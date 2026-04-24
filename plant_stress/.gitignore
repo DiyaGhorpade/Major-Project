@@ -1,0 +1,5 @@
+echo "data/
+outputs/models/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/" > ~/Projects/plant_stress/.gitignore

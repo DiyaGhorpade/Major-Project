@@ -1,0 +1,11 @@
+Logistic Regression — Classification Report
+=======================================================
+                 precision    recall  f1-score   support
+
+        Healthy     0.7313    0.8167    0.7717        60
+Moderate Stress     0.7000    0.6667    0.6829        84
+    High Stress     0.8602    0.8333    0.8466        96
+
+       accuracy                         0.7708       240
+      macro avg     0.7639    0.7722    0.7670       240
+   weighted avg     0.7719    0.7708    0.7706       240

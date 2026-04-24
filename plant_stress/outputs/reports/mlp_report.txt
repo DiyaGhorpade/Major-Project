@@ -1,0 +1,11 @@
+MLP — Classification Report
+=======================================================
+                 precision    recall  f1-score   support
+
+        Healthy     0.9048    0.9500    0.9268        60
+Moderate Stress     0.9259    0.8929    0.9091        84
+    High Stress     0.9688    0.9688    0.9688        96
+
+       accuracy                         0.9375       240
+      macro avg     0.9331    0.9372    0.9349       240
+   weighted avg     0.9378    0.9375    0.9374       240

@@ -1,0 +1,11 @@
+XGBoost — Classification Report
+=======================================================
+                 precision    recall  f1-score   support
+
+        Healthy     1.0000    0.9833    0.9916        60
+Moderate Stress     0.9882    1.0000    0.9941        84
+    High Stress     1.0000    1.0000    1.0000        96
+
+       accuracy                         0.9958       240
+      macro avg     0.9961    0.9944    0.9952       240
+   weighted avg     0.9959    0.9958    0.9958       240
