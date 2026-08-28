@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indoor Plant Growth Monitoring System-Tulsi Plants</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4faf6;
+  --surface:#ffffff;
+  --surface-2:#eef8f1;
+  --line:#cfe6d8;
+  --leaf:#0f9d58;
+  --leaf-dim:#8fd6ae;
+  --leaf-bg:#e2f7ea;
+  --amber:#b8770a;
+  --amber-bg:#fff3d9;
+  --red:#d5372b;
+  --red-bg:#fde5e2;
+  --teal:#0f7a8c;
+  --text:#0d1f16;
+  --muted:#3f5c4c;
+  --muted-2:#5f7d6c;
+  --mono:'IBM Plex Mono', monospace;
+  --disp:'Space Grotesk', sans-serif;
+  --body:'Inter', sans-serif;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{background:var(--bg); color:var(--text); font-family:var(--body); min-height:100vh; font-size:17px;}
+body{
+  background-image:
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(15,157,88,0.08), transparent),
+    radial-gradient(ellipse 700px 500px at 100% 10%, rgba(15,122,140,0.06), transparent);
+  padding:22px;
+}
+@media (prefers-reduced-motion: reduce){ *{animation-duration:0.01ms !important; transition-duration:0.01ms !important;} }
+
+.wrap{max-width:1500px; margin:0 auto; display:flex; flex-direction:column; gap:16px;}
+
+/* ---------- top bar ---------- */
+.topbar{
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;
+  padding:20px 26px; background:var(--surface); border:1.5px solid var(--line); border-radius:16px;
+  box-shadow:0 2px 10px rgba(15,60,35,0.05);
+}
+.brand{display:flex; align-items:center; gap:14px;}
+.brand-mark{
+  width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(145deg, rgba(15,157,88,0.16), rgba(15,122,140,0.08));
+  border:1.5px solid var(--leaf-dim);
+}
+.brand-mark svg{width:26px; height:26px;}
+.brand-title{font-family:var(--disp); font-weight:700; font-size:28px; letter-spacing:0.2px;}
+.brand-sub{font-family:var(--mono); font-size:14px; color:var(--muted); letter-spacing:0.4px; text-transform:uppercase; font-weight:500;}
+.top-right{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+.mode-badge{
+  font-family:var(--mono); font-size:14px; letter-spacing:0.5px; text-transform:uppercase; font-weight:600;
+  padding:10px 16px; border-radius:22px; display:flex; align-items:center; gap:9px; border:1.5px solid var(--line);
+  color:var(--muted);
+}
+.mode-badge.on{color:var(--amber); border-color:#eecb84; background:var(--amber-bg);}
+.dot{width:9px; height:9px; border-radius:50%; background:var(--muted-2);}
+.dot.pulse{background:var(--amber); box-shadow:0 0 0 0 rgba(184,119,10,0.5); animation:pulse 1.4s infinite;}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(184,119,10,0.45);}
+  70%{box-shadow:0 0 0 9px rgba(184,119,10,0);}
+  100%{box-shadow:0 0 0 0 rgba(184,119,10,0);}
+}
+.btn{
+  font-family:var(--mono); font-size:14.5px; letter-spacing:0.3px; text-transform:uppercase; font-weight:600;
+  padding:11px 20px; border-radius:10px; border:2px solid var(--leaf); background:var(--surface);
+  color:var(--leaf); cursor:pointer; transition:all .15s ease; display:flex; align-items:center; gap:8px;
+}
+.btn:hover{background:var(--leaf-bg);}
+.btn.active{background:var(--leaf); color:#ffffff; border-color:var(--leaf);}
+.btn.ghost{color:var(--muted); border-color:var(--line);}
+.btn.ghost:hover{color:var(--text); border-color:var(--muted-2); background:var(--surface-2);}
+.btn:disabled{opacity:0.4; cursor:not-allowed;}
+select.btn{appearance:none; -webkit-appearance:none; cursor:pointer;}
+
+/* ---------- status strip ---------- */
+.status-strip{display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:12px;}
+.status-card{
+  background:var(--surface); border:1.5px solid var(--line); border-radius:14px; padding:16px 18px;
+  display:flex; flex-direction:column; gap:8px; box-shadow:0 2px 8px rgba(15,60,35,0.04);
+}
+.status-top{display:flex; align-items:center; justify-content:space-between;}
+.status-name{font-family:var(--mono); font-size:14px; color:var(--muted); letter-spacing:0.3px; font-weight:600;}
+.status-pill{width:11px; height:11px; border-radius:50%; background:var(--muted-2);}
+.status-pill.ok{background:var(--leaf); box-shadow:0 0 8px rgba(15,157,88,0.5);}
+.status-pill.warn{background:var(--amber); box-shadow:0 0 8px rgba(184,119,10,0.5);}
+.status-pill.off{background:var(--red); box-shadow:0 0 8px rgba(213,55,43,0.4);}
+.status-val{font-family:var(--disp); font-size:22px; font-weight:700;}
+.status-meta{font-family:var(--mono); font-size:13px; color:var(--muted-2);}
+
+/* ---------- main grid ---------- */
+.grid{display:grid; grid-template-columns:320px 1fr 340px; gap:16px; align-items:start;}
+@media (max-width:1100px){ .grid{grid-template-columns:1fr;} }
+
+.panel{background:var(--surface); border:1.5px solid var(--line); border-radius:16px; padding:20px; box-shadow:0 2px 8px rgba(15,60,35,0.04);}
+.panel-title{
+  font-family:var(--mono); font-size:15px; text-transform:uppercase; letter-spacing:0.6px; color:var(--muted); font-weight:700;
+  margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;
+}
+
+/* ---------- pipeline / vein diagram ---------- */
+.pipeline-svg{width:100%; height:auto; display:block;}
+.pipe-line{fill:none; stroke:var(--line); stroke-width:2.5;}
+.pipe-node{fill:var(--surface-2); stroke:var(--line); stroke-width:1.8;}
+.pipe-node-label{font-family:var(--mono); font-size:12.5px; fill:var(--muted); text-transform:uppercase; letter-spacing:0.2px; font-weight:700;}
+.pipe-node-sub{font-family:var(--body); font-size:12px; fill:var(--text);}
+.pipe-node.active{stroke:var(--leaf); stroke-width:2.4; filter:drop-shadow(0 0 5px rgba(15,157,88,0.45));}
+.packet{fill:var(--leaf); filter:drop-shadow(0 0 6px rgba(15,157,88,0.8)); opacity:0;}
+.node-pair{font-family:var(--mono); font-size:12px; fill:var(--muted-2);}
+
+/* ---------- live table ---------- */
+.table-wrap{overflow-x:auto;}
+table{width:100%; border-collapse:collapse; font-family:var(--mono); font-size:15px;}
+thead th{
+  text-align:left; padding:11px 12px; color:var(--muted); font-weight:700; font-size:13px;
+  text-transform:uppercase; letter-spacing:0.3px; border-bottom:2px solid var(--line); white-space:nowrap;
+}
+tbody td{padding:11px 12px; border-bottom:1px solid var(--line); white-space:nowrap; color:var(--text); font-weight:500;}
+tbody tr{cursor:pointer; transition:background .12s;}
+tbody tr:hover{background:var(--surface-2);}
+tbody tr.latest{background:var(--leaf-bg); position:relative;}
+tbody tr.latest td:first-child{box-shadow:inset 4px 0 0 var(--leaf);}
+.status-chip{font-size:12.5px; padding:4px 10px; border-radius:6px; text-transform:uppercase; letter-spacing:0.3px; font-weight:700;}
+.status-chip.ok{color:var(--leaf); background:var(--leaf-bg);}
+.status-chip.check{color:var(--amber); background:var(--amber-bg);}
+.status-chip.anomaly{color:var(--red); background:var(--red-bg);}
+.empty-row{color:var(--muted-2); font-family:var(--body); padding:36px; text-align:center; font-size:16px;}
+
+/* ---------- latest reading card ---------- */
+.reading-card{
+  border:2px solid var(--leaf); border-radius:14px; padding:20px;
+  background:linear-gradient(160deg, var(--leaf-bg), transparent 70%);
+  margin-bottom:16px; box-shadow:0 2px 10px rgba(15,60,35,0.05);
+}
+.reading-title{font-family:var(--mono); font-size:14px; color:var(--leaf); text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:12px;}
+.reading-plant{font-family:var(--disp); font-size:32px; font-weight:700; margin-bottom:3px;}
+.reading-node{font-family:var(--mono); font-size:14px; color:var(--muted); margin-bottom:16px; font-weight:500;}
+.reading-metrics{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+.metric{display:flex; flex-direction:column; gap:3px;}
+.metric-label{font-family:var(--mono); font-size:12.5px; color:var(--muted-2); text-transform:uppercase; letter-spacing:0.3px; font-weight:600;}
+.metric-val{font-family:var(--disp); font-size:24px; font-weight:700;}
+.reading-time{margin-top:14px; padding-top:14px; border-top:1.5px solid var(--line); font-family:var(--mono); font-size:13.5px; color:var(--muted); font-weight:500;}
+
+.filter-group{margin-bottom:16px;}
+.filter-label{font-family:var(--mono); font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:0.3px; margin-bottom:7px; display:block; font-weight:700;}
+.filter-select{
+  width:100%; padding:11px 12px; background:var(--surface); border:1.5px solid var(--line); border-radius:9px;
+  color:var(--text); font-family:var(--mono); font-size:15px; cursor:pointer; font-weight:500;
+}
+
+/* detail drawer */
+.detail-panel{
+  position:fixed; top:0; right:0; height:100vh; width:380px; background:var(--surface);
+  border-left:1.5px solid var(--line); padding:24px; transform:translateX(100%); transition:transform .25s ease;
+  z-index:50; overflow-y:auto; box-shadow:-6px 0 24px rgba(15,60,35,0.08);
+}
+.detail-panel.open{transform:translateX(0);}
+.detail-close{float:right; background:none; border:none; color:var(--muted); font-size:26px; cursor:pointer; line-height:1;}
+.detail-row{display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:15px; font-weight:500;}
+.detail-row span:first-child{color:var(--muted); font-weight:600;}
+.overlay{position:fixed; inset:0; background:rgba(10,30,20,0.35); z-index:40; opacity:0; pointer-events:none; transition:opacity .2s;}
+.overlay.open{opacity:1; pointer-events:auto;}
+
+/* ---------- trends ---------- */
+.trend-tabs{display:flex; gap:9px; flex-wrap:wrap;}
+.trend-chart-wrap{margin-top:16px;}
+.chart-empty{color:var(--muted-2); font-family:var(--body); font-size:16px; padding:44px 0; text-align:center;}
+svg.trend-svg{width:100%; height:240px; overflow:visible;}
+.grid-line{stroke:var(--line); stroke-width:1;}
+.trend-line{fill:none; stroke:var(--leaf); stroke-width:3;}
+.trend-fill{fill:url(#trendGrad); opacity:0.6;}
+.axis-label{font-family:var(--mono); font-size:12.5px; fill:var(--muted-2); font-weight:600;}
+
+.footer-note{
+  font-family:var(--mono); font-size:13.5px; color:var(--muted-2); text-align:center; padding:12px 4px 4px;
+  line-height:1.7; font-weight:500;
+}
+.footer-note b{color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="overlay" id="overlay"></div>
+
+<div class="wrap">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M12 22V12M12 12C12 12 5 11 5 4C12 4 12 12 12 12ZM12 12C12 12 19 11 19 4C12 4 12 12 12 12Z" stroke="#0f9d58" stroke-width="1.6" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">Indoor Plant Growth Monitoring System</div>
+        <div class="brand-sub">Acquisition Pipeline Monitor</div>
+      </div>
+    </div>
+    <div class="top-right">
+      <div class="mode-badge" id="modeBadge"><span class="dot" id="modeDot"></span><span id="modeText">Idle — no stream</span></div>
+      <button class="btn ghost" id="speedBtn">Speed: 1×</button>
+      <button class="btn" id="demoBtn">▶ Start Data Replay</button>
+    </div>
+  </div>
+
+  <!-- STATUS STRIP -->
+  <div class="status-strip" id="statusStrip"></div>
+
+  <!-- MAIN GRID -->
+  <div class="grid">
+
+    <!-- LEFT: pipeline -->
+    <div class="panel">
+      <div class="panel-title">Acquisition Path</div>
+      <svg class="pipeline-svg" viewBox="0 0 260 480" id="pipelineSvg">
+        <!-- connecting line -->
+        <path class="pipe-line" d="M130,25 L130,455" />
+        <!-- nodes placed programmatically -->
+      </svg>
+      <div class="panel-title" style="margin-top:16px;">Node Coverage</div>
+      <div id="nodeCoverage" style="font-family:var(--mono); font-size:11px; color:var(--muted); display:flex; flex-direction:column; gap:7px;"></div>
+    </div>
+
+    <!-- CENTER: live table -->
+    <div class="panel">
+      <div class="panel-title">
+        <span>Live Sensor Records</span>
+        <span id="recordCount" style="color:var(--muted-2);">0 received</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th><th>Node</th><th>Plant</th><th>Session</th><th>Point</th>
+              <th>Soil %</th><th>Temp °C</th><th>Hum %</th><th>Light lx</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="10" class="empty-row">No records yet — press <b>Start Data Replay</b> to begin streaming stored records through the pipeline.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- RIGHT: latest reading + filters -->
+    <div>
+      <div class="reading-card">
+        <div class="reading-title">● Latest Reading</div>
+        <div id="latestBody">
+          <div class="reading-plant">—</div>
+          <div class="reading-node">Waiting for first record</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Filters</div>
+        <div class="filter-group">
+          <label class="filter-label">Node</label>
+          <select class="filter-select" id="filterNode"><option value="">All nodes</option></select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Plant ID</label>
+          <select class="filter-select" id="filterPlant"><option value="">All plants</option></select>
+        </div>
+        <div class="filter-group" style="margin-bottom:0;">
+          <label class="filter-label">Record Status</label>
+          <select class="filter-select" id="filterStatus">
+            <option value="">All statuses</option>
+            <option value="ok">OK</option>
+            <option value="check">Check</option>
+            <option value="anomaly">Anomaly</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRENDS -->
+  <div class="panel">
+    <div class="panel-title">
+      <span>Historical Trends — Stored Dataset</span>
+      <span style="color:var(--muted-2);" id="trendMeta"></span>
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div class="trend-tabs" id="paramTabs"></div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <select class="filter-select" id="trendPlant" style="width:150px;"></select>
+        <select class="filter-select" id="trendWindow" style="width:150px;">
+          <option value="full">Full session (200 rec)</option>
+          <option value="100">Last 100 records</option>
+          <option value="50">Last 50 records</option>
+          <option value="20">Last 20 records</option>
+        </select>
+      </div>
+    </div>
+    <div class="trend-chart-wrap" id="trendChartWrap"></div>
+  </div>
+
+  <div class="footer-note">
+    Source: <b>sample_data_updated.csv</b> (200 stored records). Confirmed architecture: <b>2 physical ESP32 nodes</b> — Node A (12 plants: Healthy / Water-Stress / Nutrient-Stress) and Node B (4 plants, Light-Stress, remote). The CSV's raw <code>node_id</code> field (NODE‑01…04) are sub-labels from the data run; 3 of them collectively cover Node A's 12 plants and the 4th covers Node B's 4 — shown here regrouped to match the confirmed 2-node topology, with the original sub-id kept visible in the record detail panel. This build runs in <b>Data Replay / Demo Mode</b> — no live ESP32/Jetson connection is wired up, so records are streamed from the stored dataset in chronological order to demonstrate the pipeline end-to-end.<br>
+    Fields not present in the source data — Sensor_ID, MUX_Channel, Raw ADC — are not shown rather than invented. "OK"/"Check" reflect only whether a record's own fields parsed cleanly. "Anomaly" flags plant IDs that appear under more than one node in the source file — physically impossible for a single wired probe, so treated as a placeholder/junk id rather than a real reading.
+  </div>
+
+</div>
+
+<!-- detail drawer -->
+<div class="detail-panel" id="detailPanel">
+  <button class="detail-close" id="detailClose">×</button>
+  <div class="panel-title" style="margin-top:6px;">Record Detail</div>
+  <div id="detailBody"></div>
+</div>
+
+<script id="raw-data" type="application/json">
+[{"t": "2026-08-28T07:00:00", "n": "NODE-01", "s": "1", "sp": "1", "p": "1", "soil": "65.6", "temp": "22.2", "hum": "53.3", "light": "383.9"}, {"t": "2026-08-28T07:00:07", "n": "NODE-02", "s": "1", "sp": "2", "p": "2", "soil": "69.5", "temp": "27.4", "hum": "71.8", "light": "302.2"}, {"t": "2026-08-28T07:00:14", "n": "NODE-03", "s": "1", "sp": "3", "p": "3", "soil": "56.9", "temp": "22.2", "hum": "51.6", "light": "553.2"}, {"t": "2026-08-28T07:00:21", "n": "NODE-04", "s": "1", "sp": "4", "p": "4", "soil": "41.1", "temp": "23.6", "hum": "64.5", "light": "577"}, {"t": "2026-08-28T07:00:28", "n": "NODE-01", "s": "1", "sp": "5", "p": "5", "soil": "48.8", "temp": "26.7", "hum": "69.3", "light": "253.9"}, {"t": "2026-08-28T07:00:35", "n": "NODE-02", "s": "1", "sp": "6", "p": "6", "soil": "72.2", "temp": "27.6", "hum": "55.2", "light": "343.3"}, {"t": "2026-08-28T07:00:42", "n": "NODE-03", "s": "1", "sp": "1", "p": "7", "soil": "78.3", "temp": "24.7", "hum": "47.8", "light": "308"}, {"t": "2026-08-28T07:00:49", "n": "NODE-04", "s": "1", "sp": "2", "p": "8", "soil": "73.9", "temp": "26.8", "hum": "69.2", "light": "687.8"}, {"t": "2026-08-28T07:00:56", "n": "NODE-01", "s": "1", "sp": "3", "p": "9", "soil": "61.4", "temp": "29.8", "hum": "56.4", "light": "581.2"}, {"t": "2026-08-28T07:01:03", "n": "NODE-02", "s": "1", "sp": "4", "p": "10", "soil": "73.2", "temp": "26.9", "hum": "70.9", "light": "596.4"}, {"t": "2026-08-28T07:01:10", "n": "NODE-03", "s": "2", "sp": "5", "p": "11", "soil": "68.2", "temp": "22.4", "hum": "51.8", "light": "423.6"}, {"t": "2026-08-28T07:01:17", "n": "NODE-04", "s": "2", "sp": "6", "p": "12", "soil": "43.2", "temp": "23.9", "hum": "48", "light": "416.8"}, {"t": "2026-08-28T07:01:24", "n": "NODE-01", "s": "2", "sp": "1", "p": "13", "soil": "65.4", "temp": "24.9", "hum": "56.1", "light": "375.7"}, {"t": "2026-08-28T07:01:31", "n": "NODE-02", "s": "2", "sp": "2", "p": "14", "soil": "50.7", "temp": "29.5", "hum": "64.4", "light": "615.5"}, {"t": "2026-08-28T07:01:38", "n": "NODE-03", "s": "2", "sp": "3", "p": "15", "soil": "46.8", "temp": "27.8", "hum": "49.9", "light": "477.7"}, {"t": "2026-08-28T07:01:45", "n": "NODE-04", "s": "2", "sp": "4", "p": "16", "soil": "79.6", "temp": "27.1", "hum": "61.7", "light": "660.8"}, {"t": "2026-08-28T07:01:52", "n": "NODE-01", "s": "2", "sp": "5", "p": "1", "soil": "73.7", "temp": "28.2", "hum": "51.9", "light": "269.3"}, {"t": "2026-08-28T07:01:59", "n": "NODE-02", "s": "2", "sp": "6", "p": "2", "soil": "52.6", "temp": "24.1", "hum": "51.3", "light": "815.7"}, {"t": "2026-08-28T07:02:06", "n": "NODE-03", "s": "2", "sp": "1", "p": "3", "soil": "75.1", "temp": "24.5", "hum": "64.7", "light": "487.4"}, {"t": "2026-08-28T07:02:13", "n": "NODE-04", "s": "2", "sp": "2", "p": "4", "soil": "76.6", "temp": "25.7", "hum": "52.9", "light": "398"}, {"t": "2026-08-28T07:02:20", "n": "NODE-01", "s": "2", "sp": "3", "p": "5", "soil": "62.5", "temp": "24.1", "hum": "62.5", "light": "788.7"}, {"t": "2026-08-28T07:02:27", "n": "NODE-02", "s": "3", "sp": "4", "p": "6", "soil": "56", "temp": "23.8", "hum": "74.9", "light": "555.7"}, {"t": "2026-08-28T07:02:34", "n": "NODE-03", "s": "4", "sp": "5", "p": "7", "soil": "43.6", "temp": "22.4", "hum": "48.3", "light": "626.5"}, {"t": "2026-08-28T07:02:41", "n": "NODE-04", "s": "5", "sp": "6", "p": "8", "soil": "71.7", "temp": "25.4", "hum": "46.9", "light": "479"}, {"t": "2026-08-28T07:02:48", "n": "NODE-01", "s": "1", "sp": "1", "p": "9", "soil": "79.8", "temp": "26.2", "hum": "74.1", "light": "766.5"}, {"t": "2026-08-28T07:02:55", "n": "NODE-02", "s": "2", "sp": "2", "p": "10", "soil": "40.5", "temp": "27.8", "hum": "65.5", "light": "572.2"}, {"t": "2026-08-28T07:03:02", "n": "NODE-03", "s": "3", "sp": "3", "p": "11", "soil": "50.7", "temp": "27.1", "hum": "48.3", "light": "510.9"}, {"t": "2026-08-28T07:03:09", "n": "NODE-04", "s": "4", "sp": "4", "p": "12", "soil": "58.1", "temp": "29.6", "hum": "71.3", "light": "408"}, {"t": "2026-08-28T07:03:16", "n": "NODE-01", "s": "5", "sp": "5", "p": "13", "soil": "60", "temp": "23.4", "hum": "72.4", "light": "772.3"}, {"t": "2026-08-28T07:03:23", "n": "NODE-02", "s": "1", "sp": "6", "p": "14", "soil": "51.9", "temp": "27.1", "hum": "63.3", "light": "341.7"}, {"t": "2026-08-28T07:03:30", "n": "NODE-03", "s": "2", "sp": "1", "p": "15", "soil": "70.5", "temp": "26.3", "hum": "68.4", "light": "568.2"}, {"t": "2026-08-28T07:03:37", "n": "NODE-04", "s": "3", "sp": "2", "p": "16", "soil": "40", "temp": "24.6", "hum": "45.6", "light": "807.5"}, {"t": "2026-08-28T07:03:44", "n": "NODE-01", "s": "abc", "sp": "3", "p": "1", "soil": "75.1", "temp": "28.7", "hum": "54.2", "light": "284.8"}, {"t": "2026-08-28T07:03:51", "n": "NODE-02", "s": "abc", "sp": "4", "p": "2", "soil": "75.1", "temp": "29.6", "hum": "47.6", "light": "541.6"}, {"t": "2026-08-28T07:03:58", "n": "NODE-03", "s": "abc", "sp": "5", "p": "3", "soil": "42.8", "temp": "28.1", "hum": "68", "light": "327"}, {"t": "2026-08-28T07:04:05", "n": "NODE-04", "s": "abc", "sp": "6", "p": "4", "soil": "59", "temp": "26.4", "hum": "53", "light": "773.5"}, {"t": "2026-08-28T07:04:12", "n": "NODE-01", "s": "abc", "sp": "1", "p": "5", "soil": "56.9", "temp": "23.7", "hum": "61.2", "light": "688"}, {"t": "2026-08-28T07:04:19", "n": "NODE-02", "s": "abc", "sp": "2", "p": "6", "soil": "48", "temp": "24.5", "hum": "74.9", "light": "639.9"}, {"t": "2026-08-28T07:04:26", "n": "NODE-03", "s": "abc", "sp": "3", "p": "7", "soil": "57.5", "temp": "26.1", "hum": "48.6", "light": "384.8"}, {"t": "2026-08-28T07:04:33", "n": "NODE-04", "s": "abc", "sp": "4", "p": "8", "soil": "53.5", "temp": "26.7", "hum": "51.9", "light": "382.1"}, {"t": "2026-08-28T07:04:40", "n": "NODE-01", "s": "abc", "sp": "5", "p": "9", "soil": "42.8", "temp": "27", "hum": "51.9", "light": "793.3"}, {"t": "2026-08-28T07:04:47", "n": "NODE-02", "s": "abc", "sp": "6", "p": "10", "soil": "74.4", "temp": "22.6", "hum": "52.1", "light": "651.4"}, {"t": "2026-08-28T07:04:54", "n": "NODE-03", "s": "abc", "sp": "1", "p": "11", "soil": "48.6", "temp": "23.1", "hum": "73.1", "light": "592.6"}, {"t": "2026-08-28T07:05:01", "n": "NODE-04", "s": "abc", "sp": "2", "p": "12", "soil": "58.9", "temp": "28.3", "hum": "69.2", "light": "364.2"}, {"t": "2026-08-28T07:05:08", "n": "NODE-01", "s": "1", "sp": "x", "p": "13", "soil": "43.9", "temp": "25.4", "hum": "57.7", "light": "530.2"}, {"t": "2026-08-28T07:05:15", "n": "NODE-02", "s": "2", "sp": "x", "p": "14", "soil": "69.2", "temp": "27.4", "hum": "74.5", "light": "309.1"}, {"t": "2026-08-28T07:05:22", "n": "NODE-03", "s": "3", "sp": "x", "p": "15", "soil": "56.1", "temp": "24.7", "hum": "70.9", "light": "399.2"}, {"t": "2026-08-28T07:05:29", "n": "NODE-04", "s": "4", "sp": "x", "p": "16", "soil": "47.6", "temp": "25.6", "hum": "57.7", "light": "417.1"}, {"t": "2026-08-28T07:05:36", "n": "NODE-01", "s": "5", "sp": "x", "p": "1", "soil": "50", "temp": "29.4", "hum": "58.3", "light": "766.8"}, {"t": "2026-08-28T07:05:43", "n": "NODE-02", "s": "1", "sp": "x", "p": "2", "soil": "62", "temp": "22.4", "hum": "75", "light": "751.6"}, {"t": "2026-08-28T07:05:50", "n": "NODE-03", "s": "2", "sp": "x", "p": "3", "soil": "78.8", "temp": "29.4", "hum": "70.5", "light": "349.8"}, {"t": "2026-08-28T07:05:57", "n": "NODE-04", "s": "3", "sp": "x", "p": "4", "soil": "59.4", "temp": "23.7", "hum": "57", "light": "285.2"}, {"t": "2026-08-28T07:06:04", "n": "NODE-01", "s": "4", "sp": "x", "p": "5", "soil": "55.2", "temp": "29.9", "hum": "53", "light": "720.4"}, {"t": "2026-08-28T07:06:11", "n": "NODE-02", "s": "5", "sp": "x", "p": "6", "soil": "58.2", "temp": "25.4", "hum": "73.7", "light": "847.3"}, {"t": "2026-08-28T07:06:18", "n": "NODE-03", "s": "1", "sp": "x", "p": "7", "soil": "62.2", "temp": "27.7", "hum": "49.6", "light": "428"}, {"t": "2026-08-28T07:06:25", "n": "NODE-04", "s": "2", "sp": "x", "p": "8", "soil": "78.7", "temp": "26.6", "hum": "61.3", "light": "698.8"}, {"t": "2026-08-28T07:06:32", "n": "NODE-01", "s": "3", "sp": "3", "p": "P04", "soil": "42.3", "temp": "26.7", "hum": "60.1", "light": "761.6"}, {"t": "2026-08-28T07:06:39", "n": "NODE-02", "s": "4", "sp": "4", "p": "P04", "soil": "46.3", "temp": "29.7", "hum": "47.4", "light": "361.5"}, {"t": "2026-08-28T07:06:46", "n": "NODE-03", "s": "5", "sp": "5", "p": "P04", "soil": "63.8", "temp": "27.4", "hum": "52.1", "light": "321.9"}, {"t": "2026-08-28T07:06:53", "n": "NODE-04", "s": "1", "sp": "6", "p": "P04", "soil": "75.6", "temp": "24", "hum": "62.8", "light": "621.6"}, {"t": "2026-08-28T07:07:00", "n": "NODE-01", "s": "2", "sp": "1", "p": "P04", "soil": "56.8", "temp": "26.7", "hum": "60.7", "light": "810.8"}, {"t": "2026-08-28T07:07:07", "n": "NODE-02", "s": "3", "sp": "2", "p": "P04", "soil": "48.2", "temp": "27.7", "hum": "52.2", "light": "487.5"}, {"t": "2026-08-28T07:07:14", "n": "NODE-03", "s": "4", "sp": "3", "p": "P04", "soil": "66.9", "temp": "24.4", "hum": "54.5", "light": "701.1"}, {"t": "2026-08-28T07:07:21", "n": "NODE-04", "s": "5", "sp": "4", "p": "P04", "soil": "42.9", "temp": "25.7", "hum": "75", "light": "847.7"}, {"t": "2026-08-28T07:07:28", "n": "NODE-01", "s": "1", "sp": "5", "p": "P04", "soil": "42.9", "temp": "23.7", "hum": "53", "light": "810"}, {"t": "2026-08-28T07:07:35", "n": "NODE-02", "s": "2", "sp": "6", "p": "P04", "soil": "75.2", "temp": "29", "hum": "56.1", "light": "344.6"}, {"t": "2026-08-28T07:07:42", "n": "NODE-03", "s": "3", "sp": "1", "p": "P04", "soil": "73.3", "temp": "27.6", "hum": "63.4", "light": "842.3"}, {"t": "2026-08-28T07:07:49", "n": "NODE-04", "s": "4", "sp": "2", "p": "P04", "soil": "66.2", "temp": "22.1", "hum": "69.5", "light": "429.6"}, {"t": "2026-08-28T07:07:56", "n": "NODE-01", "s": "5", "sp": "3", "p": "5", "soil": "wet", "temp": "29.5", "hum": "49", "light": "319.3"}, {"t": "2026-08-28T07:08:03", "n": "NODE-02", "s": "1", "sp": "4", "p": "6", "soil": "wet", "temp": "26.4", "hum": "53.2", "light": "612.9"}, {"t": "2026-08-28T07:08:10", "n": "NODE-03", "s": "2", "sp": "5", "p": "7", "soil": "wet", "temp": "23.6", "hum": "64", "light": "408.4"}, {"t": "2026-08-28T07:08:17", "n": "NODE-04", "s": "3", "sp": "6", "p": "8", "soil": "wet", "temp": "29.2", "hum": "70.4", "light": "305.4"}, {"t": "2026-08-28T07:08:24", "n": "NODE-01", "s": "4", "sp": "1", "p": "9", "soil": "wet", "temp": "24.2", "hum": "45.1", "light": "712.7"}, {"t": "2026-08-28T07:08:31", "n": "NODE-02", "s": "5", "sp": "2", "p": "10", "soil": "wet", "temp": "24.1", "hum": "67.2", "light": "581"}, {"t": "2026-08-28T07:08:38", "n": "NODE-03", "s": "1", "sp": "3", "p": "11", "soil": "wet", "temp": "22.1", "hum": "47.3", "light": "779.9"}, {"t": "2026-08-28T07:08:45", "n": "NODE-04", "s": "2", "sp": "4", "p": "12", "soil": "wet", "temp": "26.4", "hum": "70", "light": "599.5"}, {"t": "2026-08-28T07:08:52", "n": "NODE-01", "s": "3", "sp": "5", "p": "13", "soil": "wet", "temp": "23", "hum": "54.2", "light": "789.4"}, {"t": "2026-08-28T07:08:59", "n": "NODE-02", "s": "4", "sp": "6", "p": "14", "soil": "wet", "temp": "28.9", "hum": "72", "light": "376"}, {"t": "2026-08-28T07:09:06", "n": "NODE-03", "s": "5", "sp": "1", "p": "15", "soil": "wet", "temp": "22.8", "hum": "68.4", "light": "780.5"}, {"t": "2026-08-28T07:09:13", "n": "NODE-04", "s": "1", "sp": "2", "p": "16", "soil": "wet", "temp": "27", "hum": "49.6", "light": "807.9"}, {"t": "2026-08-28T07:09:20", "n": "NODE-01", "s": "2", "sp": "3", "p": "1", "soil": "74.6", "temp": "hot", "hum": "69.3", "light": "778.8"}, {"t": "2026-08-28T07:09:27", "n": "NODE-02", "s": "3", "sp": "4", "p": "2", "soil": "41", "temp": "hot", "hum": "55", "light": "808.5"}, {"t": "2026-08-28T07:09:34", "n": "NODE-03", "s": "4", "sp": "5", "p": "3", "soil": "72.1", "temp": "hot", "hum": "69.3", "light": "410.1"}, {"t": "2026-08-28T07:09:41", "n": "NODE-04", "s": "5", "sp": "6", "p": "4", "soil": "71.5", "temp": "hot", "hum": "71.2", "light": "765.2"}, {"t": "2026-08-28T07:09:48", "n": "NODE-01", "s": "1", "sp": "1", "p": "5", "soil": "48.9", "temp": "hot", "hum": "58.8", "light": "433.1"}, {"t": "2026-08-28T07:09:55", "n": "NODE-02", "s": "2", "sp": "2", "p": "6", "soil": "71.8", "temp": "hot", "hum": "45.7", "light": "365.9"}, {"t": "2026-08-28T07:10:02", "n": "NODE-03", "s": "3", "sp": "3", "p": "7", "soil": "53.1", "temp": "hot", "hum": "74", "light": "417.5"}, {"t": "2026-08-28T07:10:09", "n": "NODE-04", "s": "4", "sp": "4", "p": "8", "soil": "65.7", "temp": "hot", "hum": "74.4", "light": "571.7"}, {"t": "2026-08-28T07:10:16", "n": "NODE-01", "s": "5", "sp": "5", "p": "9", "soil": "77.6", "temp": "hot", "hum": "74.1", "light": "357.1"}, {"t": "2026-08-28T07:10:23", "n": "NODE-02", "s": "1", "sp": "6", "p": "10", "soil": "78.5", "temp": "hot", "hum": "48.3", "light": "510.7"}, {"t": "2026-08-28T07:10:30", "n": "NODE-03", "s": "2", "sp": "1", "p": "11", "soil": "69.1", "temp": "hot", "hum": "63.2", "light": "556.9"}, {"t": "2026-08-28T07:10:37", "n": "NODE-04", "s": "3", "sp": "2", "p": "12", "soil": "55.4", "temp": "hot", "hum": "52.6", "light": "675.3"}, {"t": "2026-08-28T07:10:44", "n": "NODE-01", "s": "4", "sp": "3", "p": "13", "soil": "40.1", "temp": "29.4", "hum": "humid", "light": "681.7"}, {"t": "2026-08-28T07:10:51", "n": "NODE-02", "s": "5", "sp": "4", "p": "14", "soil": "69.7", "temp": "27.4", "hum": "humid", "light": "292"}, {"t": "2026-08-28T07:10:58", "n": "NODE-03", "s": "1", "sp": "5", "p": "15", "soil": "66.6", "temp": "24.6", "hum": "humid", "light": "758.8"}, {"t": "2026-08-28T07:11:05", "n": "NODE-04", "s": "2", "sp": "6", "p": "16", "soil": "68.8", "temp": "24.4", "hum": "humid", "light": "495"}, {"t": "2026-08-28T07:11:12", "n": "NODE-01", "s": "3", "sp": "1", "p": "1", "soil": "56.1", "temp": "24.4", "hum": "humid", "light": "502.3"}, {"t": "2026-08-28T07:11:19", "n": "NODE-02", "s": "4", "sp": "2", "p": "2", "soil": "77.6", "temp": "27.4", "hum": "humid", "light": "619.3"}, {"t": "2026-08-28T07:11:26", "n": "NODE-03", "s": "5", "sp": "3", "p": "3", "soil": "52", "temp": "26.4", "hum": "humid", "light": "422.1"}, {"t": "2026-08-28T07:11:33", "n": "NODE-04", "s": "1", "sp": "4", "p": "4", "soil": "57.2", "temp": "26.6", "hum": "humid", "light": "529"}, {"t": "2026-08-28T07:11:40", "n": "NODE-01", "s": "2", "sp": "5", "p": "5", "soil": "57.7", "temp": "23.7", "hum": "humid", "light": "790.7"}, {"t": "2026-08-28T07:11:47", "n": "NODE-02", "s": "3", "sp": "6", "p": "6", "soil": "71.8", "temp": "23.4", "hum": "humid", "light": "559.3"}, {"t": "2026-08-28T07:11:54", "n": "NODE-03", "s": "4", "sp": "1", "p": "7", "soil": "65.3", "temp": "24.7", "hum": "humid", "light": "700.7"}, {"t": "2026-08-28T07:12:01", "n": "NODE-04", "s": "5", "sp": "2", "p": "8", "soil": "66.9", "temp": "23.8", "hum": "humid", "light": "264.7"}, {"t": "2026-08-28T07:12:08", "n": "NODE-01", "s": "1", "sp": "3", "p": "9", "soil": "49.8", "temp": "25.8", "hum": "70.5", "light": "bright"}, {"t": "2026-08-28T07:12:15", "n": "NODE-02", "s": "2", "sp": "4", "p": "10", "soil": "56.6", "temp": "27", "hum": "50.8", "light": "bright"}, {"t": "2026-08-28T07:12:22", "n": "NODE-03", "s": "3", "sp": "5", "p": "11", "soil": "59.8", "temp": "24", "hum": "64.7", "light": "bright"}, {"t": "2026-08-28T07:12:29", "n": "NODE-04", "s": "4", "sp": "6", "p": "12", "soil": "70", "temp": "28.2", "hum": "48.2", "light": "bright"}, {"t": "2026-08-28T07:12:36", "n": "NODE-01", "s": "5", "sp": "1", "p": "13", "soil": "47", "temp": "29.7", "hum": "60.5", "light": "bright"}, {"t": "2026-08-28T07:12:43", "n": "NODE-02", "s": "1", "sp": "2", "p": "14", "soil": "50", "temp": "28.8", "hum": "58.7", "light": "bright"}, {"t": "2026-08-28T07:12:50", "n": "NODE-03", "s": "2", "sp": "3", "p": "15", "soil": "66.7", "temp": "29.9", "hum": "62.9", "light": "bright"}, {"t": "2026-08-28T07:12:57", "n": "NODE-04", "s": "3", "sp": "4", "p": "16", "soil": "75.7", "temp": "26.9", "hum": "66.6", "light": "bright"}, {"t": "2026-08-28T07:13:04", "n": "NODE-01", "s": "4", "sp": "5", "p": "1", "soil": "73.2", "temp": "26.4", "hum": "71.9", "light": "bright"}, {"t": "2026-08-28T07:13:11", "n": "NODE-02", "s": "5", "sp": "6", "p": "2", "soil": "59", "temp": "24.1", "hum": "52.4", "light": "bright"}, {"t": "2026-08-28T07:13:18", "n": "NODE-03", "s": "1", "sp": "1", "p": "3", "soil": "70.6", "temp": "26.2", "hum": "63.8", "light": "bright"}, {"t": "2026-08-28T07:13:25", "n": "NODE-04", "s": "2", "sp": "2", "p": "4", "soil": "43.1", "temp": "24.3", "hum": "53.2", "light": "bright"}, {"t": "2026-08-28T07:13:32", "n": "NODE-01", "s": "0", "sp": "3", "p": "5", "soil": "61.6", "temp": "23.1", "hum": "51.9", "light": "666.4"}, {"t": "2026-08-28T07:13:39", "n": "NODE-02", "s": "0", "sp": "4", "p": "6", "soil": "68.3", "temp": "22.5", "hum": "57.2", "light": "575.6"}, {"t": "2026-08-28T07:13:46", "n": "NODE-03", "s": "0", "sp": "5", "p": "7", "soil": "56.6", "temp": "23.7", "hum": "57.6", "light": "792.9"}, {"t": "2026-08-28T07:13:53", "n": "NODE-04", "s": "0", "sp": "6", "p": "8", "soil": "63.4", "temp": "27.6", "hum": "70.7", "light": "709.4"}, {"t": "2026-08-28T07:14:00", "n": "NODE-01", "s": "0", "sp": "1", "p": "9", "soil": "55.2", "temp": "22", "hum": "55.6", "light": "702.1"}, {"t": "2026-08-28T07:14:07", "n": "NODE-02", "s": "0", "sp": "2", "p": "10", "soil": "74.1", "temp": "29.6", "hum": "57.6", "light": "698.5"}, {"t": "2026-08-28T07:14:14", "n": "NODE-03", "s": "0", "sp": "3", "p": "11", "soil": "61.8", "temp": "26.8", "hum": "51.6", "light": "381.7"}, {"t": "2026-08-28T07:14:21", "n": "NODE-04", "s": "0", "sp": "4", "p": "12", "soil": "57.4", "temp": "22.2", "hum": "55.1", "light": "657.5"}, {"t": "2026-08-28T07:14:28", "n": "NODE-01", "s": "0", "sp": "5", "p": "13", "soil": "56.2", "temp": "23.3", "hum": "59", "light": "326.6"}, {"t": "2026-08-28T07:14:35", "n": "NODE-02", "s": "0", "sp": "6", "p": "14", "soil": "64.9", "temp": "22.2", "hum": "56.8", "light": "588.6"}, {"t": "2026-08-28T07:14:42", "n": "NODE-03", "s": "0", "sp": "1", "p": "15", "soil": "41.1", "temp": "27.1", "hum": "49.1", "light": "527"}, {"t": "2026-08-28T07:14:49", "n": "NODE-04", "s": "0", "sp": "2", "p": "16", "soil": "42", "temp": "25", "hum": "51.3", "light": "446.1"}, {"t": "2026-08-28T07:14:56", "n": "NODE-01", "s": "5", "sp": "7", "p": "1", "soil": "70.4", "temp": "25", "hum": "67.6", "light": "749.2"}, {"t": "2026-08-28T07:15:03", "n": "NODE-02", "s": "1", "sp": "7", "p": "2", "soil": "50.1", "temp": "22.7", "hum": "45.6", "light": "573.7"}, {"t": "2026-08-28T07:15:10", "n": "NODE-03", "s": "2", "sp": "7", "p": "3", "soil": "80", "temp": "24.8", "hum": "64.5", "light": "718.7"}, {"t": "2026-08-28T07:15:17", "n": "NODE-04", "s": "3", "sp": "7", "p": "4", "soil": "66.1", "temp": "28", "hum": "73.5", "light": "369.6"}, {"t": "2026-08-28T07:15:24", "n": "NODE-01", "s": "4", "sp": "7", "p": "5", "soil": "40.8", "temp": "23.2", "hum": "48.8", "light": "651.7"}, {"t": "2026-08-28T07:15:31", "n": "NODE-02", "s": "5", "sp": "7", "p": "6", "soil": "62.6", "temp": "23.7", "hum": "66", "light": "710.1"}, {"t": "2026-08-28T07:15:38", "n": "NODE-03", "s": "1", "sp": "7", "p": "7", "soil": "46.7", "temp": "26.9", "hum": "67.4", "light": "318.7"}, {"t": "2026-08-28T07:15:45", "n": "NODE-04", "s": "2", "sp": "7", "p": "8", "soil": "72.8", "temp": "29.7", "hum": "48.2", "light": "265.4"}, {"t": "2026-08-28T07:15:52", "n": "NODE-01", "s": "3", "sp": "7", "p": "9", "soil": "52.5", "temp": "27.4", "hum": "73.7", "light": "488"}, {"t": "2026-08-28T07:15:59", "n": "NODE-02", "s": "4", "sp": "7", "p": "10", "soil": "68.6", "temp": "22.6", "hum": "65.7", "light": "626.3"}, {"t": "2026-08-28T07:16:06", "n": "NODE-03", "s": "5", "sp": "7", "p": "11", "soil": "44.1", "temp": "28.2", "hum": "70.5", "light": "610.2"}, {"t": "2026-08-28T07:16:13", "n": "NODE-04", "s": "1", "sp": "7", "p": "12", "soil": "44.8", "temp": "29.9", "hum": "68.5", "light": "458.3"}, {"t": "2026-08-28T07:16:20", "n": "NODE-01", "s": "2", "sp": "3", "p": "17", "soil": "57.1", "temp": "25", "hum": "60.2", "light": "454.7"}, {"t": "2026-08-28T07:16:27", "n": "NODE-02", "s": "3", "sp": "4", "p": "17", "soil": "74", "temp": "28.6", "hum": "48.2", "light": "826.5"}, {"t": "2026-08-28T07:16:34", "n": "NODE-03", "s": "4", "sp": "5", "p": "17", "soil": "65.4", "temp": "28.6", "hum": "66.2", "light": "511.3"}, {"t": "2026-08-28T07:16:41", "n": "NODE-04", "s": "5", "sp": "6", "p": "17", "soil": "69.4", "temp": "29.7", "hum": "53.1", "light": "734.9"}, {"t": "2026-08-28T07:16:48", "n": "NODE-01", "s": "1", "sp": "1", "p": "17", "soil": "61.5", "temp": "25.9", "hum": "58.1", "light": "688.6"}, {"t": "2026-08-28T07:16:55", "n": "NODE-02", "s": "2", "sp": "2", "p": "17", "soil": "50.7", "temp": "28.8", "hum": "69.9", "light": "302"}, {"t": "2026-08-28T07:17:02", "n": "NODE-03", "s": "3", "sp": "3", "p": "17", "soil": "75.3", "temp": "24", "hum": "58.9", "light": "616.2"}, {"t": "2026-08-28T07:17:09", "n": "NODE-04", "s": "4", "sp": "4", "p": "17", "soil": "55.2", "temp": "22.2", "hum": "70.5", "light": "359.1"}, {"t": "2026-08-28T07:17:16", "n": "NODE-01", "s": "5", "sp": "5", "p": "17", "soil": "48.5", "temp": "28.4", "hum": "55.2", "light": "778.2"}, {"t": "2026-08-28T07:17:23", "n": "NODE-02", "s": "1", "sp": "6", "p": "17", "soil": "68", "temp": "24.2", "hum": "45.3", "light": "818.8"}, {"t": "2026-08-28T07:17:30", "n": "NODE-03", "s": "2", "sp": "1", "p": "17", "soil": "43.4", "temp": "27.8", "hum": "59.7", "light": "704.9"}, {"t": "2026-08-28T07:17:37", "n": "NODE-04", "s": "3", "sp": "2", "p": "17", "soil": "67.6", "temp": "27.2", "hum": "59.7", "light": "725.8"}, {"t": "2026-08-28T07:17:44", "n": "NODE-01", "s": "4", "sp": "3", "p": "9", "soil": "-1", "temp": "23.8", "hum": "65.8", "light": "433.7"}, {"t": "2026-08-28T07:17:51", "n": "NODE-02", "s": "5", "sp": "4", "p": "10", "soil": "-1", "temp": "25.8", "hum": "60.9", "light": "505.3"}, {"t": "2026-08-28T07:17:58", "n": "NODE-03", "s": "1", "sp": "5", "p": "11", "soil": "-1", "temp": "24.6", "hum": "66.1", "light": "412.5"}, {"t": "2026-08-28T07:18:05", "n": "NODE-04", "s": "2", "sp": "6", "p": "12", "soil": "-1", "temp": "23", "hum": "50.8", "light": "321.7"}, {"t": "2026-08-28T07:18:12", "n": "NODE-01", "s": "3", "sp": "1", "p": "13", "soil": "-1", "temp": "28.1", "hum": "50.6", "light": "379.8"}, {"t": "2026-08-28T07:18:19", "n": "NODE-02", "s": "4", "sp": "2", "p": "14", "soil": "-1", "temp": "27.8", "hum": "74.3", "light": "564.8"}, {"t": "2026-08-28T07:18:26", "n": "NODE-03", "s": "5", "sp": "3", "p": "15", "soil": "-1", "temp": "22.8", "hum": "50.8", "light": "386.5"}, {"t": "2026-08-28T07:18:33", "n": "NODE-04", "s": "1", "sp": "4", "p": "16", "soil": "-1", "temp": "22.1", "hum": "61", "light": "414.6"}, {"t": "2026-08-28T07:18:40", "n": "NODE-01", "s": "2", "sp": "5", "p": "1", "soil": "-1", "temp": "26.4", "hum": "65.9", "light": "325.8"}, {"t": "2026-08-28T07:18:47", "n": "NODE-02", "s": "3", "sp": "6", "p": "2", "soil": "-1", "temp": "25.9", "hum": "71.2", "light": "594.4"}, {"t": "2026-08-28T07:18:54", "n": "NODE-03", "s": "4", "sp": "1", "p": "3", "soil": "-1", "temp": "25.5", "hum": "50.5", "light": "280.8"}, {"t": "2026-08-28T07:19:01", "n": "NODE-04", "s": "5", "sp": "2", "p": "4", "soil": "-1", "temp": "25.8", "hum": "69.7", "light": "490.4"}, {"t": "2026-08-28T07:19:08", "n": "NODE-01", "s": "1", "sp": "3", "p": "5", "soil": "43", "temp": "81", "hum": "46.6", "light": "339.5"}, {"t": "2026-08-28T07:19:15", "n": "NODE-02", "s": "2", "sp": "4", "p": "6", "soil": "62.5", "temp": "81", "hum": "74.8", "light": "321.1"}, {"t": "2026-08-28T07:19:22", "n": "NODE-03", "s": "3", "sp": "5", "p": "7", "soil": "70.6", "temp": "81", "hum": "68.7", "light": "385.4"}, {"t": "2026-08-28T07:19:29", "n": "NODE-04", "s": "4", "sp": "6", "p": "8", "soil": "60.9", "temp": "81", "hum": "58.3", "light": "766.1"}, {"t": "2026-08-28T07:19:36", "n": "NODE-01", "s": "5", "sp": "1", "p": "9", "soil": "79.6", "temp": "81", "hum": "63.6", "light": "615.8"}, {"t": "2026-08-28T07:19:43", "n": "NODE-02", "s": "1", "sp": "2", "p": "10", "soil": "69.6", "temp": "81", "hum": "51.2", "light": "376.6"}, {"t": "2026-08-28T07:19:50", "n": "NODE-03", "s": "2", "sp": "3", "p": "11", "soil": "66.4", "temp": "81", "hum": "50.2", "light": "295"}, {"t": "2026-08-28T07:19:57", "n": "NODE-04", "s": "3", "sp": "4", "p": "12", "soil": "40.1", "temp": "81", "hum": "62.8", "light": "424.8"}, {"t": "2026-08-28T07:20:04", "n": "NODE-01", "s": "4", "sp": "5", "p": "13", "soil": "49.3", "temp": "81", "hum": "66.1", "light": "522.4"}, {"t": "2026-08-28T07:20:11", "n": "NODE-02", "s": "5", "sp": "6", "p": "14", "soil": "67.5", "temp": "81", "hum": "68.6", "light": "625"}, {"t": "2026-08-28T07:20:18", "n": "NODE-03", "s": "1", "sp": "1", "p": "15", "soil": "66.4", "temp": "81", "hum": "57.8", "light": "576.7"}, {"t": "2026-08-28T07:20:25", "n": "NODE-04", "s": "2", "sp": "2", "p": "16", "soil": "65.9", "temp": "81", "hum": "69.8", "light": "292.8"}, {"t": "2026-08-28T07:20:32", "n": "NODE-01", "s": "3", "sp": "3", "p": "1", "soil": "46.6", "temp": "24.5", "hum": "101", "light": "591.5"}, {"t": "2026-08-28T07:20:39", "n": "NODE-02", "s": "4", "sp": "4", "p": "2", "soil": "51.5", "temp": "23", "hum": "101", "light": "669.8"}, {"t": "2026-08-28T07:20:46", "n": "NODE-03", "s": "5", "sp": "5", "p": "3", "soil": "77.7", "temp": "26", "hum": "101", "light": "298.3"}, {"t": "2026-08-28T07:20:53", "n": "NODE-04", "s": "1", "sp": "6", "p": "4", "soil": "41.6", "temp": "25.5", "hum": "101", "light": "400.2"}, {"t": "2026-08-28T07:21:00", "n": "NODE-01", "s": "2", "sp": "1", "p": "5", "soil": "43.7", "temp": "29.7", "hum": "101", "light": "595.1"}, {"t": "2026-08-28T07:21:07", "n": "NODE-02", "s": "3", "sp": "2", "p": "6", "soil": "78", "temp": "30", "hum": "101", "light": "411.7"}, {"t": "2026-08-28T07:21:14", "n": "NODE-03", "s": "4", "sp": "3", "p": "7", "soil": "41.6", "temp": "28.1", "hum": "101", "light": "640.9"}, {"t": "2026-08-28T07:21:21", "n": "NODE-04", "s": "5", "sp": "4", "p": "8", "soil": "76.6", "temp": "23.5", "hum": "101", "light": "630.9"}, {"t": "2026-08-28T07:21:28", "n": "NODE-01", "s": "1", "sp": "5", "p": "9", "soil": "59.7", "temp": "22.7", "hum": "101", "light": "450"}, {"t": "2026-08-28T07:21:35", "n": "NODE-02", "s": "2", "sp": "6", "p": "10", "soil": "66.8", "temp": "28.9", "hum": "101", "light": "666.2"}, {"t": "2026-08-28T07:21:42", "n": "NODE-03", "s": "3", "sp": "1", "p": "11", "soil": "51.5", "temp": "29.6", "hum": "101", "light": "580.1"}, {"t": "2026-08-28T07:21:49", "n": "NODE-04", "s": "4", "sp": "2", "p": "12", "soil": "58.2", "temp": "24.5", "hum": "101", "light": "832.1"}, {"t": "2026-08-28T07:21:56", "n": "NODE-01", "s": "5", "sp": "3", "p": "13", "soil": "56.2", "temp": "26.1", "hum": "74.6", "light": "1001"}, {"t": "2026-08-28T07:22:03", "n": "NODE-02", "s": "1", "sp": "4", "p": "14", "soil": "61.7", "temp": "25.3", "hum": "50.6", "light": "1001"}, {"t": "2026-08-28T07:22:10", "n": "NODE-03", "s": "2", "sp": "5", "p": "15", "soil": "70.3", "temp": "27", "hum": "67.8", "light": "1001"}, {"t": "2026-08-28T07:22:17", "n": "NODE-04", "s": "3", "sp": "6", "p": "16", "soil": "62", "temp": "29.4", "hum": "58.1", "light": "1001"}, {"t": "2026-08-28T07:22:24", "n": "NODE-01", "s": "4", "sp": "1", "p": "1", "soil": "44.9", "temp": "29.8", "hum": "63.3", "light": "1001"}, {"t": "2026-08-28T07:22:31", "n": "NODE-02", "s": "5", "sp": "2", "p": "2", "soil": "46.3", "temp": "26.4", "hum": "61.6", "light": "1001"}, {"t": "2026-08-28T07:22:38", "n": "NODE-03", "s": "1", "sp": "3", "p": "3", "soil": "79.7", "temp": "29.3", "hum": "58.8", "light": "1001"}, {"t": "2026-08-28T07:22:45", "n": "NODE-04", "s": "2", "sp": "4", "p": "4", "soil": "73.3", "temp": "26", "hum": "66.5", "light": "1001"}, {"t": "2026-08-28T07:22:52", "n": "NODE-01", "s": "3", "sp": "5", "p": "5", "soil": "50.9", "temp": "28.7", "hum": "74.4", "light": "1001"}, {"t": "2026-08-28T07:22:59", "n": "NODE-02", "s": "4", "sp": "6", "p": "6", "soil": "62.1", "temp": "25.1", "hum": "72.7", "light": "1001"}, {"t": "2026-08-28T07:23:06", "n": "NODE-03", "s": "5", "sp": "1", "p": "7", "soil": "75.2", "temp": "28.9", "hum": "53.3", "light": "1001"}, {"t": "2026-08-28T07:23:13", "n": "NODE-04", "s": "1", "sp": "2", "p": "8", "soil": "56.6", "temp": "29.5", "hum": "60.2", "light": "1001"}]</script>
+<script>
+(function(){
+  const RAW = JSON.parse(document.getElementById('raw-data').textContent);
+
+  // ---- physical topology (confirmed architecture): 2 ESP32 nodes, not 4 ----
+  // Node A = Healthy / Water-Stress / Nutrient-Stress groups = 12 plants
+  // Node B = Light-Stress group, physically remote = 4 plants
+  // The CSV's node_id field (NODE-01..04) are sub-labels from the data-generation run;
+  // 3 of the 4 collectively cover 12 plants and map to Node A, the 4th covers 4 plants and maps to Node B.
+  const NODE_MAP = { 'NODE-01':'Node A', 'NODE-02':'Node A', 'NODE-03':'Node A', 'NODE-04':'Node B' };
+  const NODE_META = {
+    'Node A': { hw:'ESP32-WROOM-32 · 12× HW-103 · CD74HC4067 · DHT22 · BH1750', coverage:'Healthy / Water-Stress / Nutrient-Stress' },
+    'Node B': { hw:'ESP32-WROOM-32 · 4× HW-103 · CD74HC4067 · DHT22 · BH1750', coverage:'Light-Stress (remote)' }
+  };
+
+  // ---- clean + derive status per record (only from presence/parse of the record's own fields) ----
+  function num(v){ const n = parseFloat(v); return isNaN(n) ? null : n; }
+
+  // A plant_id that shows up under more than one node_id can't be a real single wired probe —
+  // that's a placeholder/junk id in the source file, not a genuine anomaly-flagged reading.
+  const plantToNodes = {};
+  RAW.forEach(r=>{ (plantToNodes[r.p] = plantToNodes[r.p] || new Set()).add(r.n); });
+  const ANOMALOUS_PLANTS = new Set(Object.keys(plantToNodes).filter(p => plantToNodes[p].size > 1));
+
+  const records = RAW.map((r,i) => {
+    const soil = num(r.soil), temp = num(r.temp), hum = num(r.hum), light = num(r.light);
+    const spOk = !isNaN(parseInt(r.sp,10)) && String(parseInt(r.sp,10)) !== 'NaN' && /^\d+$/.test(r.sp);
+    const sessOk = /^\d+$/.test(r.s);
+    const clean = spOk && sessOk && soil!==null && temp!==null && hum!==null && light!==null;
+    const isAnomalousPlant = ANOMALOUS_PLANTS.has(r.p);
+    return {
+      idx:i, t:r.t, node:NODE_MAP[r.n] || r.n, physicalId:r.n, session:r.s, point:r.sp, plant:r.p,
+      soil, temp, hum, light,
+      isAnomalousPlant,
+      status: isAnomalousPlant ? 'anomaly' : (clean ? 'ok' : 'check')
+    };
+  });
+
+  const NODES = ['Node A','Node B'];
+  const PLANTS = [...new Set(records.map(r=>r.plant))].sort((a,b)=>{
+    const an=parseInt(a,10), bn=parseInt(b,10);
+    if(!isNaN(an) && !isNaN(bn)) return an-bn;
+    return String(a).localeCompare(String(b));
+  });
+
+  // Real plants wired to each node (excludes anomalous placeholder ids like shared plant ids)
+  function realPlantsForNode(n){
+    return [...new Set(records.filter(r=>r.node===n && !r.isAnomalousPlant).map(r=>r.plant))]
+      .sort((a,b)=>{ const an=parseInt(a,10), bn=parseInt(b,10); if(!isNaN(an)&&!isNaN(bn)) return an-bn; return String(a).localeCompare(String(b)); });
+  }
+
+  // ---- populate filter dropdowns ----
+  const filterNode = document.getElementById('filterNode');
+  const filterPlant = document.getElementById('filterPlant');
+  const trendPlant = document.getElementById('trendPlant');
+  NODES.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=n; filterNode.appendChild(o); });
+  PLANTS.forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent='Plant '+p; filterPlant.appendChild(o); });
+  const trendPlantAll = document.createElement('option'); trendPlantAll.value=''; trendPlantAll.textContent='All plants (avg)';
+  trendPlant.appendChild(trendPlantAll);
+  PLANTS.forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent='Plant '+p; trendPlant.appendChild(o); });
+
+  // ---- pipeline diagram ----
+  const PIPE_STAGES = [
+    {label:'PLANT', sub:'soil pot'},
+    {label:'HW-103 PROBE', sub:'soil sensor'},
+    {label:'CD74HC4067', sub:'multiplexer'},
+    {label:'ESP32', sub:'node MCU'},
+    {label:'WI-FI', sub:'wireless link'},
+    {label:'JETSON', sub:'ingest + store'},
+    {label:'DASHBOARD', sub:'this view'}
+  ];
+  const pipeSvg = document.getElementById('pipelineSvg');
+  const stageY = i => 25 + i*71.6;
+  PIPE_STAGES.forEach((s,i)=>{
+    const y = stageY(i);
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.innerHTML = `
+      <rect class="pipe-node" data-stage="${i}" x="55" y="${y-16}" width="150" height="32" rx="8"></rect>
+      <text class="pipe-node-label" x="130" y="${y-3}" text-anchor="middle">${s.label}</text>
+      <text class="pipe-node-sub" x="130" y="${y+11}" text-anchor="middle" fill-opacity="0.55">${s.sub}</text>
+    `;
+    pipeSvg.appendChild(g);
+  });
+  const packet = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  packet.setAttribute('r','4'); packet.setAttribute('class','packet'); packet.setAttribute('cx','130'); packet.setAttribute('cy','25');
+  pipeSvg.appendChild(packet);
+
+  function animatePacket(){
+    const nodesEls = [...pipeSvg.querySelectorAll('.pipe-node')];
+    nodesEls.forEach(n=>n.classList.remove('active'));
+    let step = 0;
+    packet.style.opacity = '1';
+    const total = PIPE_STAGES.length;
+    const interval = setInterval(()=>{
+      if(step >= total){ clearInterval(interval); packet.style.opacity='0'; nodesEls.forEach(n=>n.classList.remove('active')); return; }
+      nodesEls.forEach(n=>n.classList.remove('active'));
+      nodesEls[step].classList.add('active');
+      packet.setAttribute('cy', stageY(step));
+      step++;
+    }, 140);
+  }
+
+  // ---- node coverage panel ----
+  const nodeCoverageEl = document.getElementById('nodeCoverage');
+  function renderNodeCoverage(activeNode){
+    nodeCoverageEl.innerHTML = NODES.map(n=>{
+      const on = n === activeNode;
+      const plants = realPlantsForNode(n);
+      return `<div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="color:${on? 'var(--leaf)':'var(--muted)'}; font-weight:700;">${on?'●':'○'} ${n}</span>
+        <span style="color:var(--muted-2);">${plants.length} plants wired</span>
+      </div>`;
+    }).join('');
+  }
+  renderNodeCoverage(null);
+
+  // ---- status strip ----
+  const statusStrip = document.getElementById('statusStrip');
+  function renderStatusStrip(state){
+    // state: {running, lastNode, lastTime, count}
+    const cards = [];
+    NODES.forEach(n=>{
+      const recent = state.running && state.lastNode === n;
+      cards.push({
+        name:n, pill: state.running ? (recent?'ok':'warn') : 'off',
+        val: state.running ? (recent ? 'Connected' : 'Idle') : 'No stream',
+        meta: state.running ? 'ESP32-WROOM-32' : 'awaiting demo start'
+      });
+    });
+    cards.push({
+      name:'JETSON', pill: state.running?'ok':'off',
+      val: state.running ? 'Receiving' : 'Idle',
+      meta: state.running ? `${state.count} records ingested` : 'ingest + dataset manager'
+    });
+    cards.push({
+      name:'WI-FI LINK', pill: state.running?'ok':'off',
+      val: state.running ? 'Active' : 'Down',
+      meta: 'node → jetson transport'
+    });
+    cards.push({
+      name:'LAST DATA', pill: state.running?'ok':'warn',
+      val: state.lastTime ? state.lastTime.split('T')[1] : '—',
+      meta: state.running ? 'updating live' : 'no recent data'
+    });
+    statusStrip.innerHTML = cards.map(c=>`
+      <div class="status-card">
+        <div class="status-top"><span class="status-name">${c.name}</span><span class="status-pill ${c.pill}"></span></div>
+        <div class="status-val">${c.val}</div>
+        <div class="status-meta">${c.meta}</div>
+      </div>
+    `).join('');
+  }
+  renderStatusStrip({running:false, count:0});
+
+  // ---- live table + latest reading ----
+  const tableBody = document.getElementById('tableBody');
+  const recordCountEl = document.getElementById('recordCount');
+  const latestBody = document.getElementById('latestBody');
+  let streamed = [];
+
+  function fmtVal(v, unit){ return v===null ? '—' : (v.toFixed ? v.toFixed(1) : v) + (unit||''); }
+
+  function passesFilter(r){
+    const fn = filterNode.value, fp = filterPlant.value, fs = document.getElementById('filterStatus').value;
+    if(fn && r.node!==fn) return false;
+    if(fp && r.plant!==fp) return false;
+    if(fs && r.status!==fs) return false;
+    return true;
+  }
+
+  function renderTable(){
+    const visible = streamed.filter(passesFilter);
+    recordCountEl.textContent = streamed.length + ' received' + (visible.length!==streamed.length? ` (${visible.length} shown)`:'');
+    if(visible.length===0){
+      tableBody.innerHTML = `<tr><td colspan="10" class="empty-row">${streamed.length===0 ? 'No records yet — press <b>Start Data Replay</b> to begin streaming stored records through the pipeline.' : 'No records match the current filters.'}</td></tr>`;
+      return;
+    }
+    const rows = visible.slice(-40).reverse();
+    tableBody.innerHTML = rows.map((r,i)=>`
+      <tr class="${i===0 && r.idx===streamed[streamed.length-1].idx ? 'latest':''}" data-idx="${r.idx}">
+        <td>${r.t.split('T')[1]||r.t}</td>
+        <td>${r.node}</td>
+        <td>P-${r.plant}</td>
+        <td>${r.session}</td>
+        <td>${r.point}</td>
+        <td>${fmtVal(r.soil)}</td>
+        <td>${fmtVal(r.temp)}</td>
+        <td>${fmtVal(r.hum)}</td>
+        <td>${fmtVal(r.light,'')}</td>
+        <td><span class="status-chip ${r.status}">${r.status}</span></td>
+      </tr>
+    `).join('');
+    tableBody.querySelectorAll('tr[data-idx]').forEach(tr=>{
+      tr.addEventListener('click', ()=> openDetail(records[+tr.dataset.idx]));
+    });
+  }
+
+  function renderLatest(r){
+    latestBody.innerHTML = `
+      <div class="reading-plant">Plant ${r.plant}</div>
+      <div class="reading-node">${r.node} · session ${r.session} · point ${r.point}</div>
+      <div class="reading-metrics">
+        <div class="metric"><span class="metric-label">Soil Moisture</span><span class="metric-val">${fmtVal(r.soil,'%')}</span></div>
+        <div class="metric"><span class="metric-label">Temperature</span><span class="metric-val">${fmtVal(r.temp,'°C')}</span></div>
+        <div class="metric"><span class="metric-label">Humidity</span><span class="metric-val">${fmtVal(r.hum,'%')}</span></div>
+        <div class="metric"><span class="metric-label">Ambient Light</span><span class="metric-val">${fmtVal(r.light,' lx')}</span></div>
+      </div>
+      <div class="reading-time">Updated ${r.t.split('T')[1]||r.t} · <span class="status-chip ${r.status}">${r.status}</span></div>
+    `;
+  }
+
+  // ---- detail drawer ----
+  const detailPanel = document.getElementById('detailPanel');
+  const overlay = document.getElementById('overlay');
+  function openDetail(r){
+    document.getElementById('detailBody').innerHTML = `
+      <div class="detail-row"><span>Plant ID</span><span>${r.plant}</span></div>
+      <div class="detail-row"><span>Node ID</span><span>${r.node}</span></div>
+      <div class="detail-row"><span>Physical/Sub ID</span><span>${r.physicalId}</span></div>
+      <div class="detail-row"><span>Sensor ID</span><span>not in source data</span></div>
+      <div class="detail-row"><span>MUX Channel</span><span>not in source data</span></div>
+      <div class="detail-row"><span>Session</span><span>${r.session}</span></div>
+      <div class="detail-row"><span>Sampling Point</span><span>${r.point}</span></div>
+      <div class="detail-row"><span>Timestamp</span><span>${r.t}</span></div>
+      <div class="detail-row"><span>Raw ADC</span><span>not in source data</span></div>
+      <div class="detail-row"><span>Soil Moisture</span><span>${fmtVal(r.soil,'%')}</span></div>
+      <div class="detail-row"><span>Temperature</span><span>${fmtVal(r.temp,'°C')}</span></div>
+      <div class="detail-row"><span>Humidity</span><span>${fmtVal(r.hum,'%')}</span></div>
+      <div class="detail-row"><span>Ambient Light</span><span>${fmtVal(r.light,' lx')}</span></div>
+      <div class="detail-row"><span>Status</span><span>${r.status}</span></div>
+    `;
+    detailPanel.classList.add('open'); overlay.classList.add('open');
+  }
+  document.getElementById('detailClose').addEventListener('click', ()=>{detailPanel.classList.remove('open'); overlay.classList.remove('open');});
+  overlay.addEventListener('click', ()=>{detailPanel.classList.remove('open'); overlay.classList.remove('open');});
+
+  [filterNode, filterPlant, document.getElementById('filterStatus')].forEach(el=>el.addEventListener('change', renderTable));
+
+  // ---- demo replay engine ----
+  const modeBadge = document.getElementById('modeBadge');
+  const modeDot = document.getElementById('modeDot');
+  const modeText = document.getElementById('modeText');
+  const demoBtn = document.getElementById('demoBtn');
+  const speedBtn = document.getElementById('speedBtn');
+  let running = false, timer = null, cursor = 0;
+  const speeds = [1,2,4,8];
+  let speedIdx = 0;
+  const BASE_INTERVAL = 2200;
+
+  function setMode(runningNow){
+    running = runningNow;
+    if(running){
+      modeBadge.classList.add('on'); modeDot.classList.add('pulse');
+      modeText.textContent = 'DATA REPLAY / DEMO MODE — streaming stored records';
+      demoBtn.textContent = '⏸ Pause Replay';
+    } else {
+      modeBadge.classList.remove('on'); modeDot.classList.remove('pulse');
+      modeText.textContent = cursor>=records.length ? 'Replay complete' : 'Paused';
+      demoBtn.textContent = cursor===0 ? '▶ Start Data Replay' : '▶ Resume Replay';
+    }
+  }
+
+  function tick(){
+    if(cursor >= records.length){
+      clearInterval(timer); timer=null; setMode(false);
+      renderStatusStrip({running:false, count:streamed.length, lastNode:null, lastTime:null});
+      return;
+    }
+    const r = records[cursor];
+    streamed.push(r);
+    cursor++;
+    renderTable();
+    renderLatest(r);
+    renderNodeCoverage(r.node);
+    renderStatusStrip({running:true, count:streamed.length, lastNode:r.node, lastTime:r.t});
+    animatePacket();
+  }
+
+  demoBtn.addEventListener('click', ()=>{
+    if(running){
+      clearInterval(timer); timer=null; setMode(false);
+    } else {
+      if(cursor>=records.length){ cursor=0; streamed=[]; }
+      setMode(true);
+      tick();
+      timer = setInterval(tick, BASE_INTERVAL/speeds[speedIdx]);
+    }
+  });
+  speedBtn.addEventListener('click', ()=>{
+    speedIdx = (speedIdx+1)%speeds.length;
+    speedBtn.textContent = 'Speed: '+speeds[speedIdx]+'×';
+    if(running){ clearInterval(timer); timer = setInterval(tick, BASE_INTERVAL/speeds[speedIdx]); }
+  });
+
+  // ---- historical trends ----
+  const PARAMS = [{k:'soil', label:'Soil Moisture', unit:'%'}, {k:'temp', label:'Temperature', unit:'°C'}, {k:'hum', label:'Humidity', unit:'%'}, {k:'light', label:'Ambient Light', unit:'lx'}];
+  let activeParam = 'soil';
+  const paramTabs = document.getElementById('paramTabs');
+  paramTabs.innerHTML = PARAMS.map(p=>`<button class="btn ${p.k===activeParam?'active':''}" data-param="${p.k}">${p.label}</button>`).join('');
+  paramTabs.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
+    activeParam = b.dataset.param;
+    paramTabs.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    renderTrend();
+  }));
+  document.getElementById('trendPlant').addEventListener('change', renderTrend);
+  document.getElementById('trendWindow').addEventListener('change', renderTrend);
+  document.getElementById('trendMeta').textContent = records.length + ' stored records available';
+
+  function renderTrend(){
+    const wrap = document.getElementById('trendChartWrap');
+    const plant = document.getElementById('trendPlant').value;
+    const windowSel = document.getElementById('trendWindow').value;
+    let pool = plant ? records.filter(r=>r.plant===plant) : records;
+    if(windowSel!=='full'){ pool = pool.slice(-parseInt(windowSel,10)); }
+    const param = PARAMS.find(p=>p.k===activeParam);
+    const pts = pool.map(r=>r[activeParam]).map((v,i)=> v===null ? null : {x:i, y:v});
+    const clean = pts.filter(Boolean);
+    if(clean.length < 2){
+      wrap.innerHTML = `<div class="chart-empty">Not enough historical data available yet for this selection.</div>`;
+      return;
+    }
+    const w=1000,h=200,pad=30;
+    const ys = clean.map(p=>p.y);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const yr = (maxY-minY) || 1;
+    const n = pts.length;
+    const xFor = i => pad + (i/(n-1)) * (w-2*pad);
+    const yFor = v => h-pad - ((v-minY)/yr) * (h-2*pad);
+    let path = ''; let fillPath = '';
+    let started = false;
+    pts.forEach((p,i)=>{
+      if(p===null) return;
+      const x=xFor(i), y=yFor(p.y);
+      path += (started?'L':'M') + x.toFixed(1) + ',' + y.toFixed(1) + ' ';
+      started = true;
+    });
+    fillPath = path + `L${xFor(n-1)},${h-pad} L${xFor(0)},${h-pad} Z`;
+    const gridLines = [0,0.25,0.5,0.75,1].map(f=>{
+      const y = pad + f*(h-2*pad);
+      const val = (maxY - f*yr).toFixed(1);
+      return `<line class="grid-line" x1="${pad}" y1="${y}" x2="${w-pad}" y2="${y}"></line><text class="axis-label" x="4" y="${y+3}">${val}</text>`;
+    }).join('');
+    wrap.innerHTML = `
+      <svg class="trend-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="overflow:visible;">
+        <defs><linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0f9d58" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#0f9d58" stop-opacity="0"/>
+        </linearGradient></defs>
+        ${gridLines}
+        <path class="trend-fill" d="${fillPath}"></path>
+        <path class="trend-line" d="${path}"></path>
+      </svg>
+      <div style="font-family:var(--mono); font-size:10.5px; color:var(--muted-2); margin-top:6px;">
+        ${param.label} (${param.unit}) · ${clean.length} of ${pool.length} points plotted · range ${minY.toFixed(1)}–${maxY.toFixed(1)}${param.unit}
+      </div>
+    `;
+  }
+  renderTrend();
+
+})();
+</script>
+</body>
+</html>
