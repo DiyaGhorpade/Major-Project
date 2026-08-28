@@ -75,12 +75,13 @@ def log_error(
     sensor: str,
     bad_value: str,
     reason: str,
+    node_id: str = "",
 ) -> None:
     """
     Append one error row to error_log.csv.
 
     Fields are written in ERROR_HEADER order:
-        record_id, plant_id, sensor, bad_value, reason
+        record_id, plant_id, sensor, bad_value, reason, node_id
     """
     with open(config.ERROR_LOG_FILE, "a", newline="", encoding="utf-8") as f:
-        csv.writer(f).writerow([record_id, plant_id, sensor, bad_value, reason])
+        csv.writer(f).writerow([record_id, plant_id, sensor, bad_value, reason, node_id])

@@ -3,7 +3,7 @@ Property-based test for validate_record — Property 1.
 
 **Validates: Requirements 2.1**
 
-Property 1: For any list[str] with len != 8, calling validate_record must return a
+Property 1: For any list[str] with len != 9, calling validate_record must return a
 list[ValidationError] with exactly one entry where sensor="record" and plant_id="".
 """
 
@@ -13,13 +13,13 @@ import hypothesis.strategies as st
 from validator import validate_record, ValidationError
 
 
-@given(st.lists(st.text()).filter(lambda x: len(x) != 8))
+@given(st.lists(st.text()).filter(lambda x: len(x) != 9))
 @settings(max_examples=500)
 def test_wrong_field_count_produces_structural_validation_error(fields):
     """
     Property 1: Wrong field count always produces a structural ValidationError.
 
-    For any list[str] whose length is not 8, validate_record must return a
+    For any list[str] whose length is not 9, validate_record must return a
     list containing exactly one ValidationError with sensor="record" and plant_id="".
     """
     result = validate_record(fields)

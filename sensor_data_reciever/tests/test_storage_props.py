@@ -52,6 +52,7 @@ valid_record_strategy = st.fixed_dictionaries({
     "temperature":    st.floats(allow_nan=False, allow_infinity=False),
     "humidity":       st.floats(allow_nan=False, allow_infinity=False),
     "light":          st.floats(allow_nan=False, allow_infinity=False),
+    "node_id":      st.sampled_from(["NODE_01", "NODE_02", "NODE_03", "NODE_04"]),
 })
 
 

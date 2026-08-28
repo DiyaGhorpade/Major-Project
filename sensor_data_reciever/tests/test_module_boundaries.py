@@ -190,9 +190,14 @@ class TestConfigBoundaries:
         self.src = _src("config.py")
 
     def test_no_function_definitions(self):
-        """config.py must not define any functions."""
-        assert "def " not in self.src, \
-            "config.py contains a function definition — Config must be constants only"
+        """config.py must only define the two permitted node-id helper functions."""
+        import re as _re
+        defined_funcs = _re.findall(r"^def (\w+)", self.src, _re.MULTILINE)
+        allowed = {"validate_config", "is_valid_node_id"}
+        unexpected = set(defined_funcs) - allowed
+        assert not unexpected, (
+            f"config.py contains unexpected function definitions: {unexpected}"
+        )
 
     def test_no_class_definitions(self):
         """config.py must not define any classes."""

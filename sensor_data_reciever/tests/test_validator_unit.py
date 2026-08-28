@@ -8,7 +8,7 @@ from validator import validate_record, ValidationError
 # ---------------------------------------------------------------------------
 # Baseline valid record
 # ---------------------------------------------------------------------------
-VALID = ["2024-01-01T10:00:00", "1", "1", "1", "50.0", "20.0", "50.0", "500.0"]
+VALID = ["2024-01-01T10:00:00", "1", "1", "1", "NODE_01", "50.0", "20.0", "50.0", "500.0"]
 
 
 # ---------------------------------------------------------------------------
@@ -34,17 +34,17 @@ def _replace(fields: list, index: int, value: str) -> list:
     _replace(VALID, 3, "1"),
     _replace(VALID, 3, "16"),
     # soil min / max
-    _replace(VALID, 4, "0.0"),
-    _replace(VALID, 4, "100.0"),
+    _replace(VALID, 5, "0.0"),
+    _replace(VALID, 5, "100.0"),
     # temperature min / max
-    _replace(VALID, 5, "-40.0"),
-    _replace(VALID, 5, "80.0"),
+    _replace(VALID, 6, "-40.0"),
+    _replace(VALID, 6, "80.0"),
     # humidity min / max
-    _replace(VALID, 6, "0.0"),
-    _replace(VALID, 6, "100.0"),
-    # light min / max
     _replace(VALID, 7, "0.0"),
-    _replace(VALID, 7, "1000.0"),
+    _replace(VALID, 7, "100.0"),
+    # light min / max
+    _replace(VALID, 8, "0.0"),
+    _replace(VALID, 8, "1000.0"),
 ])
 def test_valid_boundary_values(fields):
     """Boundary values within valid range must return a dict, not errors."""
@@ -63,13 +63,13 @@ def test_valid_boundary_values(fields):
     # plant_id: min=1, so 0 is below
     (_replace(VALID, 3, "0"),      "plant_id"),
     # soil: min=0.0, so -0.1 is below
-    (_replace(VALID, 4, "-0.1"),   "soil"),
+    (_replace(VALID, 5, "-0.1"),   "soil"),
     # temperature: min=-40.0, so -40.1 is below
-    (_replace(VALID, 5, "-40.1"),  "temperature"),
+    (_replace(VALID, 6, "-40.1"),  "temperature"),
     # humidity: min=0.0, so -0.1 is below
-    (_replace(VALID, 6, "-0.1"),   "humidity"),
+    (_replace(VALID, 7, "-0.1"),   "humidity"),
     # light: min=0.0, so -0.1 is below
-    (_replace(VALID, 7, "-0.1"),   "light"),
+    (_replace(VALID, 8, "-0.1"),   "light"),
 ])
 def test_below_minimum(fields, expected_sensor):
     """Fields one unit below minimum must return a ValidationError for that sensor."""
@@ -90,13 +90,13 @@ def test_below_minimum(fields, expected_sensor):
     # plant_id: max=16, so 17 is above
     (_replace(VALID, 3, "17"),      "plant_id"),
     # soil: max=100.0, so 100.1 is above
-    (_replace(VALID, 4, "100.1"),   "soil"),
+    (_replace(VALID, 5, "100.1"),   "soil"),
     # temperature: max=80.0, so 80.1 is above
-    (_replace(VALID, 5, "80.1"),    "temperature"),
+    (_replace(VALID, 6, "80.1"),    "temperature"),
     # humidity: max=100.0, so 100.1 is above
-    (_replace(VALID, 6, "100.1"),   "humidity"),
+    (_replace(VALID, 7, "100.1"),   "humidity"),
     # light: max=1000.0, so 1000.1 is above
-    (_replace(VALID, 7, "1000.1"),  "light"),
+    (_replace(VALID, 8, "1000.1"),  "light"),
 ])
 def test_above_maximum(fields, expected_sensor):
     """Fields one unit above maximum must return a ValidationError for that sensor."""
@@ -112,11 +112,11 @@ def test_above_maximum(fields, expected_sensor):
 # 4 & 5. Wrong field count — fewer or more than 8 fields
 # ===========================================================================
 @pytest.mark.parametrize("fields", [
-    # Fewer than 8
+    # Fewer than 9
     [],
     ["2024-01-01T10:00:00"],
-    ["2024-01-01T10:00:00", "1", "1", "1", "50.0", "20.0", "50.0"],  # 7 fields
-    # More than 8
+    ["2024-01-01T10:00:00", "1", "1", "1", "NODE_01", "50.0", "20.0", "50.0"],  # 8 fields
+    # More than 9
     VALID + ["extra"],
     VALID + ["extra1", "extra2"],
 ])
@@ -136,10 +136,10 @@ def test_wrong_field_count(fields):
     (1, "session_id"),
     (2, "sampling_point"),
     (3, "plant_id"),
-    (4, "soil"),
-    (5, "temperature"),
-    (6, "humidity"),
-    (7, "light"),
+    (5, "soil"),
+    (6, "temperature"),
+    (7, "humidity"),
+    (8, "light"),
 ])
 def test_non_numeric_string(index, expected_sensor):
     """A non-numeric string in any numeric field must return a ValidationError for that sensor."""
@@ -162,7 +162,7 @@ def test_valid_record_dict_keys_and_types():
 
     expected_keys = {
         "timestamp", "session_id", "sampling_point", "plant_id",
-        "soil", "temperature", "humidity", "light",
+        "node_id", "soil", "temperature", "humidity", "light",
     }
     assert set(result.keys()) == expected_keys, (
         f"Key mismatch: {set(result.keys())} != {expected_keys}"
@@ -172,6 +172,7 @@ def test_valid_record_dict_keys_and_types():
     assert isinstance(result["session_id"],     int),   "session_id must be int"
     assert isinstance(result["sampling_point"], int),   "sampling_point must be int"
     assert isinstance(result["plant_id"],       int),   "plant_id must be int"
+    assert isinstance(result["node_id"],        str),   "node_id must be str"
     assert isinstance(result["soil"],           float), "soil must be float"
     assert isinstance(result["temperature"],    float), "temperature must be float"
     assert isinstance(result["humidity"],       float), "humidity must be float"

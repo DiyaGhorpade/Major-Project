@@ -76,6 +76,7 @@ class TestSaveValidRecord:
             "session_id":     1,
             "sampling_point": 2,
             "plant_id":       3,
+            "node_id":        "NODE_01",
             "soil":           45.5,
             "temperature":    22.0,
             "humidity":       60.0,
@@ -93,6 +94,7 @@ class TestSaveValidRecord:
             "session_id":     5,
             "sampling_point": 3,
             "plant_id":       7,
+            "node_id":        "NODE_01",
             "soil":           12.3,
             "temperature":    -5.0,
             "humidity":       88.8,
@@ -113,6 +115,7 @@ class TestSaveValidRecord:
             "session_id":     1,
             "sampling_point": 1,
             "plant_id":       1,
+            "node_id":        "NODE_01",
             "soil":           0.0,
             "temperature":    0.0,
             "humidity":       0.0,
@@ -132,6 +135,7 @@ class TestSaveValidRecord:
             "session_id":     1,
             "sampling_point": 1,
             "plant_id":       1,
+            "node_id":        "NODE_01",
             "soil":           0.0,
             "temperature":    0.0,
             "humidity":       0.0,
@@ -151,6 +155,7 @@ class TestSaveValidRecord:
             "session_id":     1,
             "sampling_point": 1,
             "plant_id":       1,
+            "node_id":        "NODE_01",
             "soil":           0.0,
             "temperature":    0.0,
             "humidity":       0.0,
@@ -171,6 +176,7 @@ class TestSaveValidRecord:
                 "session_id":     1,
                 "sampling_point": 1,
                 "plant_id":       plant,
+            "node_id":        "NODE_01",
                 "soil":           50.0,
                 "temperature":    20.0,
                 "humidity":       50.0,
@@ -204,12 +210,13 @@ class TestLogError:
         rows = _read_error_rows(storage_files["error"])
         assert len(rows) == 1
 
-        record_id, plant_id, sensor, bad_value, reason = rows[0]
+        record_id, plant_id, sensor, bad_value, reason, node_id = rows[0]
         assert record_id == "R000007"
         assert plant_id  == "5"
         assert sensor    == "temperature"
         assert bad_value == "-99.0"
         assert reason    == "Expected -40 to 80 C"
+        assert node_id   == ""
 
     def test_value_with_comma(self, storage_files):
         """A bad_value or reason containing a comma must round-trip correctly."""

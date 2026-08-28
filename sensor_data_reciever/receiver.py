@@ -86,6 +86,7 @@ def process_line(line: str) -> None:
                 error.sensor,
                 error.bad_value,
                 error.reason,
+                error.node_id,
             )
         print(f"[INVALID] {record_id}")
 

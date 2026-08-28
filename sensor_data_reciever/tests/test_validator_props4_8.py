@@ -62,13 +62,14 @@ valid_light = st.floats(
 )
 
 
-def make_valid_fields(ts, sid, sp, pid, soil, temp, hum, light):
-    """Return an 8-element list[str] of valid field values."""
+def make_valid_fields(ts, sid, sp, pid, node_id, soil, temp, hum, light):
+    """Return a 9-element list[str] of valid field values."""
     return [
         ts,
         str(sid),
         str(sp),
         str(pid),
+        node_id,
         str(soil),
         str(temp),
         str(hum),
@@ -78,12 +79,14 @@ def make_valid_fields(ts, sid, sp, pid, soil, temp, hum, light):
 
 @st.composite
 def valid_8_fields(draw):
-    """Draw a fully valid 8-field list[str]."""
+    """Draw a fully valid 9-field list[str]."""
+    node_id = draw(st.sampled_from(["NODE_01", "NODE_02", "NODE_03", "NODE_04"]))
     return make_valid_fields(
         draw(valid_timestamp),
         draw(valid_session_id),
         draw(valid_sampling_point),
         draw(valid_plant_id),
+        node_id,
         draw(valid_soil),
         draw(valid_temperature),
         draw(valid_humidity),
@@ -129,7 +132,7 @@ def test_out_of_range_session_id_reports_correct_sensor(
 
     **Validates: Requirements 2.6**
     """
-    fields = make_valid_fields(ts, bad_sid, sp, pid, soil, temp, hum, light)
+    fields = make_valid_fields(ts, bad_sid, sp, pid, "NODE_01", soil, temp, hum, light)
     result = validate_record(fields)
 
     assert isinstance(result, list), (
@@ -161,7 +164,7 @@ def test_out_of_range_sampling_point_reports_correct_sensor(
 
     **Validates: Requirements 2.7**
     """
-    fields = make_valid_fields(ts, sid, bad_sp, pid, soil, temp, hum, light)
+    fields = make_valid_fields(ts, sid, bad_sp, pid, "NODE_01", soil, temp, hum, light)
     result = validate_record(fields)
 
     assert isinstance(result, list), (
@@ -193,7 +196,7 @@ def test_out_of_range_plant_id_reports_correct_sensor(
 
     **Validates: Requirements 2.8**
     """
-    fields = make_valid_fields(ts, sid, sp, bad_pid, soil, temp, hum, light)
+    fields = make_valid_fields(ts, sid, sp, bad_pid, "NODE_01", soil, temp, hum, light)
     result = validate_record(fields)
 
     assert isinstance(result, list), (
@@ -248,7 +251,7 @@ def test_out_of_range_soil_reports_correct_sensor(
 
     **Validates: Requirements 2.9**
     """
-    fields = make_valid_fields(ts, sid, sp, pid, bad_soil, temp, hum, light)
+    fields = make_valid_fields(ts, sid, sp, pid, "NODE_01", bad_soil, temp, hum, light)
     result = validate_record(fields)
 
     assert isinstance(result, list), (
@@ -280,7 +283,7 @@ def test_out_of_range_temperature_reports_correct_sensor(
 
     **Validates: Requirements 2.10**
     """
-    fields = make_valid_fields(ts, sid, sp, pid, soil, bad_temp, hum, light)
+    fields = make_valid_fields(ts, sid, sp, pid, "NODE_01", soil, bad_temp, hum, light)
     result = validate_record(fields)
 
     assert isinstance(result, list), (
@@ -312,7 +315,7 @@ def test_out_of_range_humidity_reports_correct_sensor(
 
     **Validates: Requirements 2.11**
     """
-    fields = make_valid_fields(ts, sid, sp, pid, soil, temp, bad_hum, light)
+    fields = make_valid_fields(ts, sid, sp, pid, "NODE_01", soil, temp, bad_hum, light)
     result = validate_record(fields)
 
     assert isinstance(result, list), (
@@ -344,7 +347,7 @@ def test_out_of_range_light_reports_correct_sensor(
 
     **Validates: Requirements 2.12**
     """
-    fields = make_valid_fields(ts, sid, sp, pid, soil, temp, hum, bad_light)
+    fields = make_valid_fields(ts, sid, sp, pid, "NODE_01", soil, temp, hum, bad_light)
     result = validate_record(fields)
 
     assert isinstance(result, list), (
@@ -364,7 +367,7 @@ def test_out_of_range_light_reports_correct_sensor(
 
 EXPECTED_KEYS = {
     "timestamp", "session_id", "sampling_point", "plant_id",
-    "soil", "temperature", "humidity", "light",
+    "node_id", "soil", "temperature", "humidity", "light",
 }
 
 EXPECTED_TYPES = {
@@ -372,6 +375,7 @@ EXPECTED_TYPES = {
     "session_id":     int,
     "sampling_point": int,
     "plant_id":       int,
+    "node_id":        str,
     "soil":           float,
     "temperature":    float,
     "humidity":       float,

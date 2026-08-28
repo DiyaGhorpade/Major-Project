@@ -14,6 +14,7 @@ class ValidationError:
     bad_value: str  # raw string value that failed (always str for logging)
     reason: str     # human-readable explanation
     plant_id: str   # raw plant_id string (may be empty for structural errors)
+    node_id: str = ""  # raw node_id string if available, else empty
 
 
 # ============================================================
@@ -30,6 +31,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
             "session_id": int,
             "sampling_point": int,
             "plant_id": int,
+            "node_id": str,
             "soil": float,
             "temperature": float,
             "humidity": float,
@@ -54,6 +56,16 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
             )
         ]
 
+    if not config.validate_config():
+        return [
+            ValidationError(
+                sensor="record",
+                bad_value=",".join(fields),
+                reason="Invalid node configuration", 
+                plant_id="",
+            )
+        ]
+
     # --------------------------------------------------------
     # Extract raw fields
     # --------------------------------------------------------
@@ -62,10 +74,41 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
     session_id_raw   = fields[1]
     sampling_point_raw = fields[2]
     plant_id_raw     = fields[3]
-    soil_raw         = fields[4]
-    temperature_raw  = fields[5]
-    humidity_raw     = fields[6]
-    light_raw        = fields[7]
+    node_id_raw      = fields[4]
+    soil_raw         = fields[5]
+    temperature_raw  = fields[6]
+    humidity_raw     = fields[7]
+    light_raw        = fields[8]
+
+    # --------------------------------------------------------
+    # Node ID validation
+    # --------------------------------------------------------
+
+    if node_id_raw is None or node_id_raw.strip() == "":
+        return [
+            ValidationError(
+                sensor="node_id",
+                bad_value="" if node_id_raw is None else node_id_raw,
+                reason="Missing node_id",
+                plant_id=plant_id_raw,
+                node_id="MISSING",
+            )
+        ]
+
+    if not config.is_valid_node_id(node_id_raw):
+        if node_id_raw.strip().startswith(config.NODE_ID_PREFIX):
+            reason = "Node ID out of range"
+        else:
+            reason = "Expected node_id in NODE_XX format"
+        return [
+            ValidationError(
+                sensor="node_id",
+                bad_value=node_id_raw,
+                reason=reason,
+                plant_id=plant_id_raw,
+                node_id=node_id_raw,
+            )
+        ]
 
     # --------------------------------------------------------
     # Parse integer fields
@@ -80,6 +123,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
                 bad_value=session_id_raw,
                 reason="Expected an integer",
                 plant_id=plant_id_raw,
+                node_id=node_id_raw,
             )
         ]
 
@@ -92,6 +136,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
                 bad_value=sampling_point_raw,
                 reason="Expected an integer from 1 to 6",
                 plant_id=plant_id_raw,
+                node_id=node_id_raw,
             )
         ]
 
@@ -104,6 +149,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
                 bad_value=plant_id_raw,
                 reason="Expected an integer from 1 to 16",
                 plant_id=plant_id_raw,
+                node_id=node_id_raw,
             )
         ]
 
@@ -121,6 +167,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
                 bad_value=soil_raw,
                 reason="Expected a numeric value",
                 plant_id=str(plant_id),
+                node_id=node_id_raw,
             )
         ]
 
@@ -133,6 +180,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
                 bad_value=temperature_raw,
                 reason="Expected a numeric value",
                 plant_id=str(plant_id),
+                node_id=node_id_raw,
             )
         ]
 
@@ -145,6 +193,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
                 bad_value=humidity_raw,
                 reason="Expected a numeric value",
                 plant_id=str(plant_id),
+                node_id=node_id_raw,
             )
         ]
 
@@ -157,6 +206,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
                 bad_value=light_raw,
                 reason="Expected a numeric value",
                 plant_id=str(plant_id),
+                node_id=node_id_raw,
             )
         ]
 
@@ -171,6 +221,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
                 bad_value=str(session_id),
                 reason="Expected session_id >= 1",
                 plant_id=str(plant_id),
+                node_id=node_id_raw,
             )
         ]
 
@@ -184,6 +235,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
                 bad_value=str(sampling_point),
                 reason="Expected sampling point 1-6",
                 plant_id=str(plant_id),
+                node_id=node_id_raw,
             )
         ]
 
@@ -194,6 +246,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
                 bad_value=str(plant_id),
                 reason="Expected plant_id 1-16",
                 plant_id=str(plant_id),
+                node_id=node_id_raw,
             )
         ]
 
@@ -204,6 +257,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
                 bad_value=str(soil),
                 reason="Expected 0-100%",
                 plant_id=str(plant_id),
+                node_id=node_id_raw,
             )
         ]
 
@@ -217,6 +271,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
                 bad_value=str(temperature),
                 reason="Expected -40 to 80 C",
                 plant_id=str(plant_id),
+                node_id=node_id_raw,
             )
         ]
 
@@ -227,6 +282,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
                 bad_value=str(humidity),
                 reason="Expected 0-100%",
                 plant_id=str(plant_id),
+                node_id=node_id_raw,
             )
         ]
 
@@ -237,6 +293,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
                 bad_value=str(light),
                 reason="Expected 0-1000 lux",
                 plant_id=str(plant_id),
+                node_id=node_id_raw,
             )
         ]
 
@@ -249,6 +306,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
         "session_id":     session_id,
         "sampling_point": sampling_point,
         "plant_id":       plant_id,
+        "node_id":        node_id_raw,
         "soil":           soil,
         "temperature":    temperature,
         "humidity":       humidity,

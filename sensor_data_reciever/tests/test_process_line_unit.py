@@ -143,7 +143,7 @@ def test_valid_csv_line_calls_save_valid_record(mock_storage, monkeypatch):
     # Restore real validator (in case mock_validator fixture ran first)
     monkeypatch.setattr(receiver, "validator", real_validator)
 
-    valid_line = "2024-01-01T10:00:00,1,3,5,45.5,22.0,60.0,300.0"
+    valid_line = "2024-01-01T10:00:00,1,3,5,NODE_01,45.5,22.0,60.0,300.0"
     receiver.process_line(valid_line)
 
     # save_valid_record called exactly once
@@ -159,6 +159,7 @@ def test_valid_csv_line_calls_save_valid_record(mock_storage, monkeypatch):
     assert saved_dict["session_id"] == 1
     assert saved_dict["sampling_point"] == 3
     assert saved_dict["plant_id"] == 5
+    assert saved_dict["node_id"] == "NODE_01"
     assert saved_dict["soil"] == 45.5
     assert saved_dict["temperature"] == 22.0
     assert saved_dict["humidity"] == 60.0
@@ -177,7 +178,7 @@ def test_valid_csv_line_record_counter_increments(monkeypatch):
     monkeypatch.setattr(receiver, "storage", mock_stor)
     monkeypatch.setattr(receiver, "validator", real_validator)
 
-    receiver.process_line("2024-01-01T10:00:00,1,3,5,45.5,22.0,60.0,300.0")
+    receiver.process_line("2024-01-01T10:00:00,1,3,5,NODE_01,45.5,22.0,60.0,300.0")
     assert receiver.record_counter == 1
 
 
@@ -202,7 +203,7 @@ def test_invalid_csv_line_calls_log_error(mock_storage, monkeypatch):
     monkeypatch.setattr(receiver, "validator", real_validator)
 
     # session_id = "abc" is not a valid integer → validator returns a list[ValidationError]
-    invalid_line = "2024-01-01T10:00:00,abc,3,5,45.5,22.0,60.0,300.0"
+    invalid_line = "2024-01-01T10:00:00,abc,3,5,NODE_01,45.5,22.0,60.0,300.0"
     receiver.process_line(invalid_line)
 
     # log_error called exactly once
@@ -211,9 +212,9 @@ def test_invalid_csv_line_calls_log_error(mock_storage, monkeypatch):
     mock_stor.save_valid_record.assert_not_called()
 
     # Verify the five arguments passed to log_error
-    # Expected: log_error(record_id, plant_id, sensor, bad_value, reason)
+    # Expected: log_error(record_id, plant_id, sensor, bad_value, reason, node_id)
     args = mock_stor.log_error.call_args[0]
-    record_id, plant_id, sensor, bad_value, reason = args
+    record_id, plant_id, sensor, bad_value, reason, node_id = args
 
     assert record_id == "R000001"
     assert sensor == "session_id"
@@ -221,6 +222,7 @@ def test_invalid_csv_line_calls_log_error(mock_storage, monkeypatch):
     assert reason == "Expected an integer"
     # plant_id at index 3 of the raw line is "5" (raw string, before plant_id is parsed)
     assert plant_id == "5"
+    assert node_id == "NODE_01"
 
 
 def test_invalid_csv_line_record_counter_increments(monkeypatch):
@@ -234,7 +236,7 @@ def test_invalid_csv_line_record_counter_increments(monkeypatch):
     monkeypatch.setattr(receiver, "storage", mock_stor)
     monkeypatch.setattr(receiver, "validator", real_validator)
 
-    receiver.process_line("2024-01-01T10:00:00,abc,3,5,45.5,22.0,60.0,300.0")
+    receiver.process_line("2024-01-01T10:00:00,abc,3,5,NODE_01,45.5,22.0,60.0,300.0")
     assert receiver.record_counter == 1
 
 
@@ -254,8 +256,8 @@ def test_consecutive_ids_across_valid_and_invalid(monkeypatch):
     monkeypatch.setattr(receiver, "storage", mock_stor)
     monkeypatch.setattr(receiver, "validator", real_validator)
 
-    receiver.process_line("2024-01-01T10:00:00,1,3,5,45.5,22.0,60.0,300.0")
-    receiver.process_line("2024-01-01T10:00:01,abc,3,5,45.5,22.0,60.0,300.0")
+    receiver.process_line("2024-01-01T10:00:00,1,3,5,NODE_01,45.5,22.0,60.0,300.0")
+    receiver.process_line("2024-01-01T10:00:01,abc,3,5,NODE_02,45.5,22.0,60.0,300.0")
 
     # First call: save_valid_record with R000001
     saved_dict = mock_stor.save_valid_record.call_args_list[0][0][0]
