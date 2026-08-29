@@ -1,7 +1,19 @@
+"""
+storage.py — File initialisation and thread-safe CSV writing.
+
+All writes go through a single module-level Lock so that concurrent
+HTTP requests (e.g. a burst of 16 from the ESP32) never interleave
+partial rows into the output file.
+"""
+
 import csv
 import os
+import threading
 
 import config
+
+# One lock shared by all write operations in this module.
+_write_lock = threading.Lock()
 
 
 # ============================================================
@@ -10,78 +22,45 @@ import config
 
 def initialize_files() -> None:
     """
-    Create sensor_data.csv and error_log.csv with their headers
-    if they do not already exist.
+    Create sensor_data.csv with its header if it does not already exist.
 
-    Both absent  → create both with headers (normal startup).
-    Both present → leave both unchanged (no duplicate headers).
-    Exactly one missing → raise OSError without creating anything
-                          (all-or-nothing invariant).
+    Called once at server startup before any requests are accepted.
+    Uses the lock so a hypothetical race at startup cannot produce a
+    double-header (safe even if called from multiple threads).
     """
-    data_exists = os.path.exists(config.SENSOR_DATA_FILE)
-    error_exists = os.path.exists(config.ERROR_LOG_FILE)
-
-    if data_exists and error_exists:
-        # Both present — nothing to do.
-        return
-
-    if data_exists != error_exists:
-        # Exactly one file is missing — partial state is not allowed.
-        missing = (
-            config.ERROR_LOG_FILE if data_exists else config.SENSOR_DATA_FILE
-        )
-        present = (
-            config.SENSOR_DATA_FILE if data_exists else config.ERROR_LOG_FILE
-        )
-        raise OSError(
-            f"Partial output state detected: '{present}' exists but "
-            f"'{missing}' is missing. Remove or restore both files and "
-            f"restart the receiver."
-        )
-
-    # Both absent — create both with their respective headers.
-    with open(config.SENSOR_DATA_FILE, "w", newline="", encoding="utf-8") as f:
-        csv.writer(f).writerow(config.OUTPUT_HEADER)
-
-    with open(config.ERROR_LOG_FILE, "w", newline="", encoding="utf-8") as f:
-        csv.writer(f).writerow(config.ERROR_HEADER)
+    with _write_lock:
+        if not os.path.exists(config.SENSOR_DATA_FILE):
+            with open(config.SENSOR_DATA_FILE, "w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow(config.CSV_HEADER)
+            print(f"[INIT] Created {config.SENSOR_DATA_FILE} with header.")
+        else:
+            print(f"[INIT] {config.SENSOR_DATA_FILE} already exists — appending.")
 
 
 # ============================================================
 # SAVE VALID RECORD
 # ============================================================
 
-def save_valid_record(record: dict) -> None:
+def save_valid_record(fields: list) -> None:
     """
-    Append one valid record to sensor_data.csv.
+    Append one validated row to sensor_data.csv.
 
-    Fields are written in OUTPUT_HEADER order:
-        record_id, timestamp, session_id, sampling_point,
-        plant_id, soil, temperature, humidity, light
+    Parameters
+    ----------
+    fields : list
+        The 8 values in CSV_HEADER order, already validated.
+
+    The file is flushed and synced to disk immediately after the write
+    so no data is lost if the process is killed between rows.
+    The lock prevents two simultaneous requests from interleaving their
+    writes.
     """
-    row = [record[field] for field in config.OUTPUT_HEADER]
-
-    with open(config.SENSOR_DATA_FILE, "a", newline="", encoding="utf-8") as f:
-        csv.writer(f).writerow(row)
-
-
-# ============================================================
-# LOG ERROR
-# ============================================================
-
-def log_error(
-    record_id: str,
-    plant_id: str,
-    sensor: str,
-    bad_value: str,
-    reason: str,
-    node_id: str = "",
-) -> None:
-    """
-    Append one error row to error_log.csv.
-
-    Fields are written in ERROR_HEADER order:
-        record_id, plant_id, sensor, bad_value, reason, node_id
-    """
-    with open(config.ERROR_LOG_FILE, "a", newline="", encoding="utf-8") as f:
-        csv.writer(f).writerow([record_id, plant_id, sensor, bad_value, reason, node_id])
+    with _write_lock:
+        with open(config.SENSOR_DATA_FILE, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(fields)
+            # Flush Python's internal buffer then ask the OS to sync
+            # the data to disk — critical for crash safety.
+            f.flush()
+            os.fsync(f.fileno())

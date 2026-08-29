@@ -1,143 +1,300 @@
 """
-receiver.py — Orchestration layer for the sensor data receiver.
+receiver.py — HTTP server that accepts sensor data rows from an ESP32 over WiFi
+               and appends them to a local CSV file.
 
-Owns record_counter state and drives the processing pipeline.
+Run with:
+    python receiver.py
+
+Endpoints
+---------
+POST /upload   — body is one raw CSV row (plain text, 9 comma-separated fields)
+GET  /health   — returns 200 OK; use this to confirm the server is reachable
 """
 
-import csv
+# ============================================================
+# CONFIGURATION  ← edit these two values to change behaviour
+# ============================================================
 
-import serial
+PORT: int = 5000                        # listening port
+CSV_FILE: str = "sensor_data.csv"       # output file name
 
-import config
-import storage
-import validator
-from validator import ValidationError
+# CSV column names, in the exact order the ESP32 sends them
+CSV_HEADER: list[str] = [
+    "timestamp",
+    "session_id",
+    "node_id",
+    "sampling_point",
+    "plant_id",
+    "soil",
+    "temperature",
+    "humidity",
+    "light",
+]
 
-record_counter: int = 0
-
-
-def generate_record_id() -> str:
-    """
-    Increment record_counter and return a formatted record ID.
-
-    Format: R{counter:06d}  →  "R000001", "R000002", …
-    Called exactly once per non-empty, non-header line.
-    """
-    global record_counter
-    record_counter += 1
-    return f"R{record_counter:06d}"
-
-
-def process_line(line: str) -> None:
-    """
-    Full pipeline for one serial line:
-      1. strip()
-      2. skip if empty (no ID consumed)
-      3. skip if line == INPUT_HEADER joined by comma (no ID consumed)
-      4. generate_record_id()
-      5. csv.reader parse → fields list
-         on parse error: log_error + print [INVALID] + return
-      6. validate_record(fields)
-      7a. on dict: add record_id, save_valid_record, print [VALID]
-      7b. on list[ValidationError]: log each error, print [INVALID]
-    """
-    # Step 1 — strip whitespace
-    line = line.strip()
-
-    # Step 2 — skip empty lines (no ID consumed)
-    if not line:
-        return
-
-    # Step 3 — skip header line (no ID consumed)
-    if line == ",".join(config.INPUT_HEADER):
-        return
-
-    # Step 4 — consume one record ID
-    record_id = generate_record_id()
-
-    # Step 5 — CSV parse
-    try:
-        fields = next(csv.reader([line]))
-    except Exception:
-        storage.log_error(record_id, "", "record", line, "CSV parsing error")
-        print(f"[INVALID] {record_id} - CSV parsing error")
-        return
-
-    # Step 6 — validate
-    result = validator.validate_record(fields)
-
-    # Step 7a — valid record
-    if isinstance(result, dict):
-        result["record_id"] = record_id
-        storage.save_valid_record(result)
-        print(
-            f"[VALID] {record_id} | "
-            f"Session {result['session_id']} | "
-            f"Sampling Point {result['sampling_point']} | "
-            f"Plant {result['plant_id']}"
-        )
-
-    # Step 7b — validation errors
-    else:
-        for error in result:
-            storage.log_error(
-                record_id,
-                error.plant_id,
-                error.sensor,
-                error.bad_value,
-                error.reason,
-                error.node_id,
-            )
-        print(f"[INVALID] {record_id}")
-
-
-def main() -> None:
-    """
-    Entry point for the sensor data receiver.
-
-    1. Initialize output files.
-    2. Print startup banner.
-    3. Open serial connection and loop, passing each decoded line to process_line.
-    4. Handle KeyboardInterrupt and serial.SerialException cleanly.
-    """
-    # Step 1 — initialize files before touching the serial port
-    storage.initialize_files()
-
-    # Step 2 — startup banner (printed before the port is opened)
-    print("----------------------------------------")
-    print("Sensor Data Receiver")
-    print("----------------------------------------")
-    print(f"Serial port : {config.SERIAL_PORT}")
-    print(f"Baud rate   : {config.BAUD_RATE}")
-    print(f"Output      : {config.SENSOR_DATA_FILE}")
-    print(f"Errors      : {config.ERROR_LOG_FILE}")
-    print("----------------------------------------")
-    print("Waiting for sensor data...")
-    print()
-
-    # Step 3 — open serial and read loop
-    try:
-        with serial.Serial(config.SERIAL_PORT, config.BAUD_RATE, timeout=1) as serial_connection:
-            while True:
-                line = serial_connection.readline().decode("utf-8", errors="replace")
-                if line:
-                    process_line(line)
-
-    # Step 4a — graceful shutdown on Ctrl-C
-    except KeyboardInterrupt:
-        print()
-        print("Receiver stopped.")
-
-    # Step 4b — serial port error
-    except serial.SerialException as error:
-        print()
-        print("Serial connection error:")
-        print(error)
+EXPECTED_FIELDS: int = len(CSV_HEADER)  # 9 — derived from CSV_HEADER, not hardcoded
 
 
 # ============================================================
-# PROGRAM ENTRY
+# VALIDATION BOUNDS
+# ============================================================
+
+VALID_SESSION_ID_MIN     = 1
+VALID_SAMPLING_POINT_MIN = 1
+VALID_SAMPLING_POINT_MAX = 6
+VALID_PLANT_ID_MIN       = 1
+VALID_PLANT_ID_MAX       = 16
+VALID_SOIL_MIN           = 0.0
+VALID_SOIL_MAX           = 100.0
+VALID_TEMP_MIN           = -40.0
+VALID_TEMP_MAX           = 80.0
+VALID_HUMIDITY_MIN       = 0.0
+VALID_HUMIDITY_MAX       = 100.0
+VALID_LIGHT_MIN          = 0.0
+VALID_LIGHT_MAX          = 100_000.0   # lux; direct sunlight can exceed 1 000
+
+
+# ============================================================
+# IMPORTS
+# ============================================================
+
+import csv
+import os
+import threading
+from datetime import datetime
+
+from flask import Flask, request, Response
+
+# ============================================================
+# FLASK APP
+# ============================================================
+
+app = Flask(__name__)
+
+# One lock shared by every request handler — prevents interleaved writes
+# when the ESP32 sends a burst of 16 rows in rapid succession.
+_file_lock = threading.Lock()
+
+
+# ============================================================
+# STARTUP — create the CSV with a header if it doesn't exist
+# ============================================================
+
+def _init_csv() -> None:
+    """Create CSV_FILE with the header row if the file is absent."""
+    if not os.path.exists(CSV_FILE):
+        with open(CSV_FILE, "w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerow(CSV_HEADER)
+        print(f"[INIT] Created '{CSV_FILE}' with header.")
+    else:
+        print(f"[INIT] '{CSV_FILE}' already exists — rows will be appended.")
+
+
+# ============================================================
+# VALIDATION
+# ============================================================
+
+def _validate(fields: list[str]) -> str | None:
+    """
+    Check that the 9 parsed fields are within expected types and ranges.
+
+    Returns None on success, or a human-readable error string on failure.
+    The check is fail-fast: the first problem found is returned immediately.
+    """
+    # --- structural ---
+    if len(fields) != EXPECTED_FIELDS:
+        return f"Expected {EXPECTED_FIELDS} fields, got {len(fields)}"
+
+    timestamp, session_id_raw, node_id_raw, sampling_point_raw, \
+        plant_id_raw, soil_raw, temp_raw, humidity_raw, light_raw = fields
+
+    # --- timestamp: just check it's not blank ---
+    if not timestamp.strip():
+        return "timestamp is empty"
+
+    # --- session_id ---
+    try:
+        session_id = int(session_id_raw)
+    except ValueError:
+        return f"session_id is not an integer: '{session_id_raw}'"
+    if session_id < VALID_SESSION_ID_MIN:
+        return f"session_id must be >= {VALID_SESSION_ID_MIN}, got {session_id}"
+
+    # --- node_id: must be non-blank ---
+    if not node_id_raw.strip():
+        return "node_id is empty"
+
+    # --- sampling_point ---
+    try:
+        sampling_point = int(sampling_point_raw)
+    except ValueError:
+        return f"sampling_point is not an integer: '{sampling_point_raw}'"
+    if not (VALID_SAMPLING_POINT_MIN <= sampling_point <= VALID_SAMPLING_POINT_MAX):
+        return (f"sampling_point out of range [{VALID_SAMPLING_POINT_MIN}–"
+                f"{VALID_SAMPLING_POINT_MAX}]: {sampling_point}")
+
+    # --- plant_id ---
+    try:
+        plant_id = int(plant_id_raw)
+    except ValueError:
+        return f"plant_id is not an integer: '{plant_id_raw}'"
+    if not (VALID_PLANT_ID_MIN <= plant_id <= VALID_PLANT_ID_MAX):
+        return (f"plant_id out of range [{VALID_PLANT_ID_MIN}–"
+                f"{VALID_PLANT_ID_MAX}]: {plant_id}")
+
+    # --- soil ---
+    try:
+        soil = float(soil_raw)
+    except ValueError:
+        return f"soil is not a number: '{soil_raw}'"
+    if not (VALID_SOIL_MIN <= soil <= VALID_SOIL_MAX):
+        return f"soil out of range [{VALID_SOIL_MIN}–{VALID_SOIL_MAX}]: {soil}"
+
+    # --- temperature ---
+    try:
+        temp = float(temp_raw)
+    except ValueError:
+        return f"temperature is not a number: '{temp_raw}'"
+    if not (VALID_TEMP_MIN <= temp <= VALID_TEMP_MAX):
+        return f"temperature out of range [{VALID_TEMP_MIN}–{VALID_TEMP_MAX}]: {temp}"
+
+    # --- humidity ---
+    try:
+        humidity = float(humidity_raw)
+    except ValueError:
+        return f"humidity is not a number: '{humidity_raw}'"
+    if not (VALID_HUMIDITY_MIN <= humidity <= VALID_HUMIDITY_MAX):
+        return (f"humidity out of range [{VALID_HUMIDITY_MIN}–"
+                f"{VALID_HUMIDITY_MAX}]: {humidity}")
+
+    # --- light ---
+    try:
+        light = float(light_raw)
+    except ValueError:
+        return f"light is not a number: '{light_raw}'"
+    if not (VALID_LIGHT_MIN <= light <= VALID_LIGHT_MAX):
+        return f"light out of range [{VALID_LIGHT_MIN}–{VALID_LIGHT_MAX}]: {light}"
+
+    return None  # all checks passed
+
+
+# ============================================================
+# ROUTES
+# ============================================================
+
+@app.route("/health", methods=["GET"])
+def health() -> Response:
+    """
+    Simple liveness check.
+    The ESP32 can GET /health before each session to confirm the server
+    is up and reachable before it starts sending data.
+    """
+    return Response("OK\n", status=200, mimetype="text/plain")
+
+
+@app.route("/upload", methods=["POST"])
+def upload() -> Response:
+    """
+    Accept one CSV row as plain-text POST body, validate it, and append
+    it to the CSV file.
+
+    Expected body (no header, no quotes needed unless a field contains a comma):
+        2024-01-15T12:00:00,1,NODE_01,3,7,45.2,23.1,60.5,512.0
+
+    Returns 200 on success, 400 on any validation or parsing failure.
+    The server never crashes on a bad row — all exceptions are caught and
+    logged to the console.
+    """
+    try:
+        # --- read the raw body as text ---
+        raw_body = request.get_data(as_text=True).strip()
+
+        if not raw_body:
+            _log_rejected("<empty body>", "Request body is empty")
+            return Response("ERROR: empty body\n", status=400, mimetype="text/plain")
+
+        # --- split on commas (csv.reader handles quoted fields correctly) ---
+        try:
+            fields = next(csv.reader([raw_body]))
+        except StopIteration:
+            _log_rejected(raw_body, "CSV parsing yielded no fields")
+            return Response("ERROR: could not parse CSV row\n",
+                            status=400, mimetype="text/plain")
+
+        # Strip surrounding whitespace from every field
+        fields = [f.strip() for f in fields]
+
+        # --- validate ---
+        error = _validate(fields)
+        if error:
+            _log_rejected(raw_body, error)
+            return Response(f"ERROR: {error}\n", status=400, mimetype="text/plain")
+
+        # --- write to disk (lock ensures no interleaved rows) ---
+        with _file_lock:
+            with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
+                csv.writer(f).writerow(fields)
+                f.flush()           # flush Python's buffer
+                os.fsync(f.fileno()) # ask the OS to commit to disk
+
+        # --- console confirmation ---
+        _log_accepted(fields)
+
+        return Response("OK\n", status=200, mimetype="text/plain")
+
+    except Exception as exc:
+        # Catch-all: log but never crash the server
+        print(f"[ERROR] Unhandled exception in /upload: {exc}")
+        return Response("ERROR: internal server error\n",
+                        status=500, mimetype="text/plain")
+
+
+# ============================================================
+# CONSOLE LOGGING HELPERS
+# ============================================================
+
+def _log_accepted(fields: list[str]) -> None:
+    """Print a one-liner for every successfully written row."""
+    ts = datetime.now().strftime("%H:%M:%S")
+    # fields order: timestamp, session_id, node_id, sampling_point,
+    #               plant_id, soil, temperature, humidity, light
+    print(
+        f"[{ts}] [OK]      "
+        f"session={fields[1]}  node={fields[2]}  "
+        f"sp={fields[3]}  plant={fields[4]}  "
+        f"soil={fields[5]}%  temp={fields[6]}°C  "
+        f"hum={fields[7]}%  light={fields[8]} lux"
+    )
+
+
+def _log_rejected(raw: str, reason: str) -> None:
+    """Print a one-liner for every rejected row, with the reason."""
+    ts = datetime.now().strftime("%H:%M:%S")
+    # Truncate very long bodies so the console stays readable
+    preview = raw if len(raw) <= 120 else raw[:117] + "..."
+    print(f"[{ts}] [REJECT]  {reason} | row: {preview}")
+
+
+# ============================================================
+# ENTRY POINT
 # ============================================================
 
 if __name__ == "__main__":
-    main()
+    # Initialise the output file before accepting any connections
+    _init_csv()
+
+    print("=" * 56)
+    print("  Sensor Data Receiver  —  HTTP mode")
+    print("=" * 56)
+    print(f"  Listening  : 0.0.0.0:{PORT}")
+    print(f"  Upload     : POST http://<this-ip>:{PORT}/upload")
+    print(f"  Health     : GET  http://<this-ip>:{PORT}/health")
+    print(f"  Output     : {CSV_FILE}")
+    print("  Stop       : Ctrl-C")
+    print("=" * 56)
+    print()
+
+    # threaded=True lets Flask handle multiple simultaneous connections
+    # (one per OS thread) — important for rapid bursts from the ESP32.
+    # Use host="0.0.0.0" so the server is reachable on the local network,
+    # not just from localhost.
+    app.run(host="0.0.0.0", port=PORT, threaded=True)
