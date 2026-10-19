@@ -31,19 +31,17 @@ Firmware still prints over serial, uses `millis()` timestamps, and applies a
 common linear soil conversion. A common CSV layout does not provide a wireless
 connection or synchronized time by itself.
 
-## Independent receiver and validator
+## Receiver and shared validator
 
 `receiver.py` runs a Flask server on `0.0.0.0:5000`, exposing `GET /health` and
 `POST /upload`. Uploads contain one plain-text CSV row without a header. Accepted
 rows are appended under a thread lock and flushed to `sensor_data.csv`.
 Rejected rows are printed to the console, not written to `error_log.csv`.
 
-`validator.py` is an independent validation utility, not part of the server's
-request path. It follows the same column order, accepts node IDs `"1"` or `"2"`,
+`receiver.py` delegates record validation to `validator.validate_record()`. It follows the same column order, accepts node IDs `"1"` or `"2"`,
 and returns either a parsed dictionary or a fail-fast list of `ValidationError`
 objects. Node IDs remain strings in its result. Its checks no longer depend on
-nonexistent configuration helpers. The HTTP server retains its own validation;
-it currently only requires a nonblank node ID and timestamp.
+nonexistent configuration helpers. The HTTP server uses these same rules without adding separate field checks.
 
 Both paths now allow sensor IDs 1-12 rather than treating them as scan numbers
 1-6. Plant bounds remain 1-16 for compatibility. Neither path currently enforces
@@ -52,21 +50,21 @@ The firmware limits actual collection to the configured 12/4 channels.
 
 ## Exactly which configuration settings take effect
 
-`config.py` configures the separate `validator.py` and `storage.py` utilities.
-It does not configure `receiver.py`, which keeps its own settings. These remain
-independent; integrating them is not required by this collection convention.
+`config.py` supplies the shared CSV header and the validation bounds used by
+`validator.py`, including HTTP uploads. The receiver retains its own port and
+output-file settings; `storage.py` remains a separate utility.
 
 | Setting | config.py utilities | Standalone receiver.py |
 | --- | --- | --- |
 | Bind address | `HOST` (not used by validation/storage) | `host="0.0.0.0"` in `app.run` |
 | Port | `PORT` (not used by validation/storage) | `PORT` |
 | Output CSV | `SENSOR_DATA_FILE` | `CSV_FILE` |
-| Header / count | `CSV_HEADER`, `EXPECTED_FIELDS` | `CSV_HEADER`, `EXPECTED_FIELDS` |
-| Sensor bounds | `VALID_SAMPLING_POINT_MIN/MAX` | Same names |
-| Temperature bounds | `VALID_TEMPERATURE_MIN/MAX` | `VALID_TEMP_MIN/MAX` |
-| Other numeric bounds | `VALID_SESSION_ID_MIN`, `VALID_PLANT_ID_MIN/MAX`, soil/humidity/light bounds | Same names |
+| Header / count | `CSV_HEADER`, `EXPECTED_FIELDS` | Header from config; count checked by validator |
+| Sensor bounds | `VALID_SAMPLING_POINT_MIN/MAX` | Applied through validator |
+| Temperature bounds | `VALID_TEMPERATURE_MIN/MAX` | Applied through validator |
+| Other numeric bounds | `VALID_SESSION_ID_MIN`, `VALID_PLANT_ID_MIN/MAX`, soil/humidity/light bounds | Applied through validator |
 
-The sensor-ID correction is already applied in both files:
+The shared sensor-ID bounds in `config.py` are:
 
 ```python
 VALID_SAMPLING_POINT_MIN = 1
@@ -144,3 +142,21 @@ See the [hardware README](../hardware-code/README.md) for sketch details.
 `docs/jetson_deployment_guide.docx` and older examples in `../docs/` describe other
 hardware arrangements, schemas, or pin assignments. The dashboard uses stored
 replay data, and image acquisition remains open in Rev. 3.
+
+## Receiver-assigned record metadata
+
+At entry to the upload handler, before parsing or validation, HTTP ingestion
+captures an ISO 8601 UTC `received_at` timestamp. Approved records retain it.
+After validation succeeds, HTTP ingestion assigns a UUID4 `record_id` and an
+ISO 8601 UTC `accepted_at` timestamp before writing. The device `timestamp`
+is preserved. The POST body remains the same nine fields; stored CSV columns are:
+
+```text
+record_id,received_at,accepted_at,timestamp,session_id,node_id,sampling_point,plant_id,soil,temperature,humidity,light
+```
+
+Each accepted upload gets a new ID, including repeated submissions; this does
+not implement deduplication. Existing incompatible CSV headers cause startup
+to fail (or uploads to return HTTP 500), without appending or migrating data.
+Back up existing data and select a new output path or explicitly migrate it.
+The standalone storage utility retains its existing nine-field format.

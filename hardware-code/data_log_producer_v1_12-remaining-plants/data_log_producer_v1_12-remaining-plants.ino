@@ -18,35 +18,9 @@ BH1750 lightMeter;
 // Change timing values ONLY in this section.
 // ============================================================
 
-// Set to true for Wokwi accelerated simulation.
-// Set to false for real-time operation.
+// Select per-plant pacing only; this does not schedule acquisition.
+// true: 100 ms (Wokwi), false: 500 ms (real system).
 const bool SIMULATION_MODE = true;
-
-
-// Real-world collection requirements
-const unsigned long REAL_SAMPLE_INTERVAL =
-  5UL * 60UL * 1000UL;                 // 5 minutes
-
-const unsigned long REAL_SESSION_DURATION =
-  30UL * 60UL * 1000UL;                // 30 minutes
-
-
-// Wokwi simulation speed
-// 1 simulated minute = 1 real second
-const unsigned long SIMULATED_MINUTE =
-  1000UL;
-
-
-// Automatically select the correct timing
-const unsigned long SAMPLE_INTERVAL =
-  SIMULATION_MODE
-    ? 5UL * SIMULATED_MINUTE
-    : REAL_SAMPLE_INTERVAL;
-
-const unsigned long COLLECTION_DURATION =
-  SIMULATION_MODE
-    ? 30UL * SIMULATED_MINUTE
-    : REAL_SESSION_DURATION;
 
 
 // MUX timing
@@ -59,13 +33,6 @@ const unsigned long PLANT_READ_DELAY =
   SIMULATION_MODE
     ? 100UL      // Wokwi
     : 500UL;     // Real system
-
-
-// ============================================================
-// SESSION STATE
-// ============================================================
-
-int sessionId = 1;
 
 
 // ============================================================
@@ -130,7 +97,13 @@ void setup() {
 // Keep sensor IDs with their probes if the wiring or pot assignment changes.
 // ============================================================
 
-void collectSample() {
+// Perform one complete blocking scan: read shared environmental sensors once,
+// then visit channels 0 through CHANNEL_COUNT - 1 exactly once and emit one
+// unchanged CSV record per channel. sessionId is supplied by the caller and is
+// copied into every record; this function never assigns or advances session IDs.
+// Call only after setup(), from one firmware context at a time (not reentrant).
+// The caller owns invocation timing; no automatic collection is installed.
+void collectSample(int sessionId) {
 
   // ----------------------------------------------------------
   // Read shared environmental conditions once.
@@ -208,87 +181,10 @@ void collectSample() {
 
 
 // ============================================================
-// MAIN COLLECTION SESSION
+// IDLE: acquisition is invoked explicitly by a future caller.
 // ============================================================
 
 void loop() {
-
-  unsigned long sessionStart = millis();
-
-
-  // Number of scans in one session:
-  //
-  // 1 → 0 minutes
-  // 2 → 5 minutes
-  // 3 → 10 minutes
-  // 4 → 15 minutes
-  // 5 → 20 minutes
-  // 6 → 25 minutes
-  //
-  // = 6 scans
-
-
-  const int TOTAL_SAMPLES =
-    COLLECTION_DURATION / SAMPLE_INTERVAL;
-
-
-  // ----------------------------------------------------------
-  // Run all scans in this session
-  // ----------------------------------------------------------
-
-  for (
-    int sampleNumber = 0;
-    sampleNumber < TOTAL_SAMPLES;
-    sampleNumber++
-  ) {
-
-
-    // --------------------------------------------------------
-    // sampleNumber is the scan index, independent of sensor identity
-    // --------------------------------------------------------
-
-
-
-    // --------------------------------------------------------
-    // Determine when this scan is supposed to occur
-    // --------------------------------------------------------
-
-    unsigned long targetTime =
-      sessionStart +
-      (sampleNumber * SAMPLE_INTERVAL);
-
-
-    // --------------------------------------------------------
-    // If the previous scan finished early,
-    // wait until the scheduled scan.
-    //
-    // If scanning already took longer than the interval,
-    // do not wait.
-    // --------------------------------------------------------
-
-    unsigned long currentTime = millis();
-
-    if (currentTime < targetTime) {
-
-      delay(targetTime - currentTime);
-    }
-
-
-    // --------------------------------------------------------
-    // Collect all 12 plants
-    // --------------------------------------------------------
-
-    collectSample();
-  }
-
-
-  // ----------------------------------------------------------
-  // SESSION COMPLETE
-  // ----------------------------------------------------------
-
-  sessionId++;
-
-
-  // Small pause before beginning the next session
+  // No automatic scans or session advancement.
   delay(100);
 }

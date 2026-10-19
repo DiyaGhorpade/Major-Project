@@ -18,41 +18,6 @@ GET  /health   — returns 200 OK; use this to confirm the server is reachable
 PORT: int = 5000                        # listening port
 CSV_FILE: str = "sensor_data.csv"       # output file name
 
-# CSV column names, in the exact order the ESP32 sends them
-CSV_HEADER: list[str] = [
-    "timestamp",
-    "session_id",
-    "node_id",
-    "sampling_point",
-    "plant_id",
-    "soil",
-    "temperature",
-    "humidity",
-    "light",
-]
-
-EXPECTED_FIELDS: int = len(CSV_HEADER)  # 9 — derived from CSV_HEADER, not hardcoded
-
-
-# ============================================================
-# VALIDATION BOUNDS
-# ============================================================
-
-VALID_SESSION_ID_MIN     = 1
-VALID_SAMPLING_POINT_MIN = 1
-VALID_SAMPLING_POINT_MAX = 12
-VALID_PLANT_ID_MIN       = 1
-VALID_PLANT_ID_MAX       = 16
-VALID_SOIL_MIN           = 0.0
-VALID_SOIL_MAX           = 100.0
-VALID_TEMP_MIN           = -40.0
-VALID_TEMP_MAX           = 80.0
-VALID_HUMIDITY_MIN       = 0.0
-VALID_HUMIDITY_MAX       = 100.0
-VALID_LIGHT_MIN          = 0.0
-VALID_LIGHT_MAX          = 100_000.0   # lux; direct sunlight can exceed 1 000
-
-
 # ============================================================
 # IMPORTS
 # ============================================================
@@ -60,9 +25,15 @@ VALID_LIGHT_MAX          = 100_000.0   # lux; direct sunlight can exceed 1 000
 import csv
 import os
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
+from uuid import uuid4
 
 from flask import Flask, request, Response
+
+import config
+import validator
+
+CSV_HEADER = ["record_id", "received_at", "accepted_at", *config.CSV_HEADER]
 
 # ============================================================
 # FLASK APP
@@ -80,101 +51,21 @@ _file_lock = threading.Lock()
 # ============================================================
 
 def _init_csv() -> None:
-    """Create CSV_FILE with the header row if the file is absent."""
+    """Create the output or reject an incompatible existing header.
+
+    Caller must hold _file_lock when requests may be running.
+    """
     if not os.path.exists(CSV_FILE):
         with open(CSV_FILE, "w", newline="", encoding="utf-8") as f:
             csv.writer(f).writerow(CSV_HEADER)
-        print(f"[INIT] Created '{CSV_FILE}' with header.")
     else:
-        print(f"[INIT] '{CSV_FILE}' already exists — rows will be appended.")
-
-
-# ============================================================
-# VALIDATION
-# ============================================================
-
-def _validate(fields: list[str]) -> str | None:
-    """
-    Check that the 9 parsed fields are within expected types and ranges.
-
-    Returns None on success, or a human-readable error string on failure.
-    The check is fail-fast: the first problem found is returned immediately.
-    """
-    # --- structural ---
-    if len(fields) != EXPECTED_FIELDS:
-        return f"Expected {EXPECTED_FIELDS} fields, got {len(fields)}"
-
-    timestamp, session_id_raw, node_id_raw, sampling_point_raw, \
-        plant_id_raw, soil_raw, temp_raw, humidity_raw, light_raw = fields
-
-    # --- timestamp: just check it's not blank ---
-    if not timestamp.strip():
-        return "timestamp is empty"
-
-    # --- session_id ---
-    try:
-        session_id = int(session_id_raw)
-    except ValueError:
-        return f"session_id is not an integer: '{session_id_raw}'"
-    if session_id < VALID_SESSION_ID_MIN:
-        return f"session_id must be >= {VALID_SESSION_ID_MIN}, got {session_id}"
-
-    # --- node_id: must be non-blank ---
-    if not node_id_raw.strip():
-        return "node_id is empty"
-
-    # --- sampling_point ---
-    try:
-        sampling_point = int(sampling_point_raw)
-    except ValueError:
-        return f"sampling_point is not an integer: '{sampling_point_raw}'"
-    if not (VALID_SAMPLING_POINT_MIN <= sampling_point <= VALID_SAMPLING_POINT_MAX):
-        return (f"sampling_point out of range [{VALID_SAMPLING_POINT_MIN}–"
-                f"{VALID_SAMPLING_POINT_MAX}]: {sampling_point}")
-
-    # --- plant_id ---
-    try:
-        plant_id = int(plant_id_raw)
-    except ValueError:
-        return f"plant_id is not an integer: '{plant_id_raw}'"
-    if not (VALID_PLANT_ID_MIN <= plant_id <= VALID_PLANT_ID_MAX):
-        return (f"plant_id out of range [{VALID_PLANT_ID_MIN}–"
-                f"{VALID_PLANT_ID_MAX}]: {plant_id}")
-
-    # --- soil ---
-    try:
-        soil = float(soil_raw)
-    except ValueError:
-        return f"soil is not a number: '{soil_raw}'"
-    if not (VALID_SOIL_MIN <= soil <= VALID_SOIL_MAX):
-        return f"soil out of range [{VALID_SOIL_MIN}–{VALID_SOIL_MAX}]: {soil}"
-
-    # --- temperature ---
-    try:
-        temp = float(temp_raw)
-    except ValueError:
-        return f"temperature is not a number: '{temp_raw}'"
-    if not (VALID_TEMP_MIN <= temp <= VALID_TEMP_MAX):
-        return f"temperature out of range [{VALID_TEMP_MIN}–{VALID_TEMP_MAX}]: {temp}"
-
-    # --- humidity ---
-    try:
-        humidity = float(humidity_raw)
-    except ValueError:
-        return f"humidity is not a number: '{humidity_raw}'"
-    if not (VALID_HUMIDITY_MIN <= humidity <= VALID_HUMIDITY_MAX):
-        return (f"humidity out of range [{VALID_HUMIDITY_MIN}–"
-                f"{VALID_HUMIDITY_MAX}]: {humidity}")
-
-    # --- light ---
-    try:
-        light = float(light_raw)
-    except ValueError:
-        return f"light is not a number: '{light_raw}'"
-    if not (VALID_LIGHT_MIN <= light <= VALID_LIGHT_MAX):
-        return f"light out of range [{VALID_LIGHT_MIN}–{VALID_LIGHT_MAX}]: {light}"
-
-    return None  # all checks passed
+        with open(CSV_FILE, newline="", encoding="utf-8") as f:
+            header = next(csv.reader(f), None)
+        if header != CSV_HEADER:
+            raise ValueError(
+                f"Incompatible CSV header in {CSV_FILE}; select a new output file "
+                "or explicitly migrate the existing file before collecting data."
+            )
 
 
 # ============================================================
@@ -204,6 +95,8 @@ def upload() -> Response:
     The server never crashes on a bad row — all exceptions are caught and
     logged to the console.
     """
+    received_at = datetime.now(timezone.utc).isoformat(timespec="microseconds")
+
     try:
         # --- read the raw body as text ---
         raw_body = request.get_data(as_text=True).strip()
@@ -224,15 +117,22 @@ def upload() -> Response:
         fields = [f.strip() for f in fields]
 
         # --- validate ---
-        error = _validate(fields)
-        if error:
+        result = validator.validate_record(fields)
+        if isinstance(result, list):
+            error = "; ".join(f"{item.sensor}: {item.reason}" for item in result)
             _log_rejected(raw_body, error)
             return Response(f"ERROR: {error}\n", status=400, mimetype="text/plain")
 
+        # Receiver metadata is assigned only after successful validation.
+        record_id = str(uuid4())
+        accepted_at = datetime.now(timezone.utc).isoformat(timespec="microseconds")
+        stored_fields = [record_id, received_at, accepted_at, *fields]
+
         # --- write to disk (lock ensures no interleaved rows) ---
         with _file_lock:
+            _init_csv()
             with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
-                csv.writer(f).writerow(fields)
+                csv.writer(f).writerow(stored_fields)
                 f.flush()           # flush Python's buffer
                 os.fsync(f.fileno()) # ask the OS to commit to disk
 
