@@ -24,18 +24,29 @@ within a session. Keep that ID with the probe if it moves to a different pot;
 - `data_log_producer_v1_4-light-deprived/`: intended Node B firmware.
 - `libraries/`: bundled BH1750 and DHT libraries and their examples.
 
-Both sketches currently scan all 16 MUX channels, label plants as channel + 1,
-and send eight-field CSV over serial at 115200 baud:
+The sketches use explicit `NODE_ID` and `CHANNEL_COUNT` constants:
+
+| Sketch | Node ID | Channels | Local plant/sensor IDs | Rows per scan |
+| --- | --- | --- | --- | --- |
+| 12-plant | 1 | C0-C11 | 1-12 | 12 |
+| 4-plant | 2 | C0-C3 | 1-4 | 4 |
+
+Plant identity is `(node_id, plant_id)`; local IDs may overlap across nodes.
+Sensor identity is `(node_id, sampling_point)`. The current fixed wiring assigns
+both local IDs as channel + 1. If probes move, replace that assignment with an
+explicit mapping that preserves probe identity.
+
+Each sketch prints nine-field CSV over serial at 115200 baud:
 
 ```text
-timestamp,session_id,sampling_point,plant_id,soil,temperature,humidity,light
+timestamp,session_id,node_id,sampling_point,plant_id,soil,temperature,humidity,light
 ```
 
-They currently populate `sampling_point` with the session's measurement number
-1-6, which must change to the stable sensor ID. Their timestamps are `millis()`
-since boot. Soil is a common linear ADC-to-0-100 conversion, not per-probe
-calibration. Both have `SIMULATION_MODE = true`; disabling it selects the
-configured five-minute sampling interval within thirty-minute sessions.
+`sampling_point` is now the local sensor ID and remains stable across scans.
+`sampleNumber` independently controls the six scans in a session. Timestamps are
+still `millis()` since boot. Soil is a common linear ADC-to-0-100 conversion,
+not per-probe calibration. Both have `SIMULATION_MODE = true`; disabling it
+selects the configured five-minute interval. Session-boundary timing is unchanged.
 
 Current pin assignments in the source are:
 
@@ -51,18 +62,14 @@ examples use different pins; they are not the pin reference for these sketches.
 
 ## Firmware changes needed for Rev. 3
 
-1. Set node ID `1` for A and `2` for B, and define an explicit
-   channel-to-plant-to-sensor mapping per ESP32.
-   Read only the 12 connected probes on A and four on B. Do not assume a probe
-   ID always equals a plant ID or that occupied channels are necessarily contiguous.
-2. Set `sampling_point` from that mapping. Keep scan/session numbering separate
-   from sensor identity. Agree numeric IDs with the receiver before collection.
-3. Implement Wi-Fi connection and plain-text HTTP POSTs to
-   `http://<JETSON_LAN_IP>:5000/upload`. Add `node_id` in the receiver's agreed
-   column order: `timestamp,session_id,node_id,sampling_point,plant_id,soil,temperature,humidity,light`.
-   Send `1` or `2` in that third field. The separate Jetson `validator.py` now
-   enforces these IDs and this order; `receiver.py` still uses its own looser
-   node validation. The existing `Serial.println` calls do not transmit to Jetson.
+1. Verify that occupied MUX channels match C0-C11 on A and C0-C3 on B.
+   Keep node IDs 1 and 2 and the node-local plant/sensor identity convention.
+   Introduce explicit mappings if the physical assignments change.
+2. Keep sensor identity separate from the scan index; this is implemented.
+3. Wireless transfer is deferred. When implementing it, send the existing
+   nine-field serial schema as a plain-text POST to
+   `http://<JETSON_LAN_IP>:5000/upload`. Serial printing alone does not transmit
+   to the HTTP server.
 4. Use synchronized datetime timestamps, through NTP or Jetson time correction,
    rather than `millis()`. Keep both nodes on the same time convention.
 5. Preserve raw ADC and MUX channel; calculate `soil` using measured calibration

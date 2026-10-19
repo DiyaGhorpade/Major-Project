@@ -40,7 +40,7 @@ EXPECTED_FIELDS: int = len(CSV_HEADER)  # 9 — derived from CSV_HEADER, not har
 
 VALID_SESSION_ID_MIN     = 1
 VALID_SAMPLING_POINT_MIN = 1
-VALID_SAMPLING_POINT_MAX = 6
+VALID_SAMPLING_POINT_MAX = 12
 VALID_PLANT_ID_MIN       = 1
 VALID_PLANT_ID_MAX       = 16
 VALID_SOIL_MIN           = 0.0
@@ -198,7 +198,7 @@ def upload() -> Response:
     it to the CSV file.
 
     Expected body (no header, no quotes needed unless a field contains a comma):
-        2024-01-15T12:00:00,1,NODE_01,3,7,45.2,23.1,60.5,512.0
+        2024-01-15T12:00:00,1,1,3,7,45.2,23.1,60.5,512.0
 
     Returns 200 on success, 400 on any validation or parsing failure.
     The server never crashes on a bad row — all exceptions are caught and

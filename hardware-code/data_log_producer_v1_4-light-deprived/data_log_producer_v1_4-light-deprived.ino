@@ -6,6 +6,9 @@
 // SENSOR
 // ============================================================
 
+const int NODE_ID = 2;
+const int CHANNEL_COUNT = 4;
+
 DHTesp dht;
 BH1750 lightMeter;
 
@@ -87,7 +90,7 @@ void setup() {
   Serial.begin(115200);
 
   Serial.println(
-    "timestamp,session_id,sampling_point,plant_id,soil,temperature,humidity,light"
+    "timestamp,session_id,node_id,sampling_point,plant_id,soil,temperature,humidity,light"
   );
 
   // ----------------------------------------------------------
@@ -120,19 +123,18 @@ void setup() {
 
 
 // ============================================================
-// COLLECT ONE SAMPLING POINT
+// COLLECT ONE SCAN
 //
-// samplingPoint identifies which 5-minute measurement
-// within the current session this is.
-//
-// samplingPoint = 1, 2, 3, 4, 5, 6
+// sampling_point identifies the physical sensor within this node.
+// Initially sensor ID and plant ID both equal MUX channel + 1.
+// Keep sensor IDs with their probes if the wiring or pot assignment changes.
 // ============================================================
 
-void collectSample(int samplingPoint) {
+void collectSample() {
 
   // ----------------------------------------------------------
   // Read shared environmental conditions once.
-  // These values apply to all 16 plants.
+  // These values apply to all 4 plants.
   // ----------------------------------------------------------
 
   TempAndHumidity data =
@@ -150,10 +152,10 @@ void collectSample(int samplingPoint) {
 
 
   // ----------------------------------------------------------
-  // Scan all 16 plants
+  // Scan all 4 plants
   // ----------------------------------------------------------
 
-  for (int channel = 0; channel < 16; channel++) {
+  for (int channel = 0; channel < CHANNEL_COUNT; channel++) {
 
     unsigned long timestamp = millis();
 
@@ -189,7 +191,8 @@ void collectSample(int samplingPoint) {
     Serial.println(
       String(timestamp) + "," +
       String(sessionId) + "," +
-      String(samplingPoint) + "," +
+      String(NODE_ID) + "," +
+      String(channel + 1) + "," +
       String(channel + 1) + "," +
       String(soilValue) + "," +
       String(data.temperature) + "," +
@@ -213,7 +216,7 @@ void loop() {
   unsigned long sessionStart = millis();
 
 
-  // Number of sampling points in one session:
+  // Number of scans in one session:
   //
   // 1 → 0 minutes
   // 2 → 5 minutes
@@ -222,7 +225,7 @@ void loop() {
   // 5 → 20 minutes
   // 6 → 25 minutes
   //
-  // = 6 sampling points
+  // = 6 scans
 
 
   const int TOTAL_SAMPLES =
@@ -230,7 +233,7 @@ void loop() {
 
 
   // ----------------------------------------------------------
-  // Run all sampling points in this session
+  // Run all scans in this session
   // ----------------------------------------------------------
 
   for (
@@ -241,15 +244,13 @@ void loop() {
 
 
     // --------------------------------------------------------
-    // Sampling point is 1–6, not 0–5
+    // sampleNumber is the scan index, independent of sensor identity
     // --------------------------------------------------------
 
-    int samplingPoint =
-      sampleNumber + 1;
 
 
     // --------------------------------------------------------
-    // Determine when this sampling point is supposed to occur
+    // Determine when this scan is supposed to occur
     // --------------------------------------------------------
 
     unsigned long targetTime =
@@ -259,7 +260,7 @@ void loop() {
 
     // --------------------------------------------------------
     // If the previous scan finished early,
-    // wait until the scheduled sampling point.
+    // wait until the scheduled scan.
     //
     // If scanning already took longer than the interval,
     // do not wait.
@@ -274,10 +275,10 @@ void loop() {
 
 
     // --------------------------------------------------------
-    // Collect all 16 plants
+    // Collect all 4 plants
     // --------------------------------------------------------
 
-    collectSample(samplingPoint);
+    collectSample();
   }
 
 

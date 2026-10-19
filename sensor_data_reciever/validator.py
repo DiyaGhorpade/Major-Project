@@ -122,7 +122,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
             ValidationError(
                 sensor="sampling_point",
                 bad_value=sampling_point_raw,
-                reason="Expected an integer from 1 to 6",
+                reason=f"Expected an integer from {config.VALID_SAMPLING_POINT_MIN} to {config.VALID_SAMPLING_POINT_MAX}",
                 plant_id=plant_id_raw,
                 node_id=node_id_raw,
             )
@@ -221,7 +221,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
             ValidationError(
                 sensor="sampling_point",
                 bad_value=str(sampling_point),
-                reason="Expected sampling point 1-6",
+                reason=f"Expected sensor ID {config.VALID_SAMPLING_POINT_MIN}-{config.VALID_SAMPLING_POINT_MAX}",
                 plant_id=str(plant_id),
                 node_id=node_id_raw,
             )

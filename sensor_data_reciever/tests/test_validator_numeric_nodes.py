@@ -38,3 +38,12 @@ class TestNumericNodes(unittest.TestCase):
     def test_keeps_field_count_validation(self):
         errors = validate_record(self.record("1")[:-1])
         self.assertEqual(errors[0].sensor, "record")
+
+    def test_sensor_id_uses_sensor_range_instead_of_scan_count(self):
+        fields = self.record("1")
+        fields[3] = "12"
+        self.assertIsInstance(validate_record(fields), dict)
+        fields[3] = "13"
+        errors = validate_record(fields)
+        self.assertEqual(errors[0].sensor, "sampling_point")
+        self.assertEqual(errors[0].reason, "Expected sensor ID 1-12")
