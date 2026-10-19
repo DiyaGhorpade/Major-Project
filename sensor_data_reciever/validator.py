@@ -23,7 +23,9 @@ class ValidationError:
 
 def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
     """
-    Validate a raw CSV fields list.
+    Validate fields in config.CSV_HEADER order.
+
+    node_id must be "1" or "2" and is returned as a string.
 
     Returns a parsed dict on success:
         {
@@ -56,25 +58,15 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
             )
         ]
 
-    if not config.validate_config():
-        return [
-            ValidationError(
-                sensor="record",
-                bad_value=",".join(fields),
-                reason="Invalid node configuration", 
-                plant_id="",
-            )
-        ]
-
     # --------------------------------------------------------
     # Extract raw fields
     # --------------------------------------------------------
 
     timestamp        = fields[0]
     session_id_raw   = fields[1]
-    sampling_point_raw = fields[2]
-    plant_id_raw     = fields[3]
-    node_id_raw      = fields[4]
+    node_id_raw      = fields[2]
+    sampling_point_raw = fields[3]
+    plant_id_raw     = fields[4]
     soil_raw         = fields[5]
     temperature_raw  = fields[6]
     humidity_raw     = fields[7]
@@ -95,16 +87,12 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
             )
         ]
 
-    if not config.is_valid_node_id(node_id_raw):
-        if node_id_raw.strip().startswith(config.NODE_ID_PREFIX):
-            reason = "Node ID out of range"
-        else:
-            reason = "Expected node_id in NODE_XX format"
+    if node_id_raw.strip() not in {"1", "2"}:
         return [
             ValidationError(
                 sensor="node_id",
                 bad_value=node_id_raw,
-                reason=reason,
+                reason="Expected node_id to be 1 or 2",
                 plant_id=plant_id_raw,
                 node_id=node_id_raw,
             )
