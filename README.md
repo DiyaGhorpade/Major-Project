@@ -1,31 +1,16 @@
-# Plant monitoring project
+# Plant Health Monitoring
 
-The repository separates exploratory analysis from hardware and sensor ingestion.
+A sensor-based plant health monitoring project for tracking indoor growing
+conditions and detecting plant stress. ESP32 nodes collect soil moisture,
+temperature, humidity, and light readings, while a Python receiver validates and
+stores incoming measurements for analysis.
 
-```text
-eda/
-  notebooks/   Exploratory analysis and modeling notebooks
-  data/        Datasets used by the analysis
-  scripts/     Standalone analysis scripts
-  outputs/     Generated metrics, diagnostic reports, and plots
-  reports/     Markdown audits and analysis notes
-  docs/        EDA and plant-analysis Word documents
-hardware-code/
-  data_log_producer_v1_12-remaining-plants/
-  data_log_producer_v1_4-light-deprived/
-  libraries/   Arduino sensor libraries
-sensor_data_reciever/
-  receiver.py  HTTP receiver entry point
-  config.py    Configuration for the separate validation/storage modules
-  validator.py
-  storage.py
-  tests/
-  docs/        Jetson deployment guide
-  archive/     Historical receiver artifacts moved from the repository root
-Major-Project-Research-Papers/
-```
-
-See [EDA instructions](eda/README.md) for datasets and analysis commands.
+The project explores machine learning to classify plants as healthy, moderately
+stressed, or highly stressed. It includes model training and evaluation,
+exploratory analysis, supporting research, and a browser dashboard that currently
+demonstrates monitoring through recorded-data replay. Future work includes live
+integration, stress forecasting, plant recommendations, and edge deployment on
+NVIDIA Jetson Nano or Raspberry Pi.
 
 ## Python 3.12 setup
 
@@ -42,24 +27,10 @@ Select `.venv/Scripts/python.exe` as the IDE interpreter and
 `python -m pip` and `python -m pytest` using that interpreter, rather than global
 executables that may still reference an old Python installation.
 
-The root `requirements.txt` contains all analysis, receiver, and test dependencies,
+The root `requirements.txt` contains the EDA, receiver, and test dependencies,
 pinned to the versions verified with Python 3.12.10. Use the root `.venv` for all
 Python work in this repository.
+The separate `plant_stress/` ML pipeline has additional dependencies and its own
+environment instructions; see its README before training models.
 Virtual environments must be recreated when their base Python is removed;
 editing `pyvenv.cfg` alone does not replace incompatible compiled packages.
-
-To start the current HTTP receiver, run from its directory so its relative CSV
-output stays with the receiver:
-
-```powershell
-cd sensor_data_reciever
-..\.venv\Scripts\python.exe receiver.py
-```
-
-The receiver requires Flask. It exposes `GET /health` and `POST /upload` on port
-5000. The current ESP32 sketches emit serial CSV; HTTP transmission and a shared
-CSV schema still need to be aligned. The HTTP receiver currently defines its own
-settings rather than importing `config.py`.
-
-The reorganization preserves the hardware and receiver code and their existing
-interfaces. It does not resolve the pre-existing receiver/test inconsistencies.
