@@ -1,5 +1,7 @@
 # Plant Health Monitor — Circuit, Firmware & Software Pipeline
 
+> Design reference only: the embedded examples below use older pins and data conventions. For the current runnable collection system, use the [configuration guide](hardware_configuration.md) and [commissioning checklist](hardware_commissioning.md). Physical verification remains pending.
+
 Data format convention used throughout: `plant_id` is a string `P01`–`P16` (zero-padded, matching MUX channel + 1). All timestamps are ISO-8601 (`YYYY-MM-DD HH:MM:SS`). Every script downstream expects exactly these column names — do not rename them in one script without updating the next.
 
 ---

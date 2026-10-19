@@ -12,6 +12,15 @@ demonstrates monitoring through recorded-data replay. Future work includes live
 integration, stress forecasting, plant recommendations, and edge deployment on
 NVIDIA Jetson Nano or Raspberry Pi.
 
+## Hardware commissioning handover
+
+Start with the [commissioning checklist and results template](docs/hardware_commissioning.md)
+and [configuration boundaries and worksheet](docs/hardware_configuration.md).
+Physical hardware checks remain **PENDING HARDWARE VERIFICATION**. Developers
+and coding agents must follow [AGENTS.md](AGENTS.md). Existing design examples
+are not deployment configuration. See the [preparation change report](docs/hardware_handover_changes.md)
+for software evidence and remaining configuration limitations.
+
 ## Python 3.12 setup
 
 Use Python 3.12 for this project. From the repository root:

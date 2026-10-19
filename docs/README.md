@@ -10,3 +10,9 @@ Component-specific documents stay with their component: analysis documents in
 `../eda/docs/`, ML instructions in `../plant_stress/`, dashboard notes in
 `../dashboard/`, and the [Jetson deployment guide](../sensor_data_reciever/docs/jetson_deployment_guide.docx)
 with the receiver. Research PDFs are in `../papers/`.
+
+For commissioning the existing runnable collection system, use the
+[checklist/results template](hardware_commissioning.md),
+[configuration guide](hardware_configuration.md), and
+[preparation change report](hardware_handover_changes.md).
+Future developers and agents must read [AGENTS.md](../AGENTS.md).
