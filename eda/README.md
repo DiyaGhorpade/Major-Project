@@ -25,13 +25,17 @@ dataset and update the loading cells before running it locally.
 
 The notebooks use packages including NumPy, pandas, Matplotlib, seaborn, and
 scikit-learn; the indoor-plants notebook also uses the Colab environment.
+Install the root `requirements.txt` into a Python 3.12 virtual environment as
+described in the [repository setup](../README.md#python-312-setup), then select
+the `Python 3.12 (Major-Project)` kernel. All dependencies are listed in that one
+root requirements file.
 
 ## Standalone diagnostics
 
 From the repository root:
 
 ```powershell
-python eda/scripts/clustering_root_cause_diagnostics.py
+.\.venv\Scripts\python.exe eda/scripts/clustering_root_cause_diagnostics.py
 ```
 
 The script reads `data/Greenhouse Plant Growth Metrics.csv` and writes its
