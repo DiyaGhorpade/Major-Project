@@ -1,46 +1,45 @@
-# Exploratory data analysis
+# Dataset analysis
 
-All analysis notebooks, datasets, generated results, and supporting documents
-live here, separate from `../hardware-code/` and `../sensor_data_reciever/`.
+Use the notebooks to explore the supplied datasets, or run the standalone
+script to reproduce greenhouse clustering diagnostics.
 
-| Folder | Contents |
-| --- | --- |
-| `notebooks/` | Agricultural, indoor-plant, and greenhouse analysis notebooks |
-| `data/` | Greenhouse growth metrics and plant health monitoring datasets |
-| `scripts/` | Standalone greenhouse clustering diagnostics |
-| `outputs/` | Generated clustering CSV metrics, JSON diagnostics, and PNG plot |
-| `reports/` | Notebook flow analysis and greenhouse EDA audit |
-| `docs/` | Supporting Word documents |
+## Setup
 
-## Notebooks
+From the repository root, create/activate the Python 3.12 environment using the
+[root setup instructions](../README.md#python-312-setup), then install:
 
-Open notebooks from `notebooks/`. The agricultural and greenhouse notebooks
-locate `eda/data/` from the repository root or any directory inside the repository.
-Their existing saved outputs are retained; moving files does not rerun analyses.
-
-`mp_1_indoor_plants (1).ipynb` still uses Google Colab and loads
-`Indoor_Plant_Health_and_Growth_Factors.csv` from Google Drive. That dataset is
-not included in this repository. Use its existing Colab workflow or supply the
-dataset and update the loading cells before running it locally.
-
-The notebooks use packages including NumPy, pandas, Matplotlib, seaborn, and
-scikit-learn; the indoor-plants notebook also uses the Colab environment.
-Install the root `requirements.txt` into a Python 3.12 virtual environment as
-described in the [repository setup](../README.md#python-312-setup), then select
-the `Python 3.12 (Major-Project)` kernel. All dependencies are listed in that one
-root requirements file.
-
-## Standalone diagnostics
-
-From the repository root:
-
-```powershell
-.\.venv\Scripts\python.exe eda/scripts/clustering_root_cause_diagnostics.py
+```sh
+python -m pip install -r requirements.txt
+python -m ipykernel install --user --name major-project-py312 --display-name "Python 3.12 (Major-Project)"
 ```
 
-The script reads `data/Greenhouse Plant Growth Metrics.csv` and writes its
-artifacts into `outputs/`, independently of the current working directory.
-It evaluates many K-Means fits and full-dataset silhouette scores, so a run can
-take substantial time.
+## Run a notebook
 
-The reports are historical reviews and may describe earlier notebook versions.
+Open a notebook in VS Code or another notebook editor and select the
+`Python 3.12 (Major-Project)` kernel.
+
+| Notebook in `notebooks/` | Input |
+| --- | --- |
+| `agricultural-dataset.ipynb` | Supplied data under `eda/data/`. |
+| `greenhouse-plant-growth-metrics-eda.ipynb` | Supplied greenhouse data under `eda/data/`. |
+| `mp_1_indoor_plants (1).ipynb` | Google Colab/Drive workflow; its indoor-plant dataset is not included. Supply the dataset and adjust loading cells to run locally. |
+
+The agricultural and greenhouse notebooks locate the data from the repository
+root or a directory inside the repository. Run cells in order. Existing saved
+outputs are previous results; rerunning cells regenerates them.
+
+## Run clustering diagnostics
+
+With the root environment activated, run from the repository root:
+
+```sh
+python eda/scripts/clustering_root_cause_diagnostics.py
+```
+
+Input: `eda/data/Greenhouse Plant Growth Metrics.csv`.
+Outputs: metrics CSVs, diagnostic JSON and a PNG plot in `eda/outputs/`.
+The script evaluates many K-Means fits and silhouette scores, so it can take
+substantial time. It writes to the same output locations on subsequent runs.
+
+Supporting analysis reviews are in `reports/`, and documents are in `docs/`.
+This analysis does not start data collection or read the Jetson receiver CSV automatically.

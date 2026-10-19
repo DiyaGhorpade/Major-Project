@@ -1,31 +1,25 @@
-# Monitoring dashboard
+# Browser dashboard demo
 
-This folder owns the browser presentation layer. `index.html` contains the HTML,
-styles, JavaScript, and embedded replay records, so it can be opened directly in
-a browser without a build step or Python server. Google Fonts require internet
-access; the page has fallback fonts.
+This dashboard replays embedded sample readings. It does not connect to the
+ESP32 nodes, Jetson receiver or classifier.
 
-Open `dashboard/index.html` from the repository root, or serve it locally:
+## Run
 
-```powershell
+Open `dashboard/index.html` directly in a browser, or serve it from the repository root:
+
+```sh
 python -m http.server 8000 --directory dashboard
 ```
 
-Then visit <http://localhost:8000>.
+Visit <http://localhost:8000>. Stop the server with Ctrl+C. No package installation
+or build step is required. Google Fonts use internet access; fallback fonts work offline.
 
-## Demo data
+## Change the demo data
 
-`data/sample_data_updated.csv` is the source dataset for the 200 records embedded
-in `index.html`. The page reads its embedded JSON, not the CSV at runtime.
-Editing the CSV alone does not update the dashboard. Invalid readings are
-included to demonstrate rejection and validation behavior.
+The page reads JSON embedded in `index.html`. The source sample file is
+`data/sample_data_updated.csv`; changing that CSV alone does not change the page.
+Update the embedded records to change the replay.
 
-The demo displays two physical nodes and 16 plants, regrouping the CSV's four
-node identifiers for presentation. This mapping is part of the demo.
-
-## Component boundary
-
-The dashboard currently has no live connection to the ESP32, Flask receiver,
-Jetson, or stress classifier. Replay and validation are browser-side demo logic.
-Live ingestion belongs in `../sensor_data_reciever/`, firmware in
-`../hardware-code/`, and model training in `../plant_stress/`.
+Some readings are intentionally invalid to demonstrate validation. The displayed
+two-node/16-plant grouping is a demo mapping, not the installed hardware configuration.
+For actual data collection, use the [receiver setup](../sensor_data_reciever/README.md).

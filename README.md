@@ -1,45 +1,72 @@
-# Plant Health Monitoring
+# Plant health monitoring
 
-A sensor-based plant health monitoring project for tracking indoor growing
-conditions and detecting plant stress. ESP32 nodes collect soil moisture,
-temperature, humidity, and light readings, while a Python receiver validates and
-stores incoming measurements for analysis.
+Two ESP32 nodes collect soil, temperature, humidity and light readings. On the
+Jetson, `receiver.py` saves the readings and `scheduler.py` starts each collection:
+Node 1 collects 12 points, then Node 2 collects four.
 
-The project explores machine learning to classify plants as healthy, moderately
-stressed, or highly stressed. It includes model training and evaluation,
-exploratory analysis, supporting research, and a browser dashboard that currently
-demonstrates monitoring through recorded-data replay. Future work includes live
-integration, stress forecasting, plant recommendations, and edge deployment on
-NVIDIA Jetson Nano or Raspberry Pi.
+## Start data collection
 
-## Hardware commissioning handover
+1. Set up Python using the commands below.
+2. Configure and upload the two [ESP32 sketches](hardware-code/README.md).
+3. Follow the [receiver and scheduler setup](sensor_data_reciever/README.md) to
+   configure addresses, plant mappings and collection times, then run a collection.
 
-Start with the [commissioning checklist and results template](docs/hardware_commissioning.md)
-and [configuration boundaries and worksheet](docs/hardware_configuration.md).
-Physical hardware checks remain **PENDING HARDWARE VERIFICATION**. Developers
-and coding agents must follow [AGENTS.md](AGENTS.md). Existing design examples
-are not deployment configuration. See the [preparation change report](docs/hardware_handover_changes.md)
-for software evidence and remaining configuration limitations.
+Hardware commissioning is **PENDING HARDWARE VERIFICATION**. Use the
+[commissioning checklist](docs/hardware_commissioning.md) to record the installed
+wiring, sensor checks, calibration and first successful run.
 
 ## Python 3.12 setup
 
-Use Python 3.12 for this project. From the repository root:
+Run these commands from the repository root. Python 3.12 must already be installed.
+
+On Linux / Jetson:
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install Flask==3.1.3 tzdata
+```
+
+On Windows PowerShell:
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m ipykernel install --user --name major-project-py312 --display-name "Python 3.12 (Major-Project)"
+.\.venv\Scripts\Activate.ps1
+python -m pip install Flask==3.1.3 tzdata
 ```
 
-Select `.venv/Scripts/python.exe` as the IDE interpreter and
-`Python 3.12 (Major-Project)` as the notebook kernel. Run tools through
-`python -m pip` and `python -m pytest` using that interpreter, rather than global
-executables that may still reference an old Python installation.
+Activate this environment in each terminal before running the receiver or
+scheduler. On Windows, you can also run `.\.venv\Scripts\python.exe` directly
+if environment activation is unavailable.
 
-The root `requirements.txt` contains the EDA, receiver, and test dependencies,
-pinned to the versions verified with Python 3.12.10. Use the root `.venv` for all
-Python work in this repository.
-The separate `plant_stress/` ML pipeline has additional dependencies and its own
-environment instructions; see its README before training models.
-Virtual environments must be recreated when their base Python is removed;
-editing `pyvenv.cfg` alone does not replace incompatible compiled packages.
+For notebooks, analysis and software tests, install the additional root dependencies:
+
+```sh
+python -m pip install -r requirements.txt
+```
+
+Model training uses a separate environment described in `plant_stress/README.md`.
+
+## Other scripts
+
+| Task | Instructions |
+| --- | --- |
+| Explore datasets or run clustering diagnostics | [eda/](eda/README.md) |
+| Train and evaluate stress classifiers | [plant_stress/](plant_stress/README.md) |
+| Open the browser replay demo | [dashboard/](dashboard/README.md) |
+| Find design documents or commissioning forms | [docs/](docs/README.md) |
+
+The dashboard and classifier are separate tools; collected readings are not
+automatically sent to them.
+
+## Run software tests
+
+With the root dependencies installed and `g++` on PATH, run from the repository root:
+
+```sh
+python -m pytest sensor_data_reciever/tests hardware-code/tests -q
+```
+
+Tests use temporary outputs and mock ESP32 hardware. They do not verify physical
+sensors or Wi-Fi. Detailed results are in the [verification report](sensor_data_reciever/VERIFICATION.md).
+Developer and coding-agent instructions are in [AGENTS.md](AGENTS.md).

@@ -84,3 +84,32 @@ No new acquisition behavior, calibration algorithm, service, schema, retry
 policy, scheduler functionality or configuration-boundary code was necessary
 for this preparation. Review and include the required new files when packaging
 the handover; this task did not commit, deploy or flash anything.
+
+## README setup simplification ? 19 October 2026
+
+Documentation-only follow-up: reorganized the project READMEs around setup,
+working directory, configuration, run commands and output files. Removed change
+history, speculative features, repeated setup layers and lengthy implementation
+explanations from operator entry points. Runtime code, tests, dependencies and
+configuration values were not modified; no hardware verification was performed.
+
+| File modified | Purpose |
+| --- | --- |
+| `README.md` | Direct collection startup path, Linux/Windows Python setup, optional analysis/test dependencies and component links. |
+| `hardware-code/README.md` | Board/library setup, private network configuration, actual source pin table, pacing, compile/upload and collection checks. |
+| `sensor_data_reciever/README.md` | Complete receiver/scheduler runbook: configuration, parsing, receiver, one-off run, daily schedule, output files and troubleshooting. |
+| `eda/README.md` | Notebook environment/kernel and standalone diagnostics commands with input/output locations. |
+| `plant_stress/README.md` | Separate Conda setup, dataset/configuration, ordered preprocessing/training/evaluation and saved outputs. Removed references to a nonexistent export script. |
+| `dashboard/README.md` | Direct browser/local-server commands and explanation of embedded replay data. |
+| `docs/README.md` | Short index separating runnable setup from commissioning and design references. |
+| `sensor_data_reciever/archive/README.md` | Identify archived files and link current collection setup. |
+| `sensor_data_reciever/SCHEDULER.md` | Retain behavior/failure/restart reference; replace duplicate startup steps with the single receiver runbook. |
+| `docs/hardware_commissioning.md` | Point startup instructions to the receiver runbook. |
+| `docs/hardware_handover_changes.md` | Record this follow-up and its verification. |
+
+Verification: `python -m pytest sensor_data_reciever/tests hardware-code/tests -q`
+using the root `.venv` reported **225 passed, 24 subtests passed in 23.98s**.
+`receiver.py --help` and `scheduler.py --help` confirmed the documented arguments
+without issuing commands or writing collection data. Local documentation links
+were checked. Training, notebook analyses and real collection were not run;
+ESP32 target compilation and all physical checks remain pending.

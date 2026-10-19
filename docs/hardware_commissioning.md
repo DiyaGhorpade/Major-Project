@@ -7,7 +7,7 @@ evidence, not just the expected result copied into it.
 
 Use the [configuration guide/worksheet](hardware_configuration.md) to select
 values and find code-change boundaries; use [AGENTS.md](../AGENTS.md) for permitted
-changes. Startup and command syntax live in the [scheduler setup](../sensor_data_reciever/SCHEDULER.md)
+changes. Startup and command syntax live in the [receiver and scheduler setup](../sensor_data_reciever/README.md)
 and [hardware setup](../hardware-code/README.md); do not substitute older design
 document examples. This checklist creates no new runtime service or algorithm.
 

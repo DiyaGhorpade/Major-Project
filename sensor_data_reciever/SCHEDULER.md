@@ -1,30 +1,7 @@
-# Jetson-scheduled ESP32 collection
+# Scheduler behavior
 
-`scheduler.py` is the single collection schedule owner. There was no executable
-collection scheduler in this repository to extend. It runs beside the existing
-receiver; no separate command service or completion endpoint is needed.
-
-1. Configure and flash both sketches using `hardware-code/README.md`. Reserve
-   stable LAN addresses for Node 1 (12 points) and Node 2 (4 points).
-2. Copy `scheduler.commissioning.example.json` to `scheduler.local.json` and resolve
-   every empty/null field using the [configuration guide](../docs/hardware_configuration.md).
-   The older `scheduler.example.json` contains software example values only. Set node URLs,
-   collection times and mappings. Node URLs must use numeric LAN IPv4 addresses
-   to avoid DNS delays outside HTTP timeouts. Times use the specified IANA timezone.
-   Install `Flask` and `tzdata` (included in root requirements); Linux can also
-   use its system timezone database.
-3. Set `csv_file` to the **same output file** used by the receiver. Scheduler
-   paths are relative to the JSON file. Keep the journal across restarts and
-   use one shared journal/lock path for all scheduler invocations.
-4. Start the receiver and scheduler from the repository root, in two terminals:
-
-   ```sh
-   python sensor_data_reciever/receiver.py --output sensor_data_reciever/sensor_data.csv
-   python sensor_data_reciever/scheduler.py --config sensor_data_reciever/scheduler.local.json
-   ```
-
-For an immediate collection using the same ordering, locking and completion
-checks, add `--once`. It exits zero on completion and one on failure.
+For configuration and run commands, use the [receiver and scheduler setup](README.md).
+This reference explains completion, failure and restart behavior.
 
 Each scheduled run allocates one positive signed 32-bit session ID and sends
 `POST /collect` with a single URL-encoded `session_id` field to Node 1. Only
@@ -62,19 +39,5 @@ are skipped; there is no catch-up queue. Keep collection times far enough apart
 for the configured deadlines. Do not rotate or replace the receiver CSV during
 an active run. Polling scans the CSV and is intended for this small deployment.
 
-Software verification from the repository root:
-
-```sh
-python -m pytest sensor_data_reciever/tests -q
-python -m unittest discover -s hardware-code/tests -v
-```
-
-Tests exercise mock ESP32 HTTP servers with the production receiver contract,
-ordering after acceptance, duplicate/missing/invalid records, wrong sessions
-and mappings, rejections, unreachable nodes, HTTP timeouts, restart behavior,
-schedule slots and locks. Host C++ tests compile both real sketches in both
-pacing modes and exercise busy rejection during acquisition. Arduino CLI target
-compile commands are in the hardware README; the CLI is unavailable in this
-environment. No physical hardware tests were performed.
-
-Record physical results using the [commissioning checklist/results template](../docs/hardware_commissioning.md).
+Software test commands and recorded results are in [VERIFICATION.md](VERIFICATION.md).
+Physical results belong in the [commissioning checklist](../docs/hardware_commissioning.md).

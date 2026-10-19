@@ -1,7 +1,11 @@
-# Historical receiver artifacts
+# Archived receiver files
 
-`root_error_log.csv` was moved from the repository root without changing its
-contents. It is separate from the receiver directory's existing `error_log.csv`.
+These files are retained for reference and are not used by the current collection setup.
 
-`serial_receiver.py` is the historical serial receiver formerly stored in
-`../old stuff/reciever.py`. The current HTTP entry point is `../receiver.py`.
+| File | Contents |
+| --- | --- |
+| `serial_receiver.py` | Historical serial receiver. |
+| `root_error_log.csv` | Historical error log previously stored at the repository root. |
+
+To collect data, run the current HTTP receiver and scheduler using the
+[receiver setup instructions](../README.md).
