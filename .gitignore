@@ -1,0 +1,10 @@
+.idea
+.venv
+*/.hypothesis
+__pycache__/
+*/.kiro
+*/.pytest_cache
+.agents
+.codex
+.sandarbh
+*.py[cod]
