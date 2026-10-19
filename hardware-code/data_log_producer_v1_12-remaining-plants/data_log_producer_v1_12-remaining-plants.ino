@@ -1,6 +1,8 @@
 #include <DHTesp.h>
 #include <Wire.h>
 #include <BH1750.h>
+#include <SensorHttpTransport.h>
+#include <SensorCommandServer.h>
 
 // ============================================================
 // SENSOR
@@ -11,6 +13,14 @@ const int CHANNEL_COUNT = 12;
 
 DHTesp dht;
 BH1750 lightMeter;
+SensorHttpTransport sensorTransport;
+SensorCommandServer commandServer;
+
+// Preserve the serial stream; networking and its results stay at this boundary.
+void emitRecord(const String& csv) {
+  Serial.println(csv);
+  sensorTransport.upload(csv);
+}
 
 
 // ============================================================
@@ -86,6 +96,9 @@ void setup() {
   pinMode(17, OUTPUT);
   pinMode(18, OUTPUT);
   pinMode(19, OUTPUT);
+
+  sensorTransport.begin();
+  commandServer.begin();
 }
 
 
@@ -161,7 +174,7 @@ void collectSample(int sessionId) {
     // CSV record
     // --------------------------------------------------------
 
-    Serial.println(
+    emitRecord(
       String(timestamp) + "," +
       String(sessionId) + "," +
       String(NODE_ID) + "," +
@@ -181,10 +194,12 @@ void collectSample(int sessionId) {
 
 
 // ============================================================
-// IDLE: acquisition is invoked explicitly by a future caller.
+// Commands are the only acquisition trigger; Jetson owns the schedule.
 // ============================================================
 
 void loop() {
-  // No automatic scans or session advancement.
+  // Only an accepted remote command invokes a scan.
+  sensorTransport.poll();
+  commandServer.poll(collectSample);
   delay(100);
 }

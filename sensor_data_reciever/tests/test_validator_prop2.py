@@ -3,8 +3,8 @@ Property 2: Non-parseable integer field produces a ValidationError with the corr
 
 **Validates: Requirements 2.2, 2.3, 2.4**
 
-For any length-9 fields list where one of session_id (idx 1), sampling_point (idx 2), or
-plant_id (idx 3) contains a string that cannot be converted to int (all other fields structurally
+For any length-9 fields list where one of session_id (idx 1), sampling_point (idx 3), or
+plant_id (idx 4) contains a string that cannot be converted to int (all other fields structurally
 valid), calling validate_record must return a list[ValidationError] whose single entry has
 `sensor` matching the name of the failing field.
 """
@@ -42,11 +42,11 @@ non_int_string_st = st.text(
     min_size=1,
 )
 
-# Mapping from field name to its index in the 8-element fields list
+# Mapping from field name to its index in the 9-element fields list
 FIELD_INDEX = {
     "session_id":     1,
-    "sampling_point": 2,
-    "plant_id":       3,
+    "sampling_point": 3,
+    "plant_id":       4,
 }
 
 # ---------------------------------------------------------------------------
@@ -71,14 +71,14 @@ def test_non_parseable_integer_field_produces_correct_sensor_name(
     **Validates: Requirements 2.2, 2.3, 2.4**
     """
     # Build a valid base record
-    # timestamp=0, session_id=1, sampling_point=1, plant_id=1, node_id=NODE_01,
+    # timestamp=0, session_id=1, node_id=1, sampling_point=1, plant_id=1,
     # soil=50.0, temperature=20.0, humidity=50.0, light=500.0
     fields = [
         "2024-01-01T00:00:00",  # 0: timestamp
         "1",                    # 1: session_id
-        "1",                    # 2: sampling_point
-        "1",                    # 3: plant_id
-        "NODE_01",              # 4: node_id
+        "1",                    # 2: node_id
+        "1",                    # 3: sampling_point
+        "1",                    # 4: plant_id
         "50.0",                 # 5: soil
         "20.0",                 # 6: temperature
         "50.0",                 # 7: humidity

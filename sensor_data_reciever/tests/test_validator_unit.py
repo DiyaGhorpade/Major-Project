@@ -8,7 +8,7 @@ from validator import validate_record, ValidationError
 # ---------------------------------------------------------------------------
 # Baseline valid record
 # ---------------------------------------------------------------------------
-VALID = ["2024-01-01T10:00:00", "1", "1", "1", "NODE_01", "50.0", "20.0", "50.0", "500.0"]
+VALID = ["2024-01-01T10:00:00", "1", "1", "1", "1", "50.0", "20.0", "50.0", "500.0"]
 
 
 # ---------------------------------------------------------------------------
@@ -27,12 +27,12 @@ def _replace(fields: list, index: int, value: str) -> list:
 @pytest.mark.parametrize("fields", [
     # session_id min
     _replace(VALID, 1, "1"),
-    # sampling_point min / max
-    _replace(VALID, 2, "1"),
-    _replace(VALID, 2, "6"),
-    # plant_id min / max
+    # sampling_point min / max (1-12)
     _replace(VALID, 3, "1"),
-    _replace(VALID, 3, "16"),
+    _replace(VALID, 3, "12"),
+    # plant_id min / max
+    _replace(VALID, 4, "1"),
+    _replace(VALID, 4, "16"),
     # soil min / max
     _replace(VALID, 5, "0.0"),
     _replace(VALID, 5, "100.0"),
@@ -44,7 +44,7 @@ def _replace(fields: list, index: int, value: str) -> list:
     _replace(VALID, 7, "100.0"),
     # light min / max
     _replace(VALID, 8, "0.0"),
-    _replace(VALID, 8, "1000.0"),
+    _replace(VALID, 8, "100000.0"),
 ])
 def test_valid_boundary_values(fields):
     """Boundary values within valid range must return a dict, not errors."""
@@ -59,9 +59,9 @@ def test_valid_boundary_values(fields):
     # session_id: min=1, so 0 is below
     (_replace(VALID, 1, "0"),      "session_id"),
     # sampling_point: min=1, so 0 is below
-    (_replace(VALID, 2, "0"),      "sampling_point"),
+    (_replace(VALID, 3, "0"),      "sampling_point"),
     # plant_id: min=1, so 0 is below
-    (_replace(VALID, 3, "0"),      "plant_id"),
+    (_replace(VALID, 4, "0"),      "plant_id"),
     # soil: min=0.0, so -0.1 is below
     (_replace(VALID, 5, "-0.1"),   "soil"),
     # temperature: min=-40.0, so -40.1 is below
@@ -85,18 +85,18 @@ def test_below_minimum(fields, expected_sensor):
 # 3. Each numeric field one unit above its maximum (invalid)
 # ===========================================================================
 @pytest.mark.parametrize("fields,expected_sensor", [
-    # sampling_point: max=6, so 7 is above
-    (_replace(VALID, 2, "7"),       "sampling_point"),
+    # sampling_point: max=12, so 13 is above
+    (_replace(VALID, 3, "13"),       "sampling_point"),
     # plant_id: max=16, so 17 is above
-    (_replace(VALID, 3, "17"),      "plant_id"),
+    (_replace(VALID, 4, "17"),      "plant_id"),
     # soil: max=100.0, so 100.1 is above
     (_replace(VALID, 5, "100.1"),   "soil"),
     # temperature: max=80.0, so 80.1 is above
     (_replace(VALID, 6, "80.1"),    "temperature"),
     # humidity: max=100.0, so 100.1 is above
     (_replace(VALID, 7, "100.1"),   "humidity"),
-    # light: max=1000.0, so 1000.1 is above
-    (_replace(VALID, 8, "1000.1"),  "light"),
+    # light: max=100000.0, so 100000.1 is above
+    (_replace(VALID, 8, "100000.1"),  "light"),
 ])
 def test_above_maximum(fields, expected_sensor):
     """Fields one unit above maximum must return a ValidationError for that sensor."""
@@ -109,19 +109,19 @@ def test_above_maximum(fields, expected_sensor):
 
 
 # ===========================================================================
-# 4 & 5. Wrong field count — fewer or more than 8 fields
+# 4 & 5. Wrong field count — fewer or more than 9 fields
 # ===========================================================================
 @pytest.mark.parametrize("fields", [
     # Fewer than 9
     [],
     ["2024-01-01T10:00:00"],
-    ["2024-01-01T10:00:00", "1", "1", "1", "NODE_01", "50.0", "20.0", "50.0"],  # 8 fields
+    ["2024-01-01T10:00:00", "1", "1", "1", "1", "50.0", "20.0", "50.0"],  # 8 fields
     # More than 9
     VALID + ["extra"],
     VALID + ["extra1", "extra2"],
 ])
 def test_wrong_field_count(fields):
-    """Records with field count != 8 must return a ValidationError with sensor='record'."""
+    """Records with field count != 9 must return a ValidationError with sensor='record'."""
     result = validate_record(fields)
     assert isinstance(result, list) and len(result) == 1
     assert isinstance(result[0], ValidationError)
@@ -134,8 +134,8 @@ def test_wrong_field_count(fields):
 # ===========================================================================
 @pytest.mark.parametrize("index,expected_sensor", [
     (1, "session_id"),
-    (2, "sampling_point"),
-    (3, "plant_id"),
+    (3, "sampling_point"),
+    (4, "plant_id"),
     (5, "soil"),
     (6, "temperature"),
     (7, "humidity"),

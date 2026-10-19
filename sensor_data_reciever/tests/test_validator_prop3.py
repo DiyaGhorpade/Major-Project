@@ -16,7 +16,7 @@ import hypothesis.strategies as st
 from validator import validate_record, ValidationError
 
 # Base valid 9-field list — all fields parseable and in-range
-VALID_BASE = ["2024-01-01T10:00:00", "1", "1", "1", "NODE_01", "50.0", "20.0", "50.0", "500.0"]
+VALID_BASE = ["2024-01-01T10:00:00", "1", "1", "1", "1", "50.0", "20.0", "50.0", "500.0"]
 
 # Float sensor fields: (name, index)
 FLOAT_FIELDS = [("soil", 5), ("temperature", 6), ("humidity", 7), ("light", 8)]
@@ -47,13 +47,13 @@ def test_non_parseable_float_field_produces_correct_sensor_name(field_info, bad_
     Property 3: A non-parseable float field produces a ValidationError with
     sensor matching the name of the failing field.
 
-    For any length-8 fields list where exactly one of soil/temperature/humidity/light
+    For any length-9 fields list where exactly one of soil/temperature/humidity/light
     contains a non-float string, validate_record must return a list[ValidationError]
     with exactly one entry whose sensor equals the field name.
     """
     field_name, field_index = field_info
 
-    # Build a fully valid 8-field list and swap the target index with the bad value
+    # Build a fully valid 9-field list and swap the target index with the bad value
     fields = VALID_BASE[:]
     fields[field_index] = bad_value
 

@@ -1,237 +1,105 @@
-"""
-Integration test: feed every line from sample.csv through process_line and
-verify the output files satisfy the gap-free record_id sequence invariant.
-
-Validates: Requirements 8.6
-"""
-import csv
-import os
-import pathlib
+"""Real sketch generation -> Flask validation -> durable CSV, including sockets."""
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
+from urllib.error import HTTPError
+from urllib.request import Request, build_opener, ProxyHandler
+from uuid import UUID
 
 import pytest
-
-import config
 import receiver
-import storage
+from .helpers import read_rows
 
-# Absolute path to the real sample.csv at the project root
-SAMPLE_CSV = pathlib.Path(__file__).parent.parent / "sample.csv"
-
-# The exact INPUT_HEADER string that process_line skips (no ID consumed)
-INPUT_HEADER_LINE = ",".join(config.INPUT_HEADER)
-
-
-# ---------------------------------------------------------------------------
-# Helper: read all non-header rows from a CSV file
-# ---------------------------------------------------------------------------
-
-def _data_rows(path: str) -> list[list[str]]:
-    """Return all rows after the first (header) row from a CSV file."""
-    with open(path, newline="", encoding="utf-8") as f:
-        rows = list(csv.reader(f))
-    return rows[1:]
+EXPECTED_HEADER = [
+    "record_id", "received_at", "accepted_at", "timestamp", "session_id", "node_id",
+    "sampling_point", "plant_id", "soil", "temperature", "humidity", "light",
+]
 
 
-def _all_rows(path: str) -> list[list[str]]:
-    """Return every row including the header."""
-    with open(path, newline="", encoding="utf-8") as f:
-        return list(csv.reader(f))
+def good_scan(scans):
+    result = []
+    assert set(scans) == {"1", "2"}
+    for node, count in (("1", 12), ("2", 4)):
+        assert len(scans[node]) == count * 2  # One valid and one sensor-failure scan.
+        rows = scans[node][:count]
+        assert [row.split(",")[2] for row in rows] == [node] * count
+        assert [row.split(",")[3:5] for row in rows] == [[str(i), str(i)] for i in range(1, count + 1)]
+        result.extend(rows)
+    return result
 
 
-# ---------------------------------------------------------------------------
-# Fixture: isolated temp files + monkeypatched config paths
-# ---------------------------------------------------------------------------
-
-@pytest.fixture()
-def integration_files(tmp_path, monkeypatch):
-    """
-    Redirect config file paths to tmp_path, initialise the output files, and
-    reset receiver.record_counter to 0 before each test.
-    """
-    data_file = str(tmp_path / "sensor_data.csv")
-    error_file = str(tmp_path / "error_log.csv")
-
-    monkeypatch.setattr(config, "SENSOR_DATA_FILE", data_file)
-    monkeypatch.setattr(config, "ERROR_LOG_FILE", error_file)
-
-    # Initialize files (creates headers)
-    storage.initialize_files()
-
-    # Reset counter so IDs start at R000001
-    receiver.record_counter = 0
-
-    return {"data": data_file, "error": error_file}
+def assert_stored(path, bodies):
+    rows = read_rows(path)
+    assert rows[0] == EXPECTED_HEADER
+    assert [row[3:] for row in rows[1:]] == [body.split(",") for body in bodies]
+    assert len({row[0] for row in rows[1:]}) == len(bodies)
+    for row in rows[1:]:
+        assert len(row) == len(EXPECTED_HEADER)
+        assert UUID(row[0]).version == 4
+        received, accepted = (datetime.fromisoformat(value) for value in row[1:3])
+        assert received.utcoffset().total_seconds() == 0
+        assert accepted.utcoffset().total_seconds() == 0
+        assert received <= accepted
 
 
-# ---------------------------------------------------------------------------
-# Pre-compute expected behaviour from sample.csv (at import time)
-# ---------------------------------------------------------------------------
-
-def _classify_lines(path: pathlib.Path) -> tuple[list[str], list[str]]:
-    """
-    Read sample.csv and split lines into:
-      - processed_lines: non-empty lines that are NOT the INPUT_HEADER
-      - valid_lines / invalid_lines: determined by running validate_record
-
-    Returns (valid_lines, invalid_lines) where each element is the raw line.
-    """
-    import validator
-
-    valid_lines: list[str] = []
-    invalid_lines: list[str] = []
-
-    with open(path, newline="", encoding="utf-8") as f:
-        for raw_line in f:
-            line = raw_line.strip()
-            # Skip empty lines (process_line skips these, no ID consumed)
-            if not line:
-                continue
-            # Skip INPUT_HEADER (process_line skips these, no ID consumed)
-            if line == INPUT_HEADER_LINE:
-                continue
-            # This line will consume an ID; determine if valid or invalid
-            fields = next(csv.reader([line]))
-            result = validator.validate_record(fields)
-            if isinstance(result, dict):
-                valid_lines.append(line)
-            else:
-                invalid_lines.append(line)
-
-    return valid_lines, invalid_lines
+@pytest.mark.parametrize("simulation", [True, False])
+def test_real_sketches_through_real_validator_and_storage(
+        generated_records, simulation, client, output, capsys):
+    scans = generated_records[simulation]
+    bodies = good_scan(scans)
+    for body in bodies:
+        assert client.post("/upload", data=body, content_type="text/plain").status_code == 200
+    assert_stored(output, bodies)
+    before = output.read_bytes()
+    for node, count in (("1", 12), ("2", 4)):
+        for bad_body in scans[node][count:]:
+            assert client.post("/upload", data=bad_body, content_type="text/plain").status_code == 400
+        assert f"node={node!r}" in capsys.readouterr().out
+    assert output.read_bytes() == before
 
 
-VALID_LINES, INVALID_LINES = _classify_lines(SAMPLE_CSV)
-TOTAL_PROCESSED = len(VALID_LINES) + len(INVALID_LINES)
+def http_request(base_url, body=None):
+    request = Request(base_url + ("/health" if body is None else "/upload"),
+                      data=None if body is None else body.encode("utf-8"),
+                      headers={"Content-Type": "text/plain"})
+    # Ignore machine proxy configuration; the test must stay on loopback.
+    try:
+        with build_opener(ProxyHandler({})).open(request, timeout=5) as response:
+            return response.status, response.read()
+    except HTTPError as response:
+        return response.code, response.read()
 
 
-# ---------------------------------------------------------------------------
-# Integration test
-# ---------------------------------------------------------------------------
+def test_generated_scan_over_real_http_socket(generated_records, live_receiver, output):
+    bodies = good_scan(generated_records[True])
+    assert http_request(live_receiver) == (200, b"OK\n")
+    for index, body in enumerate(bodies, 1):
+        assert http_request(live_receiver, body) == (200, b"OK\n")
+        # Data is readable from disk by the time each acknowledgement arrives.
+        assert_stored(output, bodies[:index])
+    before = output.read_bytes()
+    assert http_request(live_receiver, "malformed")[0] == 400
+    assert output.read_bytes() == before
+    assert http_request(live_receiver, bodies[0])[0] == 200
+    assert_stored(output, bodies + [bodies[0]])
 
-class TestSampleCsvIntegration:
-    """Feed every line of sample.csv through process_line and verify outputs."""
 
-    def _feed_sample(self):
-        """Open sample.csv and pass every line through process_line."""
-        with open(SAMPLE_CSV, newline="", encoding="utf-8") as f:
-            for raw_line in f:
-                receiver.process_line(raw_line)
+def test_simultaneous_nodes_and_initial_file_creation(generated_records, live_receiver, output):
+    bodies = good_scan(generated_records[True]) + good_scan(generated_records[False])
+    output.unlink()  # Exercise simultaneous first uploads against a missing file.
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        responses = list(pool.map(lambda body: http_request(live_receiver, body), bodies))
+    assert responses == [(200, b"OK\n")] * 32
+    rows = read_rows(output)
+    assert rows[0] == EXPECTED_HEADER
+    assert len(rows) == 33
+    assert sorted(row[3:] for row in rows[1:]) == sorted(body.split(",") for body in bodies)
+    assert len({row[0] for row in rows[1:]}) == 32
+    assert all(len(row) == len(EXPECTED_HEADER) for row in rows)
 
-    # --- helpers ----------------------------------------------------------------
 
-    def _record_ids_in_data(self, data_path: str) -> list[str]:
-        rows = _data_rows(data_path)
-        # record_id is the first column (OUTPUT_HEADER order)
-        return [row[0] for row in rows]
-
-    def _record_ids_in_errors(self, error_path: str) -> list[str]:
-        rows = _data_rows(error_path)
-        # record_id is the first column (ERROR_HEADER order)
-        return [row[0] for row in rows]
-
-    # --- tests ------------------------------------------------------------------
-
-    def test_valid_lines_appear_in_sensor_data(self, integration_files):
-        """
-        Every structurally/range-valid input line must produce exactly one row
-        in sensor_data.csv (excluding the header).
-        """
-        self._feed_sample()
-        data_rows = _data_rows(integration_files["data"])
-        assert len(data_rows) == len(VALID_LINES), (
-            f"Expected {len(VALID_LINES)} rows in sensor_data.csv, "
-            f"got {len(data_rows)}"
-        )
-
-    def test_no_invalid_line_data_in_sensor_data(self, integration_files):
-        """
-        No data from an invalid input line must appear in sensor_data.csv.
-        The number of data rows must equal the number of valid input lines.
-        (Verified structurally: wrong-field-count rows can't produce valid records.)
-        """
-        self._feed_sample()
-        data_rows = _data_rows(integration_files["data"])
-        # All rows present must correspond to valid input lines
-        assert len(data_rows) == len(VALID_LINES), (
-            f"sensor_data.csv contains {len(data_rows)} rows but only "
-            f"{len(VALID_LINES)} input lines were valid"
-        )
-
-    def test_each_invalid_line_produces_one_error_row(self, integration_files):
-        """
-        Every invalid input line must produce exactly one row in error_log.csv.
-        """
-        self._feed_sample()
-        error_rows = _data_rows(integration_files["error"])
-        assert len(error_rows) == len(INVALID_LINES), (
-            f"Expected {len(INVALID_LINES)} rows in error_log.csv, "
-            f"got {len(error_rows)}"
-        )
-
-    def test_record_ids_form_gap_free_sequence(self, integration_files):
-        """
-        The record_id values across both output files together must form the
-        exact gap-free sequence R000001 … R{TOTAL_PROCESSED:06d}.
-        """
-        self._feed_sample()
-
-        ids_in_data   = self._record_ids_in_data(integration_files["data"])
-        ids_in_errors = self._record_ids_in_errors(integration_files["error"])
-
-        all_ids = sorted(ids_in_data + ids_in_errors)
-
-        expected_ids = [f"R{n:06d}" for n in range(1, TOTAL_PROCESSED + 1)]
-
-        assert all_ids == expected_ids, (
-            f"Record IDs are not a gap-free sequence.\n"
-            f"  Expected: {expected_ids[:5]}…{expected_ids[-5:]}\n"
-            f"  Got:      {all_ids[:5]}…{all_ids[-5:]}"
-        )
-
-    def test_record_ids_start_at_r000001(self, integration_files):
-        """The first record_id assigned must be R000001."""
-        self._feed_sample()
-
-        ids_in_data   = self._record_ids_in_data(integration_files["data"])
-        ids_in_errors = self._record_ids_in_errors(integration_files["error"])
-
-        all_ids = sorted(ids_in_data + ids_in_errors)
-
-        assert len(all_ids) > 0, "No record IDs were produced at all"
-        assert all_ids[0] == "R000001", (
-            f"First record_id should be R000001, got {all_ids[0]}"
-        )
-
-    def test_total_processed_count(self, integration_files):
-        """
-        The total number of record_ids produced must equal the number of
-        non-empty, non-INPUT_HEADER lines in sample.csv.
-        """
-        self._feed_sample()
-
-        ids_in_data   = self._record_ids_in_data(integration_files["data"])
-        ids_in_errors = self._record_ids_in_errors(integration_files["error"])
-
-        total_ids = len(ids_in_data) + len(ids_in_errors)
-
-        assert total_ids == TOTAL_PROCESSED, (
-            f"Expected {TOTAL_PROCESSED} total record IDs, got {total_ids}"
-        )
-
-    def test_sensor_data_header_is_preserved(self, integration_files):
-        """sensor_data.csv must have exactly OUTPUT_HEADER as its first row."""
-        self._feed_sample()
-        all_rows = _all_rows(integration_files["data"])
-        assert len(all_rows) >= 1, "sensor_data.csv is empty"
-        assert all_rows[0] == config.OUTPUT_HEADER, (
-            f"sensor_data.csv header mismatch: {all_rows[0]}"
-        )
-
-    def test_error_log_header_is_preserved(self, integration_files):
-        """error_log.csv must have exactly ERROR_HEADER as its first row."""
-        self._feed_sample()
-        all_rows = _all_rows(integration_files["error"])
-        assert len(all_rows) >= 1, "error_log.csv is empty"
-        assert all_rows[0] == config.ERROR_HEADER, (
-            f"error_log.csv header mismatch: {all_rows[0]}"
-        )
+def test_restart_appends_without_a_second_header(client, output, valid_fields):
+    body = ",".join(valid_fields)
+    assert client.post("/upload", data=body).status_code == 200
+    receiver._init_csv()  # Same initialization performed at process startup.
+    assert receiver.app.test_client().post("/upload", data=body).status_code == 200
+    assert_stored(output, [body, body])

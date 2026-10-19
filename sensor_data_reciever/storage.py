@@ -49,10 +49,12 @@ def save_valid_record(fields: list) -> None:
     Parameters
     ----------
     fields : list
-        The 8 values in CSV_HEADER order, already validated.
+        The 9 values in CSV_HEADER order, already validated. This standalone
+        utility does not assign HTTP receiver metadata.
 
-    The file is flushed and synced to disk immediately after the write
-    so no data is lost if the process is killed between rows.
+    The file is flushed and synced to disk immediately after the write.
+    An I/O failure can leave a partial or complete row; callers must not infer
+    definite non-delivery from an exception.
     The lock prevents two simultaneous requests from interleaving their
     writes.
     """

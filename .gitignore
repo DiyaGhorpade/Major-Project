@@ -8,3 +8,7 @@ __pycache__/
 .codex
 .sandarbh
 *.py[cod]
+hardware-code/libraries/SensorHttpTransport/src/TransportConfig.local.h
+sensor_data_reciever/scheduler.local.json
+sensor_data_reciever/collection_runs.jsonl
+sensor_data_reciever/collection_runs.jsonl.lock

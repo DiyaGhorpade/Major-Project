@@ -23,6 +23,7 @@ CSV_FILE: str = "sensor_data.csv"       # output file name
 # ============================================================
 
 import csv
+import io
 import os
 import threading
 from datetime import datetime, timezone
@@ -99,18 +100,26 @@ def upload() -> Response:
 
     try:
         # --- read the raw body as text ---
-        raw_body = request.get_data(as_text=True).strip()
+        try:
+            raw_body = request.get_data().decode("utf-8", errors="strict").strip()
+        except UnicodeDecodeError:
+            _log_rejected("<invalid UTF-8>", "Request body must be UTF-8")
+            return Response("ERROR: request body must be UTF-8\n", status=400,
+                            mimetype="text/plain")
 
         if not raw_body:
             _log_rejected("<empty body>", "Request body is empty")
             return Response("ERROR: empty body\n", status=400, mimetype="text/plain")
 
-        # --- split on commas (csv.reader handles quoted fields correctly) ---
+        # Require exactly one CSV record, including when fields are quoted.
         try:
-            fields = next(csv.reader([raw_body]))
-        except StopIteration:
-            _log_rejected(raw_body, "CSV parsing yielded no fields")
-            return Response("ERROR: could not parse CSV row\n",
+            rows = list(csv.reader(io.StringIO(raw_body, newline=""), strict=True))
+            if len(rows) != 1 or any("\n" in f or "\r" in f for f in rows[0]):
+                raise csv.Error("Expected exactly one single-line CSV record")
+            fields = rows[0]
+        except csv.Error as exc:
+            _log_rejected(raw_body, str(exc))
+            return Response("ERROR: malformed CSV; expected one record\n",
                             status=400, mimetype="text/plain")
 
         # Strip surrounding whitespace from every field
@@ -120,10 +129,11 @@ def upload() -> Response:
         result = validator.validate_record(fields)
         if isinstance(result, list):
             error = "; ".join(f"{item.sensor}: {item.reason}" for item in result)
-            _log_rejected(raw_body, error)
+            node_id = fields[2] if len(fields) > 2 else ""
+            _log_rejected(raw_body, error, node_id)
             return Response(f"ERROR: {error}\n", status=400, mimetype="text/plain")
 
-        # Receiver metadata is assigned only after successful validation.
+        # Approval metadata is assigned only after successful validation.
         record_id = str(uuid4())
         accepted_at = datetime.now(timezone.utc).isoformat(timespec="microseconds")
         stored_fields = [record_id, received_at, accepted_at, *fields]
@@ -166,12 +176,14 @@ def _log_accepted(fields: list[str]) -> None:
     )
 
 
-def _log_rejected(raw: str, reason: str) -> None:
+def _log_rejected(raw: str, reason: str, node_id: str = "") -> None:
     """Print a one-liner for every rejected row, with the reason."""
     ts = datetime.now().strftime("%H:%M:%S")
     # Truncate very long bodies so the console stays readable
     preview = raw if len(raw) <= 120 else raw[:117] + "..."
-    print(f"[{ts}] [REJECT]  {reason} | row: {preview}")
+    # A recoverable third field is the claimed source, not authenticated identity.
+    node = node_id[:40] if node_id else "unknown"
+    print(f"[{ts}] [REJECT]  node={node!r} {reason} | row: {preview!r}")
 
 
 # ============================================================
@@ -179,6 +191,13 @@ def _log_rejected(raw: str, reason: str) -> None:
 # ============================================================
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Receive validated sensor CSV uploads")
+    parser.add_argument("--output", default=CSV_FILE,
+                        help="CSV destination; existing headers must match the stored schema")
+    CSV_FILE = parser.parse_args().output
+
     # Initialise the output file before accepting any connections
     _init_csv()
 

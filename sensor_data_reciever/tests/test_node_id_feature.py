@@ -1,57 +1,39 @@
+"""Claimed node identity is retained in accepted and rejected records."""
 import pytest
-
-import config
 from validator import validate_record
+from .helpers import read_rows
 
 
-def test_num_nodes_is_configured_and_valid():
-    assert hasattr(config, "NUM_NODES")
-    assert isinstance(config.NUM_NODES, int)
-    assert config.NUM_NODES > 0
-    assert config.validate_config() is True
+@pytest.mark.parametrize("node", ["1", "2"])
+def test_same_local_ids_are_distinct_between_nodes(client, output, valid_fields, node):
+    valid_fields[2:5] = [node, "1", "1"]
+    assert client.post("/upload", data=",".join(valid_fields)).status_code == 200
+    row = dict(zip(read_rows(output)[0], read_rows(output)[1]))
+    assert (row["node_id"], row["plant_id"], row["sampling_point"]) == (node, "1", "1")
 
 
-@pytest.mark.parametrize(
-    "node_id, expected",
-    [
-        ("NODE_01", True),
-        ("NODE_02", True),
-        ("NODE_04", True),
-        ("NODE_05", False),
-        ("", False),
-        ("NODE_0", False),
-        ("node_01", False),
-        ("NODE_1", False),
-    ],
-)
-def test_node_id_format_and_range(node_id, expected):
-    assert config.is_valid_node_id(node_id) is expected
+@pytest.mark.parametrize("node", ["1", "2", "3", "NODE_01"])
+def test_rejection_logs_claimed_node(client, valid_fields, capsys, node):
+    valid_fields[2] = node
+    valid_fields[5] = "bad"
+    assert client.post("/upload", data=",".join(valid_fields)).status_code == 400
+    assert f"node={node!r}" in capsys.readouterr().out
 
 
-def test_valid_record_accepts_node_id_and_rejects_missing_or_invalid_node_id():
-    valid_fields = [
-        "2024-01-01T10:00:00",
-        "1",
-        "1",
-        "1",
-        "NODE_01",
-        "50.0",
-        "20.0",
-        "50.0",
-        "500.0",
-    ]
-    valid_result = validate_record(valid_fields)
-    assert isinstance(valid_result, dict)
-    assert valid_result["node_id"] == "NODE_01"
+@pytest.mark.parametrize("body,node", [("123,7,2", "2"), ("123,7", "unknown"),
+                                       ("123,7,,4,4,45,23,60,512", "unknown"),
+                                       ('"unterminated', "unknown")])
+def test_structural_rejection_reports_source_when_recoverable(client, capsys, body, node):
+    assert client.post("/upload", data=body).status_code == 400
+    assert f"node={node!r}" in capsys.readouterr().out
 
-    missing_fields = valid_fields.copy()
-    missing_fields[4] = ""
-    missing_result = validate_record(missing_fields)
-    assert isinstance(missing_result, list)
-    assert missing_result[0].sensor == "node_id"
 
-    invalid_fields = valid_fields.copy()
-    invalid_fields[4] = "NODE_05"
-    invalid_result = validate_record(invalid_fields)
-    assert isinstance(invalid_result, list)
-    assert invalid_result[0].sensor == "node_id"
+def test_validator_error_keeps_node_for_wrong_count(valid_fields):
+    error = validate_record(valid_fields[:-1])[0]
+    assert error.node_id == "2"
+
+
+def test_current_bounds_are_preserved_not_replaced_with_wiring_rules(valid_fields):
+    # Existing contract permits sensor IDs 1-12 and plant IDs 1-16 on either node.
+    valid_fields[2:5] = ["2", "12", "16"]
+    assert isinstance(validate_record(valid_fields), dict)

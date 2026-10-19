@@ -22,7 +22,7 @@ import config
 # ============================================================
 
 # A valid timestamp is any non-empty string (no structural constraints in spec).
-valid_timestamp = st.text(min_size=1)
+valid_timestamp = st.text(min_size=1).filter(lambda value: bool(value.strip()))
 
 # Valid integer fields
 valid_session_id    = st.integers(min_value=config.VALID_SESSION_ID_MIN)
@@ -67,9 +67,9 @@ def make_valid_fields(ts, sid, sp, pid, node_id, soil, temp, hum, light):
     return [
         ts,
         str(sid),
+        node_id,
         str(sp),
         str(pid),
-        node_id,
         str(soil),
         str(temp),
         str(hum),
@@ -78,9 +78,9 @@ def make_valid_fields(ts, sid, sp, pid, node_id, soil, temp, hum, light):
 
 
 @st.composite
-def valid_8_fields(draw):
+def valid_9_fields(draw):
     """Draw a fully valid 9-field list[str]."""
-    node_id = draw(st.sampled_from(["NODE_01", "NODE_02", "NODE_03", "NODE_04"]))
+    node_id = draw(st.sampled_from(["1", "2"]))
     return make_valid_fields(
         draw(valid_timestamp),
         draw(valid_session_id),
@@ -132,7 +132,7 @@ def test_out_of_range_session_id_reports_correct_sensor(
 
     **Validates: Requirements 2.6**
     """
-    fields = make_valid_fields(ts, bad_sid, sp, pid, "NODE_01", soil, temp, hum, light)
+    fields = make_valid_fields(ts, bad_sid, sp, pid, "1", soil, temp, hum, light)
     result = validate_record(fields)
 
     assert isinstance(result, list), (
@@ -160,11 +160,11 @@ def test_out_of_range_sampling_point_reports_correct_sensor(
     ts, sid, bad_sp, pid, soil, temp, hum, light
 ):
     """
-    Property 4b: sampling_point outside [1,6] produces sensor='sampling_point'.
+    Property 4b: sampling_point outside [1,12] produces sensor='sampling_point'.
 
     **Validates: Requirements 2.7**
     """
-    fields = make_valid_fields(ts, sid, bad_sp, pid, "NODE_01", soil, temp, hum, light)
+    fields = make_valid_fields(ts, sid, bad_sp, pid, "1", soil, temp, hum, light)
     result = validate_record(fields)
 
     assert isinstance(result, list), (
@@ -196,7 +196,7 @@ def test_out_of_range_plant_id_reports_correct_sensor(
 
     **Validates: Requirements 2.8**
     """
-    fields = make_valid_fields(ts, sid, sp, bad_pid, "NODE_01", soil, temp, hum, light)
+    fields = make_valid_fields(ts, sid, sp, bad_pid, "1", soil, temp, hum, light)
     result = validate_record(fields)
 
     assert isinstance(result, list), (
@@ -251,7 +251,7 @@ def test_out_of_range_soil_reports_correct_sensor(
 
     **Validates: Requirements 2.9**
     """
-    fields = make_valid_fields(ts, sid, sp, pid, "NODE_01", bad_soil, temp, hum, light)
+    fields = make_valid_fields(ts, sid, sp, pid, "1", bad_soil, temp, hum, light)
     result = validate_record(fields)
 
     assert isinstance(result, list), (
@@ -283,7 +283,7 @@ def test_out_of_range_temperature_reports_correct_sensor(
 
     **Validates: Requirements 2.10**
     """
-    fields = make_valid_fields(ts, sid, sp, pid, "NODE_01", soil, bad_temp, hum, light)
+    fields = make_valid_fields(ts, sid, sp, pid, "1", soil, bad_temp, hum, light)
     result = validate_record(fields)
 
     assert isinstance(result, list), (
@@ -315,7 +315,7 @@ def test_out_of_range_humidity_reports_correct_sensor(
 
     **Validates: Requirements 2.11**
     """
-    fields = make_valid_fields(ts, sid, sp, pid, "NODE_01", soil, temp, bad_hum, light)
+    fields = make_valid_fields(ts, sid, sp, pid, "1", soil, temp, bad_hum, light)
     result = validate_record(fields)
 
     assert isinstance(result, list), (
@@ -343,11 +343,11 @@ def test_out_of_range_light_reports_correct_sensor(
     ts, sid, sp, pid, soil, temp, hum, bad_light
 ):
     """
-    Property 5d: light outside [0.0, 1000.0] produces sensor='light'.
+    Property 5d: light outside [0.0, 100000.0] produces sensor='light'.
 
     **Validates: Requirements 2.12**
     """
-    fields = make_valid_fields(ts, sid, sp, pid, "NODE_01", soil, temp, hum, bad_light)
+    fields = make_valid_fields(ts, sid, sp, pid, "1", soil, temp, hum, bad_light)
     result = validate_record(fields)
 
     assert isinstance(result, list), (
@@ -383,7 +383,7 @@ EXPECTED_TYPES = {
 }
 
 
-@given(fields=valid_8_fields())
+@given(fields=valid_9_fields())
 @settings(max_examples=500)
 def test_all_valid_fields_returns_correctly_typed_dict(fields):
     """

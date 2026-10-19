@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import math
 from typing import Union
 
 import config
@@ -55,6 +56,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
                 bad_value=",".join(fields),
                 reason=f"Expected {config.EXPECTED_FIELDS} fields, received {len(fields)}",
                 plant_id="",
+                node_id=fields[2] if len(fields) > 2 else "",
             )
         ]
 
@@ -71,6 +73,10 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
     temperature_raw  = fields[6]
     humidity_raw     = fields[7]
     light_raw        = fields[8]
+
+    if not timestamp.strip():
+        return [ValidationError("timestamp", timestamp, "Missing timestamp",
+                                plant_id_raw, node_id_raw)]
 
     # --------------------------------------------------------
     # Node ID validation
@@ -199,6 +205,17 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
         ]
 
     # --------------------------------------------------------
+    # Reject non-finite sensor failures before comparing numeric bounds.
+    for name, value, raw in (
+        ("soil", soil, soil_raw),
+        ("temperature", temperature, temperature_raw),
+        ("humidity", humidity, humidity_raw),
+        ("light", light, light_raw),
+    ):
+        if not math.isfinite(value):
+            return [ValidationError(name, raw, "Expected a finite numeric value",
+                                    str(plant_id), node_id_raw)]
+
     # Range checks (fail-fast; bad_value = str of parsed value)
     # --------------------------------------------------------
 
@@ -279,7 +296,7 @@ def validate_record(fields: list[str]) -> Union[dict, list[ValidationError]]:
             ValidationError(
                 sensor="light",
                 bad_value=str(light),
-                reason="Expected 0-1000 lux",
+                reason=f"Expected {config.VALID_LIGHT_MIN:g}-{config.VALID_LIGHT_MAX:g} lux",
                 plant_id=str(plant_id),
                 node_id=node_id_raw,
             )
