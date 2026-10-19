@@ -26,8 +26,9 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 
 
-ROOT = Path(__file__).resolve().parent
-DATA_PATH = ROOT / "Greenhouse Plant Growth Metrics.csv"
+EDA_ROOT = Path(__file__).resolve().parents[1]
+DATA_PATH = EDA_ROOT / "data" / "Greenhouse Plant Growth Metrics.csv"
+OUTPUT_DIR = EDA_ROOT / "outputs"
 FEATURES = [
     "ACHP",
     "PHR",
@@ -87,6 +88,7 @@ def piecewise_knee(k_values: np.ndarray, inertias: np.ndarray) -> tuple[int, dic
 
 
 def main() -> None:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     started = time.perf_counter()
     df = pd.read_csv(DATA_PATH)
     X_df = df[FEATURES].copy()
@@ -231,12 +233,12 @@ def main() -> None:
     for axis in axes:
         axis.set_xlabel("PC1")
         axis.set_ylabel("PC2")
-    fig.savefig(ROOT / "clustering_pca_diagnostics.png", dpi=170)
+    fig.savefig(OUTPUT_DIR / "clustering_pca_diagnostics.png", dpi=170)
     plt.close(fig)
 
-    metrics.to_csv(ROOT / "clustering_validation_metrics.csv", index=False)
-    sizes_default.to_csv(ROOT / "clustering_sizes_notebook_default.csv", index=False)
-    sizes_n10.to_csv(ROOT / "clustering_sizes_n_init_10.csv", index=False)
+    metrics.to_csv(OUTPUT_DIR / "clustering_validation_metrics.csv", index=False)
+    sizes_default.to_csv(OUTPUT_DIR / "clustering_sizes_notebook_default.csv", index=False)
+    sizes_n10.to_csv(OUTPUT_DIR / "clustering_sizes_n_init_10.csv", index=False)
 
     report = {
         "dataset": {
@@ -281,7 +283,7 @@ def main() -> None:
             "pandas": pd.__version__,
         },
     }
-    with (ROOT / "clustering_root_cause_diagnostics.json").open("w", encoding="utf-8") as handle:
+    with (OUTPUT_DIR / "clustering_root_cause_diagnostics.json").open("w", encoding="utf-8") as handle:
         json.dump(report, handle, indent=2)
     emit(f"Finished in {time.perf_counter() - started:.1f}s")
 
