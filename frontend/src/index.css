@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-deep-forest: #102F26;
+  --color-dark-pine: #173F32;
+  --color-moss-green: #426B4F;
+  --color-emerald-accent: #2E8B57;
+  --color-bright-leaf: #79B86A;
+  --color-soft-sage: #DDE8D8;
+  --color-pale-mint: #EDF4EB;
+  --color-warm-ivory: #F6F7F0;
+  --color-white-card: #FFFFFF;
+  --color-primary-text: #1C2B23;
+  --color-muted-text: #6B786E;
+  --color-border: #DCE4D9;
+  --color-warning-amber: #C98227;
+  --color-error-red: #C94C4C;
+  --color-info-blue: #3977B8;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-warm-ivory);
+  color: var(--color-primary-text);
+  overflow-x: hidden;
+}
+
+/* Custom scrollbars for a clean look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C4D1C0;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #A0B59B;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
