@@ -1,0 +1,10 @@
+# Publishes the port on localhost only. Change to "0.0.0.0:8001:8001" only after reading docs/JETSON_DEPLOYMENT.md.
+services:
+  plant-ml:
+    build: .
+    ports:
+      - "127.0.0.1:8001:8001"
+    volumes:
+      - ./artifacts:/app/artifacts:ro
+      - ./config:/app/config:ro
+    restart: unless-stopped

@@ -1,0 +1,16 @@
+# Exact versions used for the build/tests recorded in BUILD_REPORT.md (Python 3.13, Linux x86_64).
+# Use ONLY on a compatible Python; Jetson (aarch64, Python 3.10/3.11) should use requirements.txt ranges.
+numpy==2.5.3
+pandas==3.0.5
+scipy==1.18.1
+scikit-learn==1.9.1
+xgboost==3.4.1
+pyyaml==6.0.3
+joblib==1.6.0
+fastapi==0.156.4
+uvicorn==0.54.0
+pydantic==2.13.5
+shap==0.54.1
+matplotlib==3.11.2
+pytest==9.1.1
+httpx==0.28.1

@@ -1,0 +1,221 @@
+{
+  "model_version": "1.0.0",
+  "created_at_utc": "2026-10-21T06:37:29.494277+00:00",
+  "random_seed": 42,
+  "dependency_versions": {
+    "python": "3.13.16",
+    "platform": "Linux-6.18.44-fc-v139-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "scipy": "1.18.1",
+    "sklearn": "1.9.1",
+    "xgboost": "3.4.1",
+    "joblib": "1.6.0",
+    "yaml": "6.0.3",
+    "fastapi": "0.156.4",
+    "pydantic": "2.13.5",
+    "shap": "0.54.1",
+    "matplotlib": "3.11.2"
+  },
+  "training_data": {
+    "filename": "plant_sensor_data.csv",
+    "sha256": "92ea22e21bf3ffa8544207751a2b8ac55589c5b68a9c570ce0c0e7c1eedbf860",
+    "rows": 5376,
+    "rows_used": 5376,
+    "rows_quarantined": 0,
+    "provenance": "synthetic",
+    "provenance_note": "Training labels (stress_level / stress_type) are simulation labels, not biological ground truth. Metrics are synthetic-data metrics and are not experimentally validated plant-health performance.\n"
+  },
+  "split": {
+    "strategy": "chronological",
+    "cutoff_timestamp": "2026-10-11T22:05:15+05:30",
+    "test_fraction": 0.25,
+    "note": "Train rows are strictly earlier than test rows; features use past rows only.",
+    "train_rows": 4032,
+    "test_rows": 1344
+  },
+  "run_id": "v1.0.0_20261021T063729Z",
+  "validated_on_real_plants": false,
+  "models": [
+    "classifier",
+    "clustering",
+    "anomaly"
+  ],
+  "config": {
+    "config": {
+      "project": {
+        "name": "money_plant_ml_pipeline",
+        "model_version": "1.0.0"
+      },
+      "seed": 42,
+      "timezone": "Asia/Kolkata",
+      "paths": {
+        "default_input": "data/raw/plant_sensor_data.csv",
+        "processed_dir": "data/processed",
+        "artifacts_dir": "artifacts",
+        "reports_dir": "reports"
+      },
+      "data": {
+        "provenance": "synthetic",
+        "provenance_note": "Training labels (stress_level / stress_type) are simulation labels, not biological ground truth. Metrics are synthetic-data metrics and are not experimentally validated plant-health performance.\n",
+        "validated_on_real_plants": false
+      },
+      "validation": {
+        "mode": "warn",
+        "save_quarantine": true
+      },
+      "features": {
+        "rolling_windows": [
+          3,
+          6,
+          12
+        ],
+        "std_min_periods": 2,
+        "baseline_window": 48,
+        "baseline_min_periods": 6,
+        "max_light": 100000
+      },
+      "split": {
+        "strategy": "chronological",
+        "test_fraction": 0.25,
+        "holdout_plants": [
+          4,
+          8,
+          12,
+          16
+        ]
+      },
+      "classifier": {
+        "class_weight": "none",
+        "num_boost_round": 300,
+        "xgboost_params": {
+          "objective": "multi:softprob",
+          "eval_metric": "mlogloss",
+          "eta": 0.05,
+          "max_depth": 4,
+          "min_child_weight": 3,
+          "subsample": 0.8,
+          "colsample_bytree": 0.8,
+          "reg_lambda": 2.0,
+          "tree_method": "hist",
+          "nthread": 2
+        },
+        "baselines": [
+          "majority_class",
+          "logistic_regression"
+        ]
+      },
+      "clustering": {
+        "k_min": 2,
+        "k_max": 8,
+        "k": null,
+        "n_init": 10,
+        "silhouette_sample_size": 5000
+      },
+      "anomaly": {
+        "contamination": 0.02,
+        "n_estimators": 200,
+        "max_samples": "auto",
+        "label_column": "is_synthetic_anomaly",
+        "evaluate_on": "test"
+      },
+      "explain": {
+        "enabled": true,
+        "top_k": 5,
+        "background_rows": 500
+      },
+      "recommendations": {
+        "soil_low_pct": 25,
+        "soil_fast_drop_pct_per_hr": -1.5,
+        "daytime_hours": [
+          9,
+          16
+        ],
+        "light_low_lux": 300,
+        "light_high_lux": 20000,
+        "temp_high_c": 32,
+        "temp_low_c": 18,
+        "humidity_low_pct": 40,
+        "vpd_high_kpa": 2.0,
+        "low_confidence_max_prob": 0.45,
+        "min_consistent_rows": 3
+      },
+      "artifacts": {
+        "allow_version_mismatch": false
+      },
+      "api": {
+        "host": "127.0.0.1",
+        "port": 8001,
+        "max_history_rows": 500,
+        "max_batch_items": 64
+      }
+    },
+    "feature_config": {
+      "allow_identifier_experiments": [],
+      "classifier": {
+        "include": "all",
+        "exclude": [
+          "elapsed_hours"
+        ]
+      },
+      "clustering": {
+        "features": [
+          "soil",
+          "temperature",
+          "humidity",
+          "log_light",
+          "vpd",
+          "soil_rate_per_hr",
+          "soil_base_dev",
+          "temperature_base_dev",
+          "humidity_base_dev",
+          "log_light_base_dev",
+          "vpd_base_dev",
+          "soil_roll6_mean",
+          "temperature_roll6_mean",
+          "humidity_roll6_mean",
+          "light_roll6_mean",
+          "vpd_roll6_mean"
+        ]
+      },
+      "anomaly": {
+        "features": [
+          "soil",
+          "temperature",
+          "humidity",
+          "log_light",
+          "vpd",
+          "soil_diff1",
+          "temperature_diff1",
+          "humidity_diff1",
+          "light_diff1",
+          "vpd_diff1",
+          "soil_rate_per_hr",
+          "soil_base_dev",
+          "temperature_base_dev",
+          "humidity_base_dev",
+          "log_light_base_dev",
+          "vpd_base_dev",
+          "soil_roll6_std",
+          "temperature_roll6_std",
+          "humidity_roll6_std",
+          "light_soil_interaction"
+        ]
+      }
+    }
+  },
+  "validation_mode": "warn",
+  "feature_engineering": {
+    "rolling_windows": [
+      3,
+      6,
+      12
+    ],
+    "baseline_window": 48,
+    "baseline_min_periods": 6,
+    "std_min_periods": 2,
+    "max_light": 100000
+  },
+  "schema_version": 1
+}

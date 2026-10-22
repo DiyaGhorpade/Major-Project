@@ -1,0 +1,54 @@
+# Model input feature selection.
+# Feature names are produced by plant_ml.feature_engineering (see docs/FEATURE_ENGINEERING.md).
+# Labels, identifiers and raw timestamps are FORBIDDEN as inputs (see plant_ml.schema.FORBIDDEN_MODEL_COLUMNS);
+# the pipeline raises LeakageError if they are listed here, unless explicitly whitelisted below.
+
+# Leakage-safe, justified identifier experiments only (empty by default; do not enable casually).
+allow_identifier_experiments: []
+
+classifier:
+  include: all                 # every engineered + raw sensor feature ...
+  exclude: [elapsed_hours]     # ... except elapsed_hours (depends on how much history a caller supplies -> train/serve skew,
+                               #     and acts as a proxy for "which week of the experiment")
+
+clustering:
+  features:
+    - soil
+    - temperature
+    - humidity
+    - log_light
+    - vpd
+    - soil_rate_per_hr
+    - soil_base_dev
+    - temperature_base_dev
+    - humidity_base_dev
+    - log_light_base_dev
+    - vpd_base_dev
+    - soil_roll6_mean
+    - temperature_roll6_mean
+    - humidity_roll6_mean
+    - light_roll6_mean
+    - vpd_roll6_mean
+
+anomaly:
+  features:
+    - soil
+    - temperature
+    - humidity
+    - log_light
+    - vpd
+    - soil_diff1
+    - temperature_diff1
+    - humidity_diff1
+    - light_diff1
+    - vpd_diff1
+    - soil_rate_per_hr
+    - soil_base_dev
+    - temperature_base_dev
+    - humidity_base_dev
+    - log_light_base_dev
+    - vpd_base_dev
+    - soil_roll6_std
+    - temperature_roll6_std
+    - humidity_roll6_std
+    - light_soil_interaction

@@ -1,0 +1,235 @@
+{
+  "model_version": "1.0.0",
+  "created_at_utc": "2026-10-21T14:52:44.115025+00:00",
+  "random_seed": 42,
+  "dependency_versions": {
+    "python": "3.13.1",
+    "platform": "Windows-11-10.0.26100-SP0",
+    "machine": "AMD64",
+    "numpy": "2.5.4",
+    "pandas": "3.0.6",
+    "scipy": "1.18.1",
+    "sklearn": "1.9.1",
+    "xgboost": "3.4.1",
+    "joblib": "1.6.0",
+    "yaml": "6.0.3",
+    "fastapi": "0.157.0",
+    "pydantic": "2.14.1",
+    "shap": "0.54.1",
+    "matplotlib": "3.11.2"
+  },
+  "training_data": {
+    "filename": "plant_sensor_data.csv",
+    "sha256": "92ea22e21bf3ffa8544207751a2b8ac55589c5b68a9c570ce0c0e7c1eedbf860",
+    "rows": 5376,
+    "rows_used": 5376,
+    "rows_quarantined": 0,
+    "provenance": "synthetic",
+    "provenance_note": "Training labels (stress_level / stress_type) are simulation labels, not biological ground truth. Metrics are synthetic-data metrics and are not experimentally validated plant-health performance.\n"
+  },
+  "split": {
+    "strategy": "chronological",
+    "cutoff_timestamp": "2026-10-11T22:05:15+05:30",
+    "test_fraction": 0.25,
+    "note": "Train rows are strictly earlier than test rows; features use past rows only.",
+    "train_rows": 4032,
+    "test_rows": 1344
+  },
+  "model_name": "xgboost_stress_classifier",
+  "feature_names": [
+    "soil",
+    "temperature",
+    "humidity",
+    "light",
+    "vpd",
+    "log_light",
+    "light_soil_interaction",
+    "soil_rate_per_hr",
+    "soil_lag1",
+    "soil_diff1",
+    "soil_trend3",
+    "temperature_lag1",
+    "temperature_diff1",
+    "temperature_trend3",
+    "humidity_lag1",
+    "humidity_diff1",
+    "humidity_trend3",
+    "light_lag1",
+    "light_diff1",
+    "light_trend3",
+    "vpd_lag1",
+    "vpd_diff1",
+    "vpd_trend3",
+    "soil_roll3_mean",
+    "soil_roll3_std",
+    "soil_roll6_mean",
+    "soil_roll6_std",
+    "soil_roll12_mean",
+    "soil_roll12_std",
+    "temperature_roll3_mean",
+    "temperature_roll3_std",
+    "temperature_roll6_mean",
+    "temperature_roll6_std",
+    "temperature_roll12_mean",
+    "temperature_roll12_std",
+    "humidity_roll3_mean",
+    "humidity_roll3_std",
+    "humidity_roll6_mean",
+    "humidity_roll6_std",
+    "humidity_roll12_mean",
+    "humidity_roll12_std",
+    "light_roll3_mean",
+    "light_roll3_std",
+    "light_roll6_mean",
+    "light_roll6_std",
+    "light_roll12_mean",
+    "light_roll12_std",
+    "vpd_roll3_mean",
+    "vpd_roll3_std",
+    "vpd_roll6_mean",
+    "vpd_roll6_std",
+    "vpd_roll12_mean",
+    "vpd_roll12_std",
+    "soil_base_dev",
+    "temperature_base_dev",
+    "humidity_base_dev",
+    "log_light_base_dev",
+    "vpd_base_dev",
+    "hour",
+    "dayofweek",
+    "hour_sin",
+    "hour_cos"
+  ],
+  "label_mapping": {
+    "healthy": 0,
+    "low": 1,
+    "moderate": 2,
+    "high": 3
+  },
+  "preprocessing": {
+    "imputation": "none - XGBoost handles NaN natively (missing-value direction learned in training)",
+    "scaling": "none (tree model)",
+    "class_weight": "none"
+  },
+  "xgboost_params": {
+    "objective": "multi:softprob",
+    "eval_metric": "mlogloss",
+    "eta": 0.05,
+    "max_depth": 4,
+    "min_child_weight": 3,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "reg_lambda": 2.0,
+    "tree_method": "hist",
+    "nthread": 2,
+    "num_class": 4,
+    "seed": 42
+  },
+  "num_boost_round": 300,
+  "metrics": {
+    "metric_scope": "synthetic-data metrics (NOT validated plant-health performance)",
+    "n_samples": 1344,
+    "accuracy": 0.6458333333333334,
+    "macro_f1": 0.5863661122637052,
+    "weighted_f1": 0.644107888989826,
+    "balanced_accuracy": 0.605827224744972,
+    "per_class": {
+      "healthy": {
+        "precision": 0.6167979002624672,
+        "recall": 0.8935361216730038,
+        "f1": 0.7298136645962733,
+        "support": 263
+      },
+      "low": {
+        "precision": 0.32432432432432434,
+        "recall": 0.31746031746031744,
+        "f1": 0.32085561497326204,
+        "support": 189
+      },
+      "moderate": {
+        "precision": 0.5255972696245734,
+        "recall": 0.46808510638297873,
+        "f1": 0.49517684887459806,
+        "support": 329
+      },
+      "high": {
+        "precision": 0.8639175257731959,
+        "recall": 0.7442273534635879,
+        "f1": 0.799618320610687,
+        "support": 563
+      }
+    },
+    "confusion_matrix": {
+      "labels": [
+        "healthy",
+        "low",
+        "moderate",
+        "high"
+      ],
+      "matrix": [
+        [
+          235,
+          28,
+          0,
+          0
+        ],
+        [
+          122,
+          60,
+          7,
+          0
+        ],
+        [
+          24,
+          85,
+          154,
+          66
+        ],
+        [
+          0,
+          12,
+          132,
+          419
+        ]
+      ],
+      "rows": "true",
+      "cols": "predicted"
+    },
+    "class_counts": {
+      "healthy": 263,
+      "low": 189,
+      "moderate": 329,
+      "high": 563
+    },
+    "classes_absent_from_eval_set": []
+  },
+  "baseline_metrics": {
+    "majority_class": {
+      "accuracy": 0.140625,
+      "macro_f1": 0.06164383561643835,
+      "weighted_f1": 0.034674657534246575,
+      "balanced_accuracy": 0.25
+    },
+    "logistic_regression": {
+      "accuracy": 0.46056547619047616,
+      "macro_f1": 0.4521706741727416,
+      "weighted_f1": 0.48147984798094656,
+      "balanced_accuracy": 0.4648698747777124
+    }
+  },
+  "train_class_counts": {
+    "healthy": 1075,
+    "low": 1167,
+    "moderate": 1011,
+    "high": 779
+  },
+  "known_limitations": [
+    "Labels are simulation labels, not biological ground truth; metrics are synthetic-data metrics.",
+    "Plant identity and experimental group are deliberately excluded, so the model sees only sensor-derived features.",
+    "Small dataset (16 plants, a few weeks): estimates have wide uncertainty and may not generalise to real plants.",
+    "Temporal features need ~49 consecutive readings per plant for full parity with training."
+  ],
+  "artifact_file": "classifier.xgb.json",
+  "artifact_sha256": "e4c6ad2a96e3b55bfb3f6ebd808c7e0b452eb421b9268b8c84fe075a704da6c2",
+  "artifact_size_bytes": 2129263
+}

@@ -1,0 +1,101 @@
+# ===================================================================================
+# Money Plant ML pipeline configuration.  All relative paths resolve from the project root.
+# CLI flags on scripts override the matching keys; environment variables are listed in .env.example.
+# ===================================================================================
+
+project:
+  name: money_plant_ml_pipeline
+  model_version: "1.0.0"       # bump when feature set / training logic changes; artifacts are stored per run
+
+seed: 42                        # global random seed (XGBoost, K-Means, Isolation Forest, splits)
+timezone: Asia/Kolkata          # all timestamps are normalised to this zone; naive timestamps are ASSUMED to be in it
+
+paths:
+  default_input: data/raw/plant_sensor_data.csv
+  processed_dir: data/processed        # the only place processed/quarantined data is written
+  artifacts_dir: artifacts
+  reports_dir: reports
+
+data:
+  # synthetic | real | mixed.  Recorded in every artifact + exposed by GET /metadata.
+  # The supplied dataset carries an `is_synthetic_anomaly` helper column and contains no experimenter
+  # confirmation of real measurements, so it is treated as SYNTHETIC. Change ONLY if you have verified real data.
+  provenance: synthetic
+  provenance_note: >
+    Training labels (stress_level / stress_type) are simulation labels, not biological ground truth.
+    Metrics are synthetic-data metrics and are not experimentally validated plant-health performance.
+  validated_on_real_plants: false
+
+validation:
+  mode: warn                    # fail | warn | quarantine   (see docs/TRAINING_AND_EVALUATION.md)
+  save_quarantine: true         # write quarantined rows to processed_dir
+
+features:
+  rolling_windows: [3, 6, 12]   # trailing windows in observations (never centred)
+  std_min_periods: 2
+  baseline_window: 48           # past-only rolling baseline length (obs). 48 obs = 4 days at 2-hourly cadence
+  baseline_min_periods: 6       # warm-up: baseline (and *_base_dev) are NaN until 6 past observations exist
+  max_light: 100000             # lux; normaliser for light_soil_interaction
+
+split:
+  strategy: chronological       # chronological | group_holdout
+  test_fraction: 0.25           # chronological: last 25% of unique timestamps are test (= last session in the supplied data)
+  holdout_plants: [4, 8, 12, 16]  # group_holdout: unseen plants (one per experimental group)
+
+classifier:
+  class_weight: none            # none | balanced  (balanced = inverse-frequency sample weights on TRAIN only)
+  num_boost_round: 300
+  xgboost_params:
+    objective: multi:softprob
+    eval_metric: mlogloss
+    eta: 0.05
+    max_depth: 4
+    min_child_weight: 3
+    subsample: 0.8
+    colsample_bytree: 0.8
+    reg_lambda: 2.0
+    tree_method: hist
+    nthread: 2
+  baselines: [majority_class, logistic_regression]
+
+clustering:
+  k_min: 2
+  k_max: 8
+  k: null                       # null = choose k with best silhouette in [k_min, k_max]; or set an integer
+  n_init: 10
+  silhouette_sample_size: 5000
+
+anomaly:
+  contamination: 0.02           # expected outlier fraction (supplied data labels ~1.2%); adjustable
+  n_estimators: 200
+  max_samples: auto
+  label_column: is_synthetic_anomaly   # evaluation ONLY, never an input
+  evaluate_on: test             # test | all
+
+explain:
+  enabled: true                 # SHAP is optional; falls back with an explicit message if unavailable
+  top_k: 5
+  background_rows: 500          # rows used for global importance reports
+
+recommendations:
+  # Monitoring ranges are HEURISTIC and configurable. They are not validated biological thresholds.
+  soil_low_pct: 25
+  soil_fast_drop_pct_per_hr: -1.5
+  daytime_hours: [9, 16]        # inclusive local hours in which low light is considered meaningful
+  light_low_lux: 300
+  light_high_lux: 20000
+  temp_high_c: 32
+  temp_low_c: 18
+  humidity_low_pct: 40
+  vpd_high_kpa: 2.0
+  low_confidence_max_prob: 0.45
+  min_consistent_rows: 3        # trailing readings that must agree before a persistent-condition suggestion
+
+artifacts:
+  allow_version_mismatch: false # true = only warn when sklearn/xgboost versions differ from the training environment
+
+api:
+  host: 127.0.0.1               # safe default. Use 0.0.0.0 only after reading docs/JETSON_DEPLOYMENT.md
+  port: 8001
+  max_history_rows: 500
+  max_batch_items: 64
