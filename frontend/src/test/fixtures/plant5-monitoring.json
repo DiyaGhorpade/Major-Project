@@ -1,0 +1,997 @@
+{
+ "plant": {
+  "id": 5,
+  "name": "Pot 5: Rama Tulsi (Watering Trial)",
+  "species": "Ocimum sanctum",
+  "variety": "Rama Tulsi (Green)",
+  "cluster": "Cluster 2",
+  "clusterLabel": "Cluster 2: Water Stress",
+  "stressType": "Water Stress",
+  "nodeId": "1",
+  "samplingPoint": 12,
+  "optimalRanges": {
+   "soil": {
+    "min": 25,
+    "max": 75,
+    "unit": "%",
+    "lowLabel": "Too Dry (<25%)",
+    "idealLabel": "Ideal (25–75%)",
+    "highLabel": "Too Wet (>75%)"
+   },
+   "temperature": {
+    "min": 18,
+    "max": 32,
+    "unit": "°C",
+    "lowLabel": "Cold (<18°C)",
+    "idealLabel": "Comfortable (18–32°C)",
+    "highLabel": "Hot (>32°C)"
+   },
+   "humidity": {
+    "min": 40,
+    "max": 90,
+    "unit": "%",
+    "lowLabel": "Dry Air (<40%)",
+    "idealLabel": "Comfortable (40–90%)",
+    "highLabel": "Very Humid (>90%)"
+   },
+   "light": {
+    "min": 300,
+    "max": 20000,
+    "unit": "lux",
+    "lowLabel": "Dim (<300 lux)",
+    "idealLabel": "Bright (300–20,000 lux)",
+    "highLabel": "Intense (>20,000 lux)"
+   }
+  },
+  "latestReading": {
+   "record_id": "R-5365",
+   "timestamp": "2026-10-18T22:01:30+05:30",
+   "session_id": 4,
+   "node_id": "1",
+   "sampling_point": 12,
+   "plant_id": 5,
+   "soil": 7.2,
+   "temperature": 22.8,
+   "humidity": 75.3,
+   "light": 1.0,
+   "received_at": null,
+   "accepted_at": null,
+   "status": "accepted",
+   "validation_error": null,
+   "rssi": null,
+   "crc_ok": null,
+   "datasetLabels": {
+    "stressLevel": "high",
+    "stressType": "water",
+    "isSyntheticAnomaly": false
+   }
+  },
+  "status": "critical",
+  "conditionPrediction": {
+   "condition": "Water Stress",
+   "conditionSource": "heuristic",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.018970690667629242,
+    "low": 0.22982674837112427,
+    "moderate": 0.1270640790462494,
+    "high": 0.6241384744644165
+   },
+   "confidence": 0.6241384744644165,
+   "timestamp": "2026-10-18T22:01:30+05:30",
+   "modelVersion": "1.0.0",
+   "recordId": "R-5365",
+   "simpleExplanation": "Model rates stress 'high' (P=0.62) from the latest reading at 2026-10-18T22:01:30+05:30; the stress type ('Water Stress') is a heuristic guess, not a diagnosis.",
+   "envState": {
+    "id": 1,
+    "distance": 5.659156409605634,
+    "label": "Environmental state group 1"
+   },
+   "anomaly": {
+    "isAnomaly": false,
+    "score": -0.14056766938118048
+   }
+  },
+  "description": "Rama Tulsi (Ocimum sanctum) is the green-leaved variety. Part of the watering trial, where the watering routine is varied on purpose.",
+  "simpleCareTip": "Check the soil by hand before watering and follow the trial's watering plan; avoid waterlogging.",
+  "location": "Bay 2 — Watering Trial Row"
+ },
+ "series": [
+  {
+   "timestamp": "2026-10-16T12:01:30+05:30",
+   "soil": 13.5,
+   "temperature": 25.0,
+   "humidity": 73.0,
+   "light": 4961.0
+  },
+  {
+   "timestamp": "2026-10-16T14:01:30+05:30",
+   "soil": 13.1,
+   "temperature": 26.1,
+   "humidity": 68.2,
+   "light": 4560.0
+  },
+  {
+   "timestamp": "2026-10-16T16:01:30+05:30",
+   "soil": 12.4,
+   "temperature": 26.4,
+   "humidity": 73.4,
+   "light": 1664.0
+  },
+  {
+   "timestamp": "2026-10-16T18:01:30+05:30",
+   "soil": 12.3,
+   "temperature": null,
+   "humidity": 72.0,
+   "light": 1.0
+  },
+  {
+   "timestamp": "2026-10-16T20:01:30+05:30",
+   "soil": 13.7,
+   "temperature": 24.6,
+   "humidity": 77.0,
+   "light": 1.0
+  },
+  {
+   "timestamp": "2026-10-16T22:01:30+05:30",
+   "soil": 12.2,
+   "temperature": 21.9,
+   "humidity": 80.6,
+   "light": 0.0
+  },
+  {
+   "timestamp": "2026-10-17T00:01:30+05:30",
+   "soil": 12.3,
+   "temperature": 20.8,
+   "humidity": 88.2,
+   "light": 2.0
+  },
+  {
+   "timestamp": "2026-10-17T02:01:30+05:30",
+   "soil": 11.2,
+   "temperature": 20.0,
+   "humidity": 87.4,
+   "light": 2.0
+  },
+  {
+   "timestamp": "2026-10-17T04:01:30+05:30",
+   "soil": 13.4,
+   "temperature": 20.6,
+   "humidity": 85.7,
+   "light": 1.0
+  },
+  {
+   "timestamp": "2026-10-17T06:01:30+05:30",
+   "soil": 11.2,
+   "temperature": 21.4,
+   "humidity": 85.1,
+   "light": 1.0
+  },
+  {
+   "timestamp": "2026-10-17T08:01:30+05:30",
+   "soil": 10.9,
+   "temperature": 22.6,
+   "humidity": 84.8,
+   "light": 1434.0
+  },
+  {
+   "timestamp": "2026-10-17T10:01:30+05:30",
+   "soil": 11.3,
+   "temperature": 23.5,
+   "humidity": 78.3,
+   "light": 3785.0
+  },
+  {
+   "timestamp": "2026-10-17T12:01:30+05:30",
+   "soil": 10.6,
+   "temperature": 25.5,
+   "humidity": 72.7,
+   "light": 3090.0
+  },
+  {
+   "timestamp": "2026-10-17T14:01:30+05:30",
+   "soil": 11.1,
+   "temperature": 25.7,
+   "humidity": 73.2,
+   "light": 3866.0
+  },
+  {
+   "timestamp": "2026-10-17T16:01:30+05:30",
+   "soil": 9.6,
+   "temperature": 26.6,
+   "humidity": 72.0,
+   "light": 1924.0
+  },
+  {
+   "timestamp": "2026-10-17T18:01:30+05:30",
+   "soil": 11.0,
+   "temperature": 26.1,
+   "humidity": 73.9,
+   "light": 1.0
+  },
+  {
+   "timestamp": "2026-10-17T20:01:30+05:30",
+   "soil": 10.6,
+   "temperature": 24.1,
+   "humidity": 76.7,
+   "light": 3.0
+  },
+  {
+   "timestamp": "2026-10-17T22:01:30+05:30",
+   "soil": 9.8,
+   "temperature": 22.9,
+   "humidity": 81.9,
+   "light": 1.0
+  },
+  {
+   "timestamp": "2026-10-18T00:01:30+05:30",
+   "soil": 8.7,
+   "temperature": 21.5,
+   "humidity": 77.9,
+   "light": 0.0
+  },
+  {
+   "timestamp": "2026-10-18T02:01:30+05:30",
+   "soil": 9.0,
+   "temperature": 20.2,
+   "humidity": 81.5,
+   "light": 1.0
+  },
+  {
+   "timestamp": "2026-10-18T04:01:30+05:30",
+   "soil": 9.4,
+   "temperature": 20.7,
+   "humidity": 83.5,
+   "light": 0.0
+  },
+  {
+   "timestamp": "2026-10-18T06:01:30+05:30",
+   "soil": 8.4,
+   "temperature": 21.1,
+   "humidity": 76.3,
+   "light": 1.0
+  },
+  {
+   "timestamp": "2026-10-18T08:01:30+05:30",
+   "soil": 8.3,
+   "temperature": 22.5,
+   "humidity": 75.2,
+   "light": 1805.0
+  },
+  {
+   "timestamp": "2026-10-18T10:01:30+05:30",
+   "soil": 9.4,
+   "temperature": 25.2,
+   "humidity": 69.7,
+   "light": 3586.0
+  },
+  {
+   "timestamp": "2026-10-18T12:01:30+05:30",
+   "soil": 8.5,
+   "temperature": 26.0,
+   "humidity": 67.5,
+   "light": 4664.0
+  },
+  {
+   "timestamp": "2026-10-18T14:01:30+05:30",
+   "soil": 8.2,
+   "temperature": 26.8,
+   "humidity": 60.5,
+   "light": 2854.0
+  },
+  {
+   "timestamp": "2026-10-18T16:01:30+05:30",
+   "soil": 8.1,
+   "temperature": 26.6,
+   "humidity": 63.1,
+   "light": 1785.0
+  },
+  {
+   "timestamp": "2026-10-18T18:01:30+05:30",
+   "soil": 7.3,
+   "temperature": 25.8,
+   "humidity": 65.3,
+   "light": 0.0
+  },
+  {
+   "timestamp": "2026-10-18T20:01:30+05:30",
+   "soil": 7.2,
+   "temperature": 25.0,
+   "humidity": 71.5,
+   "light": 1.0
+  },
+  {
+   "timestamp": "2026-10-18T22:01:30+05:30",
+   "soil": 7.2,
+   "temperature": 22.8,
+   "humidity": 75.3,
+   "light": 1.0
+  }
+ ],
+ "predictionHistory": [
+  {
+   "timestamp": "2026-10-16T12:01:30+05:30",
+   "record_id": "R-4901",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.047020550817251205,
+    "low": 0.18657821416854858,
+    "moderate": 0.09625211358070374,
+    "high": 0.6701490879058838
+   },
+   "confidence": 0.6701490879058838,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.1214006469464477,
+   "envState": {
+    "id": 2,
+    "distance": 4.688893729115226,
+    "label": "Environmental state group 2"
+   }
+  },
+  {
+   "timestamp": "2026-10-16T14:01:30+05:30",
+   "record_id": "R-4917",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.020644715055823326,
+    "low": 0.1436612755060196,
+    "moderate": 0.11668767780065536,
+    "high": 0.7190062999725342
+   },
+   "confidence": 0.7190062999725342,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.11266954988118755,
+   "envState": {
+    "id": 2,
+    "distance": 4.5093106402807654,
+    "label": "Environmental state group 2"
+   }
+  },
+  {
+   "timestamp": "2026-10-16T16:01:30+05:30",
+   "record_id": "R-4933",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.014110610820353031,
+    "low": 0.12712150812149048,
+    "moderate": 0.13478948175907135,
+    "high": 0.7239784002304077
+   },
+   "confidence": 0.7239784002304077,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.11242767054777486,
+   "envState": {
+    "id": 2,
+    "distance": 4.588569555596628,
+    "label": "Environmental state group 2"
+   }
+  },
+  {
+   "timestamp": "2026-10-16T18:01:30+05:30",
+   "record_id": "R-4949",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.028432006016373634,
+    "low": 0.09162557870149612,
+    "moderate": 0.24764777719974518,
+    "high": 0.6322946548461914
+   },
+   "confidence": 0.6322946548461914,
+   "condition": "Unclassified Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.14641751022107163,
+   "envState": {
+    "id": 1,
+    "distance": 5.016673619676401,
+    "label": "Environmental state group 1"
+   }
+  },
+  {
+   "timestamp": "2026-10-16T20:01:30+05:30",
+   "record_id": "R-4965",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.037711285054683685,
+    "low": 0.12035368382930756,
+    "moderate": 0.3168719708919525,
+    "high": 0.5250630378723145
+   },
+   "confidence": 0.5250630378723145,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.13313532315109528,
+   "envState": {
+    "id": 1,
+    "distance": 4.85032053979444,
+    "label": "Environmental state group 1"
+   }
+  },
+  {
+   "timestamp": "2026-10-16T22:01:30+05:30",
+   "record_id": "R-4981",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.025562509894371033,
+    "low": 0.18928156793117523,
+    "moderate": 0.27199673652648926,
+    "high": 0.5131591558456421
+   },
+   "confidence": 0.5131591558456421,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.12913232265280866,
+   "envState": {
+    "id": 1,
+    "distance": 4.775420971723778,
+    "label": "Environmental state group 1"
+   }
+  },
+  {
+   "timestamp": "2026-10-17T00:01:30+05:30",
+   "record_id": "R-4997",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.02150760032236576,
+    "low": 0.2551991939544678,
+    "moderate": 0.19720326364040375,
+    "high": 0.5260899662971497
+   },
+   "confidence": 0.5260899662971497,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.11407504564910936,
+   "envState": {
+    "id": 1,
+    "distance": 4.950676754265962,
+    "label": "Environmental state group 1"
+   }
+  },
+  {
+   "timestamp": "2026-10-17T02:01:30+05:30",
+   "record_id": "R-5013",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.029976001009345055,
+    "low": 0.1913834661245346,
+    "moderate": 0.18684856593608856,
+    "high": 0.5917919874191284
+   },
+   "confidence": 0.5917919874191284,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.11973581496102204,
+   "envState": {
+    "id": 1,
+    "distance": 5.090964322642417,
+    "label": "Environmental state group 1"
+   }
+  },
+  {
+   "timestamp": "2026-10-17T04:01:30+05:30",
+   "record_id": "R-5029",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.035667307674884796,
+    "low": 0.13694600760936737,
+    "moderate": 0.3133007884025574,
+    "high": 0.5140859484672546
+   },
+   "confidence": 0.5140859484672546,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.12309594888968356,
+   "envState": {
+    "id": 1,
+    "distance": 4.838278170340215,
+    "label": "Environmental state group 1"
+   }
+  },
+  {
+   "timestamp": "2026-10-17T06:01:30+05:30",
+   "record_id": "R-5045",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.054981425404548645,
+    "low": 0.12656241655349731,
+    "moderate": 0.27251020073890686,
+    "high": 0.545945942401886
+   },
+   "confidence": 0.545945942401886,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.12704036070131824,
+   "envState": {
+    "id": 1,
+    "distance": 4.956110754401699,
+    "label": "Environmental state group 1"
+   }
+  },
+  {
+   "timestamp": "2026-10-17T08:01:30+05:30",
+   "record_id": "R-5061",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.03896848484873772,
+    "low": 0.255940705537796,
+    "moderate": 0.18730439245700836,
+    "high": 0.51778644323349
+   },
+   "confidence": 0.51778644323349,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.09058653916446074,
+   "envState": {
+    "id": 1,
+    "distance": 5.482134570018199,
+    "label": "Environmental state group 1"
+   }
+  },
+  {
+   "timestamp": "2026-10-17T10:01:30+05:30",
+   "record_id": "R-5077",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.03425966948270798,
+    "low": 0.12488901615142822,
+    "moderate": 0.25379475951194763,
+    "high": 0.5870565176010132
+   },
+   "confidence": 0.5870565176010132,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.10982851200751093,
+   "envState": {
+    "id": 2,
+    "distance": 5.36609515399519,
+    "label": "Environmental state group 2"
+   }
+  },
+  {
+   "timestamp": "2026-10-17T12:01:30+05:30",
+   "record_id": "R-5093",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.021908244118094444,
+    "low": 0.16551099717617035,
+    "moderate": 0.2220279723405838,
+    "high": 0.590552806854248
+   },
+   "confidence": 0.590552806854248,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.11370133974805119,
+   "envState": {
+    "id": 2,
+    "distance": 4.914770928116169,
+    "label": "Environmental state group 2"
+   }
+  },
+  {
+   "timestamp": "2026-10-17T14:01:30+05:30",
+   "record_id": "R-5109",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.015429796651005745,
+    "low": 0.1315252035856247,
+    "moderate": 0.21302668750286102,
+    "high": 0.6400183439254761
+   },
+   "confidence": 0.6400183439254761,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.12531600712214053,
+   "envState": {
+    "id": 2,
+    "distance": 4.8145105272310005,
+    "label": "Environmental state group 2"
+   }
+  },
+  {
+   "timestamp": "2026-10-17T16:01:30+05:30",
+   "record_id": "R-5125",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.026377707719802856,
+    "low": 0.07417137175798416,
+    "moderate": 0.2343788594007492,
+    "high": 0.6650720834732056
+   },
+   "confidence": 0.6650720834732056,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.1255344430525666,
+   "envState": {
+    "id": 2,
+    "distance": 4.902338322305147,
+    "label": "Environmental state group 2"
+   }
+  },
+  {
+   "timestamp": "2026-10-17T18:01:30+05:30",
+   "record_id": "R-5141",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.021466178819537163,
+    "low": 0.08848471194505692,
+    "moderate": 0.23985391855239868,
+    "high": 0.6501952409744263
+   },
+   "confidence": 0.6501952409744263,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.13631938295288987,
+   "envState": {
+    "id": 2,
+    "distance": 5.256573733218239,
+    "label": "Environmental state group 2"
+   }
+  },
+  {
+   "timestamp": "2026-10-17T20:01:30+05:30",
+   "record_id": "R-5157",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.015329995192587376,
+    "low": 0.061986010521650314,
+    "moderate": 0.17926110327243805,
+    "high": 0.7434229254722595
+   },
+   "confidence": 0.7434229254722595,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.12803459567000391,
+   "envState": {
+    "id": 1,
+    "distance": 5.159646995508632,
+    "label": "Environmental state group 1"
+   }
+  },
+  {
+   "timestamp": "2026-10-17T22:01:30+05:30",
+   "record_id": "R-5173",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.025584597140550613,
+    "low": 0.17390519380569458,
+    "moderate": 0.34486740827560425,
+    "high": 0.45564284920692444
+   },
+   "confidence": 0.45564284920692444,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.1469923440344144,
+   "envState": {
+    "id": 1,
+    "distance": 5.043166427625522,
+    "label": "Environmental state group 1"
+   }
+  },
+  {
+   "timestamp": "2026-10-18T00:01:30+05:30",
+   "record_id": "R-5189",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.024589255452156067,
+    "low": 0.13750413060188293,
+    "moderate": 0.2962017357349396,
+    "high": 0.5417048931121826
+   },
+   "confidence": 0.5417048931121826,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.12783004166585832,
+   "envState": {
+    "id": 1,
+    "distance": 5.185132237979938,
+    "label": "Environmental state group 1"
+   }
+  },
+  {
+   "timestamp": "2026-10-18T02:01:30+05:30",
+   "record_id": "R-5205",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.013033210299909115,
+    "low": 0.15180861949920654,
+    "moderate": 0.22344662249088287,
+    "high": 0.6117115616798401
+   },
+   "confidence": 0.6117115616798401,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.13627146431931553,
+   "envState": {
+    "id": 1,
+    "distance": 5.164150867013398,
+    "label": "Environmental state group 1"
+   }
+  },
+  {
+   "timestamp": "2026-10-18T04:01:30+05:30",
+   "record_id": "R-5221",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.015854161232709885,
+    "low": 0.1338302344083786,
+    "moderate": 0.26923877000808716,
+    "high": 0.5810768008232117
+   },
+   "confidence": 0.5810768008232117,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.133780318801009,
+   "envState": {
+    "id": 1,
+    "distance": 5.125168234207853,
+    "label": "Environmental state group 1"
+   }
+  },
+  {
+   "timestamp": "2026-10-18T06:01:30+05:30",
+   "record_id": "R-5237",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.026858150959014893,
+    "low": 0.15641091763973236,
+    "moderate": 0.2310842126607895,
+    "high": 0.5856467485427856
+   },
+   "confidence": 0.5856467485427856,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.12091707167825999,
+   "envState": {
+    "id": 1,
+    "distance": 5.283222310238239,
+    "label": "Environmental state group 1"
+   }
+  },
+  {
+   "timestamp": "2026-10-18T08:01:30+05:30",
+   "record_id": "R-5253",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.025133423507213593,
+    "low": 0.19126448035240173,
+    "moderate": 0.1806972175836563,
+    "high": 0.6029048562049866
+   },
+   "confidence": 0.6029048562049866,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.12926190363311563,
+   "envState": {
+    "id": 2,
+    "distance": 5.553135642769944,
+    "label": "Environmental state group 2"
+   }
+  },
+  {
+   "timestamp": "2026-10-18T10:01:30+05:30",
+   "record_id": "R-5269",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.029025403782725334,
+    "low": 0.13763228058815002,
+    "moderate": 0.3802112638950348,
+    "high": 0.4531310200691223
+   },
+   "confidence": 0.4531310200691223,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.10129727159198826,
+   "envState": {
+    "id": 2,
+    "distance": 5.104068599691183,
+    "label": "Environmental state group 2"
+   }
+  },
+  {
+   "timestamp": "2026-10-18T12:01:30+05:30",
+   "record_id": "R-5285",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.018718361854553223,
+    "low": 0.14275385439395905,
+    "moderate": 0.21743100881576538,
+    "high": 0.6210967898368835
+   },
+   "confidence": 0.6210967898368835,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.11481634623629577,
+   "envState": {
+    "id": 2,
+    "distance": 5.159041233284564,
+    "label": "Environmental state group 2"
+   }
+  },
+  {
+   "timestamp": "2026-10-18T14:01:30+05:30",
+   "record_id": "R-5301",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.012905281037092209,
+    "low": 0.1052255854010582,
+    "moderate": 0.12522733211517334,
+    "high": 0.7566417455673218
+   },
+   "confidence": 0.7566417455673218,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.07869286327821085,
+   "envState": {
+    "id": 2,
+    "distance": 5.513407243230452,
+    "label": "Environmental state group 2"
+   }
+  },
+  {
+   "timestamp": "2026-10-18T16:01:30+05:30",
+   "record_id": "R-5317",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.011956116184592247,
+    "low": 0.12503774464130402,
+    "moderate": 0.08398251980543137,
+    "high": 0.7790235877037048
+   },
+   "confidence": 0.7790235877037048,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.09819311585224372,
+   "envState": {
+    "id": 2,
+    "distance": 5.377943153082161,
+    "label": "Environmental state group 2"
+   }
+  },
+  {
+   "timestamp": "2026-10-18T18:01:30+05:30",
+   "record_id": "R-5333",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.021395742893218994,
+    "low": 0.1362779587507248,
+    "moderate": 0.09532704204320908,
+    "high": 0.7469992637634277
+   },
+   "confidence": 0.7469992637634277,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.11293938805125842,
+   "envState": {
+    "id": 2,
+    "distance": 5.8805540408171115,
+    "label": "Environmental state group 2"
+   }
+  },
+  {
+   "timestamp": "2026-10-18T20:01:30+05:30",
+   "record_id": "R-5349",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.019356094300746918,
+    "low": 0.20787076652050018,
+    "moderate": 0.09170397371053696,
+    "high": 0.6810691356658936
+   },
+   "confidence": 0.6810691356658936,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.12621449796037498,
+   "envState": {
+    "id": 2,
+    "distance": 5.743110634101106,
+    "label": "Environmental state group 2"
+   }
+  },
+  {
+   "timestamp": "2026-10-18T22:01:30+05:30",
+   "record_id": "R-5365",
+   "status": "ok",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.018970690667629242,
+    "low": 0.22982674837112427,
+    "moderate": 0.1270640790462494,
+    "high": 0.6241384744644165
+   },
+   "confidence": 0.6241384744644165,
+   "condition": "Water Stress",
+   "isAnomaly": false,
+   "anomalyScore": -0.14056766938118048,
+   "envState": {
+    "id": 1,
+    "distance": 5.659156409605634,
+    "label": "Environmental state group 1"
+   }
+  }
+ ],
+ "recommendations": [
+  {
+   "id": "rec-1",
+   "plant_id": 5,
+   "plant_name": "Pot 5: Rama Tulsi (Watering Trial)",
+   "cluster": "Cluster 2",
+   "title": "Check watering",
+   "simpleAction": "Soil moisture has stayed low for several readings. Check the soil moisture and your watering schedule.",
+   "priority": "high",
+   "status": "new",
+   "category": "irrigation",
+   "supporting_sensor_values": [
+    {
+     "metric": "Soil moisture",
+     "value": "7.2 %",
+     "target": "25–75 %",
+     "status": "low"
+    },
+    {
+     "metric": "Temperature",
+     "value": "22.8 °C",
+     "target": "18–32 °C",
+     "status": "good"
+    },
+    {
+     "metric": "Humidity",
+     "value": "75.3 %",
+     "target": "40–90 %",
+     "status": "good"
+    },
+    {
+     "metric": "Light",
+     "value": "1 lux",
+     "target": "night (no target)",
+     "status": "good"
+    }
+   ],
+   "reason": "Last 3 soil readings are below the configured monitoring level (25.0%). Soil moisture 7.2 % (recent average 7.8 %); model P(high)=0.62.",
+   "scientificContext": "Tulsi (Ocimum) generally prefers evenly moist, well-drained soil; prolonged dryness and waterlogging both stress the roots. A soil-moisture sensor gives a relative reading that depends on the soil, pot and probe placement, so confirm by checking the soil by hand.",
+   "guidance_source": "ML heuristic rules · model 1.0.0 (run v1.0.0_20261021T145244Z)",
+   "created_at": "2026-10-25T17:05:48.071217+05:30",
+   "updated_at": "2026-10-25T17:12:38.344592+05:30",
+   "resolved_at": null,
+   "source": "ml",
+   "confidence": 0.6241384744644165,
+   "basedOn": {
+    "timestamp": "2026-10-18T22:01:30+05:30",
+    "modelVersion": "1.0.0",
+    "runId": "v1.0.0_20261021T145244Z"
+   },
+   "disclaimer": true,
+   "mlRecId": "check_watering"
+  }
+ ]
+}

@@ -21,10 +21,10 @@ export const ConfusionMatrixChart: React.FC<ConfusionMatrixChartProps> = ({ metr
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div>
           <h3 className="text-sm font-bold text-[#1C2B23]">
-            Holdout Test Confusion Matrix
+            Hold-out Confusion Matrix ({labels.length} classes)
           </h3>
           <p className="text-xs text-[#6B786E]">
-            Rows represent Ground Truth (True Condition); Columns represent Model Prediction.
+            Rows are the synthetic ground-truth label; columns are the model's prediction.
           </p>
         </div>
         <div className="text-xs font-mono text-stone-500">
@@ -55,7 +55,7 @@ export const ConfusionMatrixChart: React.FC<ConfusionMatrixChartProps> = ({ metr
                   {row.map((val, cIdx) => {
                     const isDiagonal = rIdx === cIdx;
                     // Compute opacity
-                    const opacity = Math.max(0.08, Math.min(1, val / maxVal));
+                    const opacity = maxVal > 0 ? Math.max(0.08, Math.min(1, val / maxVal)) : 0.08;
                     const cellBg = isDiagonal
                       ? `rgba(46, 139, 87, ${opacity})`
                       : val > 0
@@ -75,10 +75,10 @@ export const ConfusionMatrixChart: React.FC<ConfusionMatrixChartProps> = ({ metr
                         className="p-3 border border-[#DCE4D9]/60 font-mono text-xs transition-colors relative group"
                         style={{ backgroundColor: cellBg }}
                       >
-                        <span className={textColor}>{val}</span>
+                        <span className={textColor} data-testid={`cm-${rIdx}-${cIdx}`}>{val}</span>
                         {/* Hover tooltip */}
                         <div className="absolute hidden group-hover:block z-20 bottom-full left-1/2 -translate-x-1/2 mb-1 px-2.5 py-1 bg-stone-900 text-white rounded text-[10px] whitespace-nowrap shadow-lg">
-                          True: {labels[rIdx]} | Pred: {labels[cIdx]} ({((val / rowTotal) * 100).toFixed(1)}%)
+                          True: {labels[rIdx]} | Pred: {labels[cIdx]} ({rowTotal > 0 ? ((val / rowTotal) * 100).toFixed(1) : '0.0'}% of true {labels[rIdx]})
                         </div>
                       </td>
                     );

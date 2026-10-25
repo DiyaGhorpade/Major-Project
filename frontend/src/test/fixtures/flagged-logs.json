@@ -1,0 +1,71 @@
+[
+ {
+  "record_id": "R-5344",
+  "timestamp": "2026-10-18T18:05:15+05:30",
+  "session_id": 4,
+  "node_id": "2",
+  "sampling_point": 10,
+  "plant_id": 16,
+  "soil": null,
+  "temperature": 23.0,
+  "humidity": 77.9,
+  "light": 1.0,
+  "received_at": null,
+  "accepted_at": null,
+  "status": "flagged",
+  "validation_error": "missing: soil",
+  "rssi": null,
+  "crc_ok": null,
+  "datasetLabels": {
+   "stressLevel": "moderate",
+   "stressType": "light",
+   "isSyntheticAnomaly": false
+  }
+ },
+ {
+  "record_id": "R-5312",
+  "timestamp": "2026-10-18T14:05:15+05:30",
+  "session_id": 4,
+  "node_id": "2",
+  "sampling_point": 8,
+  "plant_id": 16,
+  "soil": null,
+  "temperature": 23.9,
+  "humidity": 72.2,
+  "light": 546.0,
+  "received_at": null,
+  "accepted_at": null,
+  "status": "flagged",
+  "validation_error": "missing: soil",
+  "rssi": null,
+  "crc_ok": null,
+  "datasetLabels": {
+   "stressLevel": "moderate",
+   "stressType": "light",
+   "isSyntheticAnomaly": false
+  }
+ },
+ {
+  "record_id": "R-5274",
+  "timestamp": "2026-10-18T10:03:00+05:30",
+  "session_id": 4,
+  "node_id": "2",
+  "sampling_point": 6,
+  "plant_id": 10,
+  "soil": 55.6,
+  "temperature": 24.2,
+  "humidity": null,
+  "light": 2088.0,
+  "received_at": null,
+  "accepted_at": null,
+  "status": "flagged",
+  "validation_error": "missing: humidity",
+  "rssi": null,
+  "crc_ok": null,
+  "datasetLabels": {
+   "stressLevel": "low",
+   "stressType": "none",
+   "isSyntheticAnomaly": false
+  }
+ }
+]

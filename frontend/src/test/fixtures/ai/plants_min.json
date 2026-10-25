@@ -1,0 +1,114 @@
+[
+ {
+  "id": 1,
+  "name": "Pot 1: Rama Tulsi (Control Group)",
+  "species": "Ocimum sanctum",
+  "cluster": "Cluster 1",
+  "nodeId": "1"
+ },
+ {
+  "id": 2,
+  "name": "Pot 2: Krishna Tulsi (Control Group)",
+  "species": "Ocimum tenuiflorum",
+  "cluster": "Cluster 1",
+  "nodeId": "2"
+ },
+ {
+  "id": 3,
+  "name": "Pot 3: Rama Tulsi (Control Group)",
+  "species": "Ocimum sanctum",
+  "cluster": "Cluster 1",
+  "nodeId": "1"
+ },
+ {
+  "id": 4,
+  "name": "Pot 4: Krishna Tulsi (Control Group)",
+  "species": "Ocimum tenuiflorum",
+  "cluster": "Cluster 1",
+  "nodeId": "2"
+ },
+ {
+  "id": 5,
+  "name": "Pot 5: Rama Tulsi (Watering Trial)",
+  "species": "Ocimum sanctum",
+  "cluster": "Cluster 2",
+  "nodeId": "1"
+ },
+ {
+  "id": 6,
+  "name": "Pot 6: Krishna Tulsi (Watering Trial)",
+  "species": "Ocimum tenuiflorum",
+  "cluster": "Cluster 2",
+  "nodeId": "2"
+ },
+ {
+  "id": 7,
+  "name": "Pot 7: Rama Tulsi (Watering Trial)",
+  "species": "Ocimum sanctum",
+  "cluster": "Cluster 2",
+  "nodeId": "1"
+ },
+ {
+  "id": 8,
+  "name": "Pot 8: Krishna Tulsi (Watering Trial)",
+  "species": "Ocimum tenuiflorum",
+  "cluster": "Cluster 2",
+  "nodeId": "2"
+ },
+ {
+  "id": 9,
+  "name": "Pot 9: Rama Tulsi (Light Trial)",
+  "species": "Ocimum sanctum",
+  "cluster": "Cluster 3",
+  "nodeId": "1"
+ },
+ {
+  "id": 10,
+  "name": "Pot 10: Krishna Tulsi (Light Trial)",
+  "species": "Ocimum tenuiflorum",
+  "cluster": "Cluster 3",
+  "nodeId": "2"
+ },
+ {
+  "id": 11,
+  "name": "Pot 11: Rama Tulsi (Light Trial)",
+  "species": "Ocimum sanctum",
+  "cluster": "Cluster 3",
+  "nodeId": "1"
+ },
+ {
+  "id": 12,
+  "name": "Pot 12: Krishna Tulsi (Light Trial)",
+  "species": "Ocimum tenuiflorum",
+  "cluster": "Cluster 3",
+  "nodeId": "2"
+ },
+ {
+  "id": 13,
+  "name": "Pot 13: Rama Tulsi (Climate Trial)",
+  "species": "Ocimum sanctum",
+  "cluster": "Cluster 4",
+  "nodeId": "1"
+ },
+ {
+  "id": 14,
+  "name": "Pot 14: Krishna Tulsi (Climate Trial)",
+  "species": "Ocimum tenuiflorum",
+  "cluster": "Cluster 4",
+  "nodeId": "2"
+ },
+ {
+  "id": 15,
+  "name": "Pot 15: Rama Tulsi (Climate Trial)",
+  "species": "Ocimum sanctum",
+  "cluster": "Cluster 4",
+  "nodeId": "1"
+ },
+ {
+  "id": 16,
+  "name": "Pot 16: Krishna Tulsi (Climate Trial)",
+  "species": "Ocimum tenuiflorum",
+  "cluster": "Cluster 4",
+  "nodeId": "2"
+ }
+]

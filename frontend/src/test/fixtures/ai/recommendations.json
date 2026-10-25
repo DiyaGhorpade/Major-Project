@@ -1,0 +1,106 @@
+[
+ {
+  "id": "rec-7",
+  "plant_id": 16,
+  "plant_name": "Pot 16: Krishna Tulsi (Climate Trial)",
+  "cluster": "Cluster 4",
+  "title": "Monitor and inspect",
+  "simpleAction": "The model rates this plant's recent readings as stressed, but no single sensor condition explains it. Keep monitoring and inspect the plant and sensors in person.",
+  "priority": "high",
+  "status": "new",
+  "category": "monitoring",
+  "supporting_sensor_values": [
+   {
+    "metric": "Soil moisture",
+    "value": "55.9 %",
+    "target": "25\u201375 %",
+    "status": "good"
+   },
+   {
+    "metric": "Temperature",
+    "value": "19.7 \u00b0C",
+    "target": "18\u201332 \u00b0C",
+    "status": "good"
+   },
+   {
+    "metric": "Humidity",
+    "value": "81.3 %",
+    "target": "40\u201390 %",
+    "status": "good"
+   },
+   {
+    "metric": "Light",
+    "value": "0 lux",
+    "target": "night (no target)",
+    "status": "good"
+   }
+  ],
+  "reason": "Predicted class is 'moderate' without a persistent out-of-range sensor condition under the configured ranges. Model P(moderate)=0.96. Priority raised to high: the model has rated the last 3 consecutive readings 'moderate' or higher.",
+  "scientificContext": "The model gives a statistical estimate learned from a synthetic dataset and has not been validated on real plants. When it is unsure, or no single sensor explains a stress rating, inspecting the plant and sensors in person is the most reliable check.",
+  "guidance_source": "ML heuristic rules \u00b7 model 1.0.0 (run v1.0.0_20261021T145244Z)",
+  "created_at": "2026-10-25T17:05:48.085023+05:30",
+  "updated_at": "2026-10-25T17:05:48.085024+05:30",
+  "resolved_at": null,
+  "source": "ml",
+  "confidence": 0.9561293721199036,
+  "basedOn": {
+   "timestamp": "2026-10-18T22:05:15+05:30",
+   "modelVersion": "1.0.0",
+   "runId": "v1.0.0_20261021T145244Z"
+  },
+  "disclaimer": true,
+  "mlRecId": "monitor_and_inspect"
+ },
+ {
+  "id": "rec-4",
+  "plant_id": 8,
+  "plant_name": "Pot 8: Krishna Tulsi (Watering Trial)",
+  "cluster": "Cluster 2",
+  "title": "Check watering",
+  "simpleAction": "Soil moisture has stayed low for several readings. Check the soil moisture and your watering schedule.",
+  "priority": "high",
+  "status": "new",
+  "category": "irrigation",
+  "supporting_sensor_values": [
+   {
+    "metric": "Soil moisture",
+    "value": "2.5 %",
+    "target": "25\u201375 %",
+    "status": "low"
+   },
+   {
+    "metric": "Temperature",
+    "value": "27.0 \u00b0C",
+    "target": "18\u201332 \u00b0C",
+    "status": "good"
+   },
+   {
+    "metric": "Humidity",
+    "value": "75.5 %",
+    "target": "40\u201390 %",
+    "status": "good"
+   },
+   {
+    "metric": "Light",
+    "value": "0 lux",
+    "target": "night (no target)",
+    "status": "good"
+   }
+  ],
+  "reason": "Last 3 soil readings are below the configured monitoring level (25.0%). Soil moisture 2.5 % (recent average 2.1 %); model P(high)=0.57.",
+  "scientificContext": "Tulsi (Ocimum) generally prefers evenly moist, well-drained soil; prolonged dryness and waterlogging both stress the roots. A soil-moisture sensor gives a relative reading that depends on the soil, pot and probe placement, so confirm by checking the soil by hand.",
+  "guidance_source": "ML heuristic rules \u00b7 model 1.0.0 (run v1.0.0_20261021T145244Z)",
+  "created_at": "2026-10-25T17:05:48.077225+05:30",
+  "updated_at": "2026-10-25T17:05:48.077227+05:30",
+  "resolved_at": null,
+  "source": "ml",
+  "confidence": 0.568954348564148,
+  "basedOn": {
+   "timestamp": "2026-10-18T22:02:15+05:30",
+   "modelVersion": "1.0.0",
+   "runId": "v1.0.0_20261021T145244Z"
+  },
+  "disclaimer": true,
+  "mlRecId": "check_watering"
+ }
+]

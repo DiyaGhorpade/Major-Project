@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -10,21 +10,92 @@ import {
   CartesianGrid,
   ReferenceArea,
 } from 'recharts';
-import { SensorRecord } from '../../types';
 import { formatDateTime } from '../../lib/utils';
+import { formatIstTick, toMillis } from '../monitoring/format';
+
+/** Anything with a timestamp and the four sensor values (a stored reading or a monitoring series point). */
+export interface TrendPoint {
+  timestamp: string;
+  soil: number | null;
+  temperature: number | null;
+  humidity: number | null;
+  light: number | null;
+  plant_id?: number;
+  sampling_point?: number | null;
+}
+
+type Sensor = 'soil' | 'temperature' | 'humidity' | 'light';
+type Selected = 'all' | Sensor;
 
 interface SensorTrendChartProps {
-  records: SensorRecord[];
+  records: readonly TrendPoint[];
   title?: string;
-  defaultSensor?: 'all' | 'soil' | 'temperature' | 'humidity' | 'light';
-  optimalRange?: {
-    soil?: { min: number; max: number };
-    temperature?: { min: number; max: number };
-    humidity?: { min: number; max: number };
-    light?: { min: number; max: number };
-  };
+  defaultSensor?: Selected;
+  optimalRange?: Partial<Record<Sensor, { min: number; max: number }>>;
   height?: number;
 }
+
+interface ChartRow {
+  ts: number;
+  fullDate: string;
+  soil: number | null;
+  temperature: number | null;
+  humidity: number | null;
+  light: number | null;
+  plantId: number | null;
+  samplingPoint: number | null;
+}
+
+const SENSORS: Record<Sensor, { name: string; unit: string; color: string }> = {
+  soil: { name: 'Soil Moisture', unit: '%', color: '#2E8B57' },
+  temperature: { name: 'Temperature', unit: '°C', color: '#C98227' },
+  humidity: { name: 'Humidity', unit: '%', color: '#3977B8' },
+  light: { name: 'Light', unit: 'lx', color: '#D4A338' },
+};
+
+const TABS: Array<{ key: Selected; label: string }> = [
+  { key: 'all', label: 'All Metrics' },
+  { key: 'soil', label: 'Soil Moisture (%)' },
+  { key: 'temperature', label: 'Temp (°C)' },
+  { key: 'humidity', label: 'Humidity (%)' },
+  { key: 'light', label: 'Light (lx)' },
+];
+
+interface TooltipProps {
+  active?: boolean;
+  payload?: ReadonlyArray<{ payload: ChartRow }>;
+  visible: Sensor[];
+}
+
+const ChartTooltip: React.FC<TooltipProps> = ({ active, payload, visible }) => {
+  if (!active || !payload || payload.length === 0) return null;
+  const row = payload[0].payload;
+  return (
+    <div className="bg-[#102F26] text-white p-3 rounded-lg shadow-xl border border-[#2E8B57]/40 text-xs space-y-1.5">
+      <div className="font-semibold text-[#DDE8D8] border-b border-white/10 pb-1">{row.fullDate} IST</div>
+      {visible.map((key) => {
+        const value = row[key];
+        return (
+          <div key={key} className="flex items-center justify-between gap-4">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: SENSORS[key].color }} />
+              <span className="text-[#EDF4EB]">{SENSORS[key].name}:</span>
+            </span>
+            <span className="font-mono font-bold text-white">
+              {value === null ? 'n/a' : `${key === 'light' ? Math.round(value).toLocaleString() : value} ${SENSORS[key].unit}`}
+            </span>
+          </div>
+        );
+      })}
+      {row.plantId !== null && (
+        <div className="text-[10px] text-stone-400 pt-1 border-t border-white/10">
+          Pot #{row.plantId}
+          {row.samplingPoint !== null ? ` (sampling point ${row.samplingPoint})` : ''}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const SensorTrendChart: React.FC<SensorTrendChartProps> = ({
   records,
@@ -33,254 +104,144 @@ export const SensorTrendChart: React.FC<SensorTrendChartProps> = ({
   optimalRange,
   height = 320,
 }) => {
-  const [selectedSensor, setSelectedSensor] = useState<'all' | 'soil' | 'temperature' | 'humidity' | 'light'>(
-    defaultSensor
+  const [selectedSensor, setSelectedSensor] = useState<Selected>(defaultSensor);
+
+  // Chronological rows on a numeric time axis. Missing values stay null so the line breaks (never drawn as 0).
+  const chartData = useMemo<ChartRow[]>(
+    () =>
+      records
+        .map((r) => ({ r, ts: toMillis(r.timestamp) }))
+        .filter((x): x is { r: TrendPoint; ts: number } => x.ts !== null)
+        .sort((a, b) => a.ts - b.ts)
+        .map(({ r, ts }) => ({
+          ts,
+          fullDate: formatDateTime(r.timestamp),
+          soil: r.soil,
+          temperature: r.temperature,
+          humidity: r.humidity,
+          light: r.light,
+          plantId: r.plant_id ?? null,
+          samplingPoint: r.sampling_point ?? null,
+        })),
+    [records],
   );
 
-  // Prepare data sorted chronologically
-  const chartData = [...records]
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-    .map((r) => {
-      const date = new Date(r.timestamp);
-      return {
-        timestamp: r.timestamp,
-        timeLabel: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
-        fullDate: formatDateTime(r.timestamp),
-        soil: r.soil,
-        temperature: r.temperature,
-        humidity: r.humidity,
-        light: r.light,
-        plantId: r.plant_id,
-        samplingPoint: r.sampling_point,
-      };
-    });
+  const spansDays = chartData.length > 1 && chartData[chartData.length - 1].ts - chartData[0].ts > 36 * 3600 * 1000;
+  const showDots = chartData.length <= 48;
+  const visible: Sensor[] = selectedSensor === 'all' ? ['soil', 'temperature', 'humidity', 'light'] : [selectedSensor];
+  const hasAnyValue = chartData.some((r) => visible.some((k) => r[k] !== null));
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const dataPoint = payload[0].payload;
-      return (
-        <div className="bg-[#102F26] text-white p-3 rounded-lg shadow-xl border border-[#2E8B57]/40 text-xs space-y-1.5">
-          <div className="font-semibold text-[#DDE8D8] border-b border-white/10 pb-1">
-            {dataPoint.fullDate}
-          </div>
-          {payload.map((entry: any, index: number) => (
-            <div key={`item-${index}`} className="flex items-center justify-between gap-4">
-              <span className="flex items-center gap-1.5">
-                <span
-                  className="w-2.5 h-2.5 rounded-full inline-block"
-                  style={{ backgroundColor: entry.color }}
-                />
-                <span className="text-[#EDF4EB] capitalize">{entry.name}:</span>
-              </span>
-              <span className="font-mono font-bold text-white">
-                {entry.value} {entry.name === 'soil' || entry.name === 'humidity' ? '%' : entry.name === 'temperature' ? '°C' : 'lx'}
-              </span>
-            </div>
-          ))}
-          {dataPoint.plantId && (
-            <div className="text-[10px] text-stone-400 pt-1 border-t border-white/10">
-              Plant: {dataPoint.plantId.toUpperCase()} ({dataPoint.samplingPoint})
-            </div>
-          )}
-        </div>
-      );
-    }
-    return null;
-  };
+  const leftDomain: [number | 'auto', number | 'auto'] =
+    selectedSensor === 'light' ? [0, 'auto'] : selectedSensor === 'temperature' ? ['auto', 'auto'] : [0, 100];
+  const leftUnit = selectedSensor === 'temperature' ? '°C' : selectedSensor === 'light' ? ' lx' : '%';
+
+  const band = selectedSensor !== 'all' ? optimalRange?.[selectedSensor] : undefined;
 
   return (
     <div className="bg-white rounded-card border border-[#DCE4D9] p-5 shadow-card">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         {title && <h3 className="text-sm font-bold text-[#1C2B23]">{title}</h3>}
-        
-        {/* Sensor selector tabs */}
-        <div className="inline-flex rounded-lg bg-[#EDF4EB] p-1 text-xs font-medium text-[#173F32]">
-          <button
-            onClick={() => setSelectedSensor('all')}
-            className={`px-2.5 py-1 rounded-md transition-all ${
-              selectedSensor === 'all'
-                ? 'bg-white text-[#102F26] shadow-sm font-semibold'
-                : 'hover:text-[#102F26]'
-            }`}
-          >
-            All Metrics
-          </button>
-          <button
-            onClick={() => setSelectedSensor('soil')}
-            className={`px-2.5 py-1 rounded-md transition-all ${
-              selectedSensor === 'soil'
-                ? 'bg-white text-[#2E8B57] shadow-sm font-semibold'
-                : 'hover:text-[#102F26]'
-            }`}
-          >
-            Soil Moisture (%)
-          </button>
-          <button
-            onClick={() => setSelectedSensor('temperature')}
-            className={`px-2.5 py-1 rounded-md transition-all ${
-              selectedSensor === 'temperature'
-                ? 'bg-white text-[#C98227] shadow-sm font-semibold'
-                : 'hover:text-[#102F26]'
-            }`}
-          >
-            Temp (°C)
-          </button>
-          <button
-            onClick={() => setSelectedSensor('humidity')}
-            className={`px-2.5 py-1 rounded-md transition-all ${
-              selectedSensor === 'humidity'
-                ? 'bg-white text-[#3977B8] shadow-sm font-semibold'
-                : 'hover:text-[#102F26]'
-            }`}
-          >
-            Humidity (%)
-          </button>
-          <button
-            onClick={() => setSelectedSensor('light')}
-            className={`px-2.5 py-1 rounded-md transition-all ${
-              selectedSensor === 'light'
-                ? 'bg-white text-[#D4A338] shadow-sm font-semibold'
-                : 'hover:text-[#102F26]'
-            }`}
-          >
-            Light (lx)
-          </button>
+
+        <div className="inline-flex flex-wrap rounded-lg bg-[#EDF4EB] p-1 text-xs font-medium text-[#173F32]">
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setSelectedSensor(tab.key)}
+              className={`px-2.5 py-1 rounded-md transition-all ${
+                selectedSensor === tab.key ? 'bg-white text-[#102F26] shadow-sm font-semibold' : 'hover:text-[#102F26]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div style={{ width: '100%', height }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 10, right: 15, left: -10, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#EDF4EB" vertical={false} />
-            <XAxis
-              dataKey="timeLabel"
-              stroke="#6B786E"
-              fontSize={11}
-              tickLine={false}
-              axisLine={{ stroke: '#DCE4D9' }}
-            />
-            
-            {/* Left Y Axis for percentages and temperatures */}
-            <YAxis
-              yAxisId="left"
-              stroke="#6B786E"
-              fontSize={11}
-              tickLine={false}
-              axisLine={{ stroke: '#DCE4D9' }}
-              domain={selectedSensor === 'light' ? ['auto', 'auto'] : [0, 100]}
-              unit={selectedSensor === 'temperature' ? '°C' : selectedSensor === 'light' ? ' lx' : '%'}
-            />
-
-            {/* Right Y Axis if viewing all metrics (for Light in lux) */}
-            {selectedSensor === 'all' && (
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                stroke="#D4A338"
+      {!hasAnyValue ? (
+        <div style={{ height }} className="flex items-center justify-center text-xs text-stone-500" data-testid="trend-empty">
+          No readings to chart for this selection.
+        </div>
+      ) : (
+        <div style={{ width: '100%', height }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData} margin={{ top: 10, right: 15, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#EDF4EB" vertical={false} />
+              <XAxis
+                dataKey="ts"
+                type="number"
+                scale="time"
+                domain={['dataMin', 'dataMax']}
+                tickFormatter={(v: number) => formatIstTick(v, spansDays)}
+                stroke="#6B786E"
                 fontSize={11}
                 tickLine={false}
                 axisLine={{ stroke: '#DCE4D9' }}
-                unit=" lx"
-                domain={[0, 8000]}
+                minTickGap={40}
               />
-            )}
 
-            <Tooltip content={<CustomTooltip />} />
-            <Legend
-              wrapperStyle={{ paddingTop: '10px', fontSize: '12px' }}
-              iconType="circle"
-            />
+              <YAxis
+                yAxisId="left"
+                stroke="#6B786E"
+                fontSize={11}
+                tickLine={false}
+                axisLine={{ stroke: '#DCE4D9' }}
+                domain={leftDomain}
+                unit={leftUnit}
+              />
 
-            {/* Optimal Range Reference Band if looking at single sensor */}
-            {selectedSensor === 'soil' && optimalRange?.soil && (
-              <ReferenceArea
-                yAxisId="left"
-                y1={optimalRange.soil.min}
-                y2={optimalRange.soil.max}
-                fill="#2E8B57"
-                fillOpacity={0.12}
-                stroke="#2E8B57"
-                strokeDasharray="3 3"
-              />
-            )}
-            {selectedSensor === 'temperature' && optimalRange?.temperature && (
-              <ReferenceArea
-                yAxisId="left"
-                y1={optimalRange.temperature.min}
-                y2={optimalRange.temperature.max}
-                fill="#C98227"
-                fillOpacity={0.12}
-                stroke="#C98227"
-                strokeDasharray="3 3"
-              />
-            )}
-            {selectedSensor === 'humidity' && optimalRange?.humidity && (
-              <ReferenceArea
-                yAxisId="left"
-                y1={optimalRange.humidity.min}
-                y2={optimalRange.humidity.max}
-                fill="#3977B8"
-                fillOpacity={0.12}
-                stroke="#3977B8"
-                strokeDasharray="3 3"
-              />
-            )}
+              {selectedSensor === 'all' && (
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  stroke="#D4A338"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={{ stroke: '#DCE4D9' }}
+                  unit=" lx"
+                  domain={[0, 'auto']}
+                />
+              )}
 
-            {(selectedSensor === 'all' || selectedSensor === 'soil') && (
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="soil"
-                name="Soil Moisture"
-                stroke="#2E8B57"
-                strokeWidth={2.5}
-                dot={{ r: 3, fill: '#2E8B57' }}
-                activeDot={{ r: 6 }}
-              />
-            )}
+              <Tooltip content={<ChartTooltip visible={visible} />} />
+              <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '12px' }} iconType="circle" />
 
-            {(selectedSensor === 'all' || selectedSensor === 'temperature') && (
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="temperature"
-                name="Temperature"
-                stroke="#C98227"
-                strokeWidth={2}
-                dot={{ r: 3, fill: '#C98227' }}
-                activeDot={{ r: 6 }}
-              />
-            )}
+              {band && selectedSensor !== 'all' && (
+                <ReferenceArea
+                  yAxisId="left"
+                  y1={band.min}
+                  y2={band.max}
+                  ifOverflow="hidden"
+                  fill={SENSORS[selectedSensor].color}
+                  fillOpacity={0.12}
+                  stroke={SENSORS[selectedSensor].color}
+                  strokeDasharray="3 3"
+                />
+              )}
 
-            {(selectedSensor === 'all' || selectedSensor === 'humidity') && (
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="humidity"
-                name="Humidity"
-                stroke="#3977B8"
-                strokeWidth={2}
-                dot={{ r: 3, fill: '#3977B8' }}
-                activeDot={{ r: 6 }}
-              />
-            )}
-
-            {(selectedSensor === 'all' || selectedSensor === 'light') && (
-              <Line
-                yAxisId={selectedSensor === 'all' ? 'right' : 'left'}
-                type="monotone"
-                dataKey="light"
-                name="Light"
-                stroke="#D4A338"
-                strokeWidth={1.5}
-                strokeDasharray={selectedSensor === 'all' ? '4 4' : undefined}
-                dot={{ r: 2, fill: '#D4A338' }}
-                activeDot={{ r: 5 }}
-              />
-            )}
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+              {visible.map((key) => (
+                <Line
+                  key={key}
+                  yAxisId={key === 'light' && selectedSensor === 'all' ? 'right' : 'left'}
+                  type="monotone"
+                  dataKey={key}
+                  name={SENSORS[key].name}
+                  stroke={SENSORS[key].color}
+                  strokeWidth={key === 'soil' ? 2.5 : key === 'light' ? 1.5 : 2}
+                  strokeDasharray={key === 'light' && selectedSensor === 'all' ? '4 4' : undefined}
+                  dot={showDots ? { r: key === 'light' ? 2 : 3, fill: SENSORS[key].color } : false}
+                  activeDot={{ r: 5 }}
+                  connectNulls={false}
+                  isAnimationActive={false}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+      <p className="mt-2 text-[10px] text-[#6B786E]">
+        Times shown in IST. Missing sensor values appear as gaps, not zeros.
+      </p>
     </div>
   );
 };

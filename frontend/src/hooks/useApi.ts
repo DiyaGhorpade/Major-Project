@@ -50,6 +50,9 @@ export function useAsync<T>(fetcher: () => Promise<T>, key: ReadonlyArray<unknow
 
   const run = useCallback(async () => {
     const id = ++requestId.current;
+    // Start the in-flight count on a microtask so it is never a synchronous setState inside the fetching effect.
+    await Promise.resolve();
+    if (!mounted.current) return;
     setInFlight((n) => n + 1);
     try {
       const data = await fetcherRef.current();

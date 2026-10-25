@@ -257,7 +257,6 @@ export type UserRecommendationStatus = Exclude<RecommendationStatus, 'superseded
 export type RecommendationCategory =
   | 'irrigation'
   | 'lighting'
-  | 'nutrition' // kept in the type, never produced
   | 'sensor_check'
   | 'climate'
   | 'monitoring';
@@ -473,19 +472,6 @@ export interface Prediction {
   anomaly: AnomalyInfo;
 }
 
-export interface AnomalyRecord {
-  id: string;
-  plant_id: number;
-  plant_name: string;
-  record_id: string;
-  timestamp: string;
-  score: number;
-  threshold: number;
-  interpretation: string;
-  readings: { soil: number | null; temperature: number | null; humidity: number | null; light: number | null };
-  datasetLabelIsSyntheticAnomaly: boolean | null;
-}
-
 export interface AiInsights {
   hasPredictions: boolean;
   predictions: Record<string, number>; // by status: ok/unavailable/rejected
@@ -520,18 +506,6 @@ export interface AiInsights {
   } | null;
   provenance: string;
   disclaimer: string;
-}
-
-export interface IngestResult {
-  accepted: number;
-  flagged: number;
-  duplicates: number;
-  items: Array<{
-    record_id: string | null;
-    plant_id: number;
-    timestamp: string;
-    status: 'accepted' | 'flagged' | 'duplicate';
-  }>;
 }
 
 /** 404 `global_shap_unavailable`: the empty-state hint says which command to run. */

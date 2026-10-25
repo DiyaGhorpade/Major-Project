@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, apiClient } from './client';
+import { ApiError, REQUEST_TIMEOUT_MS, apiClient } from './client';
 import { mockFetch } from '../test/helpers';
 
 afterEach(() => {
@@ -55,7 +55,6 @@ describe('api client', () => {
     mockFetch({
       'GET /api/ai/shap/global': { status: 404, body: envelope('global_shap_unavailable', 'no report', { hint: 'python scripts/generate_explanations.py' }) },
     });
-    expect(await apiClient.getGlobalShap()).toBeNull();
     const result = await apiClient.getGlobalShapResult();
     expect(result.data).toBeNull();
     expect(result.unavailable?.hint).toBe('python scripts/generate_explanations.py');
@@ -69,7 +68,6 @@ describe('api client', () => {
     const page = await apiClient.getRecordsPage({ limit: 2 });
     expect(page.total).toBe(5376);
     expect(page.items).toHaveLength(2);
-    expect(await apiClient.getRecords()).toHaveLength(2);
     const noHeader = await apiClient.getDataLogsPage();
     expect(noHeader.total).toBe(1);
   });
@@ -111,5 +109,53 @@ describe('api client', () => {
     const res = await apiClient.runPipeline(true);
     expect(res).toEqual({ runId: 2, state: 'queued' });
     expect(calls[0].init?.body).toBe(JSON.stringify({ reset: true }));
+  });
+
+  it('only maps the intended 404 codes to null; any other 404 is an error', async () => {
+    mockFetch({
+      'GET /api/plants/7': { status: 404, body: envelope('route_not_found', 'No such route') },
+      'GET /api/monitoring/plants/7': { status: 404, body: 'plain not found' },
+      'GET /api/ai/shap/7': { status: 404, body: envelope('not_found', 'unknown plant') },
+      'GET /api/ai/shap/global': { status: 404, body: envelope('not_found', 'wrong route') },
+    });
+    await expect(apiClient.getPlantById(7)).rejects.toMatchObject({ status: 404, code: 'route_not_found' });
+    await expect(apiClient.getPlantMonitoring(7)).rejects.toMatchObject({ status: 404, code: 'http_404' });
+    await expect(apiClient.getLocalShap(7)).rejects.toMatchObject({ status: 404, code: 'not_found' });
+    await expect(apiClient.getGlobalShapResult()).rejects.toMatchObject({ status: 404, code: 'not_found' });
+  });
+
+  describe('request timeout', () => {
+    afterEach(() => vi.useRealTimers());
+
+    const hangingFetch = () =>
+      vi.fn((_url: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new DOMException('The operation was aborted.', 'AbortError')));
+        }),
+      );
+
+    it('aborts a hanging request and fails with ApiError code "timeout"', async () => {
+      vi.useFakeTimers();
+      vi.stubGlobal('fetch', hangingFetch());
+      const pending = apiClient.getHealth().catch((e) => e);
+      await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS + 1);
+      const err = await pending;
+      expect(err).toBeInstanceOf(ApiError);
+      expect(err.code).toBe('timeout');
+      expect(err.isNetwork).toBe(false);
+      expect(err.message).toMatch(/timed out after 10 s/);
+    });
+
+    it('also times out POST requests (a stuck run start) and does not time out fast answers', async () => {
+      vi.useFakeTimers();
+      vi.stubGlobal('fetch', hangingFetch());
+      const run = apiClient.runPipeline().catch((e) => e);
+      await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS + 1);
+      expect((await run).code).toBe('timeout');
+
+      mockFetch({ 'GET /api/health': { body: { status: 'ok' } } });
+      expect(await apiClient.getHealth()).toEqual({ status: 'ok' });
+      await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS * 2); // the finished request's timer was cleared
+    });
   });
 });

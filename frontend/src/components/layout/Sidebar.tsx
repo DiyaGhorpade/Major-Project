@@ -12,7 +12,6 @@ import {
   History,
   Settings,
   Leaf,
-  Cpu,
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -99,8 +98,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               Plant Monitor
             </h1>
             <div className="flex items-center gap-1.5 text-[11px] text-[#79B86A] font-medium">
-              <Cpu className="w-3 h-3" />
-              <span>Jetson Orin Nano</span>
+              <Leaf className="w-3 h-3" />
+              <span>Tulsi stress monitoring</span>
             </div>
           </div>
         </div>

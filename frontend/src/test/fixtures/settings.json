@@ -1,0 +1,23 @@
+{
+ "polling_interval_seconds": 5,
+ "jetson_receiver_port": 5000,
+ "ph_sensor_installed": false,
+ "collection_times": [
+  "00:00",
+  "02:00",
+  "04:00",
+  "06:00",
+  "08:00",
+  "10:00",
+  "12:00",
+  "14:00",
+  "16:00",
+  "18:00",
+  "20:00",
+  "22:00"
+ ],
+ "log_retention_days": 30,
+ "storage_path": "backend/data/app.db",
+ "soil_adc_dry": 3200,
+ "soil_adc_wet": 1450
+}

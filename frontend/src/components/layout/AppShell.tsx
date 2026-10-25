@@ -7,7 +7,9 @@ import { ErrorBanner } from '../shared/ErrorBanner';
 import { DataVersionContext } from '../../hooks/dataVersion';
 import { PipelineContext, usePipeline, usePipelineMachine } from '../../hooks/usePipeline';
 import { HealthContext, useHealth, useHealthPolling } from '../../hooks/useHealth';
-import { useOverview } from '../../hooks/useData';
+import { useOverviewSource } from '../../hooks/useData';
+import { usePlantsSource } from '../../hooks/usePlants';
+import { SharedDataContext } from '../../hooks/sharedData';
 
 interface AppShellProps {
   currentRoute: NavRoute;
@@ -36,16 +38,26 @@ const ShellProviders: React.FC<{ bumpDataVersion: () => void; children: React.Re
   const health = useHealthPolling();
   return (
     <PipelineContext.Provider value={pipeline}>
-      <HealthContext.Provider value={health}>{children}</HealthContext.Provider>
+      <HealthContext.Provider value={health}>
+        <SharedDataProvider>{children}</SharedDataProvider>
+      </HealthContext.Provider>
     </PipelineContext.Provider>
   );
+};
+
+/** Loads the overview and plants once for the whole app (bell, search box, pages). */
+const SharedDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const overview = useOverviewSource();
+  const plants = usePlantsSource();
+  const value = useMemo(() => ({ overview, plants }), [overview, plants]);
+  return <SharedDataContext.Provider value={value}>{children}</SharedDataContext.Provider>;
 };
 
 const ShellLayout: React.FC<AppShellProps> = ({ currentRoute, activePlantId, onNavigate, children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pipeline = usePipeline();
   const { health, error: healthError, mlUnreachable } = useHealth();
-  const overview = useOverview();
+  const { overview, plants } = useContext(SharedDataContext);
   const { bumpDataVersion } = useContext(DataVersionContext);
 
   // Refresh button: bump the data version so every hook refetches; it spins while that refetch runs.
@@ -108,9 +120,10 @@ const ShellLayout: React.FC<AppShellProps> = ({ currentRoute, activePlantId, onN
           activePlantId={activePlantId}
           onOpenMobile={() => setMobileOpen(true)}
           onRefresh={handleRefresh}
-          isRefreshing={overview.refreshing}
-          alerts={overview.data?.recentAlerts ?? []}
-          onNavigate={(route) => onNavigate(route)}
+          isRefreshing={overview?.refreshing ?? false}
+          alerts={overview?.data?.recentAlerts ?? []}
+          plants={plants?.data ?? []}
+          onNavigate={onNavigate}
         />
 
         <SyntheticBanner />

@@ -10,26 +10,30 @@ import { useGlobalShap, useLocalShap } from '../hooks/useData';
 import { ShapWaterfallChart } from '../components/charts/ShapWaterfallChart';
 import { ShapBeeswarmChart } from '../components/charts/ShapBeeswarmChart';
 import { EmptyState, RunEmptyState } from '../components/shared/EmptyState';
+import { ErrorState } from '../components/shared/ErrorState';
+import { NavRoute } from '../components/layout/Sidebar';
+import { formatDateTime } from '../lib/utils';
 
 interface ShapAnalysisPageProps {
   initialPlantId?: number | string;
-  onNavigate: (route: any, plantId?: number | string) => void;
+  onNavigate: (route: NavRoute, plantId?: number | string) => void;
 }
 
-export const ShapAnalysisPage: React.FC<ShapAnalysisPageProps> = ({
-  initialPlantId = 5,
-  onNavigate,
-}) => {
+export const ShapAnalysisPage: React.FC<ShapAnalysisPageProps> = ({ initialPlantId }) => {
   const [activeTab, setActiveTab] = useState<'local' | 'global'>('local');
-  const [selectedPlantId, setSelectedPlantId] = useState<string>(String(initialPlantId));
+  const [pickedPlantId, setSelectedPlantId] = useState<string | null>(
+    initialPlantId === undefined ? null : String(initialPlantId).replace('plant-', ''),
+  );
   const plants = usePlants().data ?? [];
-  const localQuery = useLocalShap(selectedPlantId);
+  // No explicit pick (and none passed in): the first plant from the data, not a hard-coded pot.
+  const selectedPlantId = pickedPlantId ?? (plants[0] ? String(plants[0].id) : '');
+  const localQuery = useLocalShap(selectedPlantId === '' ? null : selectedPlantId);
   const globalQuery = useGlobalShap();
   const localShap = localQuery.data;
   const globalShap = globalQuery.data?.data ?? null;
   const globalHint = globalQuery.data?.unavailable?.hint ?? null;
 
-  const selectedPlant = plants.find((p) => p.id === Number(selectedPlantId)) || plants[4] || plants[0];
+  const selectedPlant = plants.find((p) => p.id === Number(selectedPlantId));
 
   return (
     <div className="space-y-6">
@@ -41,11 +45,11 @@ export const ShapAnalysisPage: React.FC<ShapAnalysisPageProps> = ({
               Explainable AI (XAI)
             </span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-[#EDF4EB] text-[#2E8B57] font-semibold border border-[#DDE8D8]">
-              TreeSHAP / Jetson Edge
+              Model explanation (SHAP, log-odds)
             </span>
           </div>
           <h1 className="text-lg font-bold text-[#1C2B23]">
-            SHAP (SHapley Additive exPlanations) Diagnostic Workspace
+            SHAP (SHapley Additive exPlanations) Explainability Workspace
           </h1>
         </div>
 
@@ -98,6 +102,7 @@ export const ShapAnalysisPage: React.FC<ShapAnalysisPageProps> = ({
                 onChange={(e) => setSelectedPlantId(e.target.value)}
                 className="text-xs font-bold bg-[#EDF4EB] border border-[#DDE8D8] rounded-lg px-3 py-1.5 text-[#102F26] outline-none cursor-pointer"
               >
+                {plants.length === 0 && <option value={selectedPlantId}>{selectedPlantId ? `Pot #${selectedPlantId}` : 'Loading plants...'}</option>}
                 {plants.map((p) => (
                   <option key={p.id} value={p.id}>
                     Pot #{p.id}: {p.name} ({p.cluster})
@@ -113,12 +118,18 @@ export const ShapAnalysisPage: React.FC<ShapAnalysisPageProps> = ({
             </div>
 
             <div className="text-xs font-mono text-stone-500">
-              Evaluated on latest validated reading • Output Space: Class Probability [0, 1]
+              {localShap
+                ? `Explains reading ${localShap.record_id} (${formatDateTime(localShap.timestamp)} IST) • Units: log-odds`
+                : 'Explains the plant\'s newest stored prediction • Units: log-odds'}
             </div>
           </div>
 
           {/* Local Waterfall Chart */}
-          {localShap ? (
+          {localQuery.error && !localShap ? (
+            <ErrorState message={localQuery.error.message} onRetry={() => void localQuery.refetch()} />
+          ) : localQuery.loading ? (
+            <EmptyState title="Loading explanation..." description="" />
+          ) : localShap ? (
             <ShapWaterfallChart explanation={localShap} />
           ) : (
             <RunEmptyState title="No explanation yet" />
@@ -127,15 +138,25 @@ export const ShapAnalysisPage: React.FC<ShapAnalysisPageProps> = ({
       ) : (
         /* Global SHAP View */
         <div className="space-y-6">
-          {globalShap ? (
+          {globalQuery.error && !globalShap ? (
+            <ErrorState message={globalQuery.error.message} onRetry={() => void globalQuery.refetch()} />
+          ) : globalQuery.loading ? (
+            <EmptyState title="Loading global SHAP report..." description="" />
+          ) : globalShap ? (
             <ShapBeeswarmChart data={globalShap} />
           ) : (
             <EmptyState
               title="Global SHAP Data Unavailable"
               description={
-                globalHint
-                  ? `The global SHAP report has not been generated yet. Run: ${globalHint}`
-                  : 'Global SHAP report not available.'
+                <span data-testid="global-shap-unavailable">
+                  The global SHAP report has not been generated yet.
+                  {globalHint ? (
+                    <>
+                      {' '}Run this command once:
+                      <code className="block mt-3 p-2 rounded bg-stone-100 text-[11px] text-left text-stone-800 break-all font-mono">{globalHint}</code>
+                    </>
+                  ) : null}
+                </span>
               }
             />
           )}

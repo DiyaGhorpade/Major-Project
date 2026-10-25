@@ -1,0 +1,318 @@
+{
+ "totals": {
+  "plants": 16,
+  "readings": 5376,
+  "flaggedReadings": 233,
+  "predictions": {
+   "ok": 5376,
+   "unavailable": 0,
+   "rejected": 0,
+   "total": 5376
+  },
+  "anomalies": 102
+ },
+ "plantStatusCounts": {
+  "healthy": 6,
+  "attention": 5,
+  "critical": 5,
+  "stale": 0,
+  "unmeasured": 0
+ },
+ "severityCounts": {
+  "healthy": 6,
+  "low": 3,
+  "moderate": 2,
+  "high": 5,
+  "unmeasured": 0
+ },
+ "clusterSummaries": [
+  {
+   "cluster": "Cluster 1",
+   "clusterLabel": "Cluster 1: Healthy Control",
+   "plantIds": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "plants": 4,
+   "averages": {
+    "soil": 52.575,
+    "temperature": 23.325,
+    "humidity": 78.625,
+    "light": 0.5
+   },
+   "severityCounts": {
+    "healthy": 4,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "unmeasured": 0
+   },
+   "topCondition": "Healthy"
+  },
+  {
+   "cluster": "Cluster 2",
+   "clusterLabel": "Cluster 2: Water Stress",
+   "plantIds": [
+    5,
+    6,
+    7,
+    8
+   ],
+   "plants": 4,
+   "averages": {
+    "soil": 3.725,
+    "temperature": 24.95,
+    "humidity": 76.425,
+    "light": 0.75
+   },
+   "severityCounts": {
+    "healthy": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 4,
+    "unmeasured": 0
+   },
+   "topCondition": "Water Stress"
+  },
+  {
+   "cluster": "Cluster 3",
+   "clusterLabel": "Cluster 3: Light Stress",
+   "plantIds": [
+    9,
+    10,
+    11,
+    12
+   ],
+   "plants": 4,
+   "averages": {
+    "soil": 42.375,
+    "temperature": 23.1,
+    "humidity": 74.125,
+    "light": 1.5
+   },
+   "severityCounts": {
+    "healthy": 2,
+    "low": 1,
+    "moderate": 0,
+    "high": 1,
+    "unmeasured": 0
+   },
+   "topCondition": "Healthy"
+  },
+  {
+   "cluster": "Cluster 4",
+   "clusterLabel": "Cluster 4: Temperature/Humidity Stress",
+   "plantIds": [
+    13,
+    14,
+    15,
+    16
+   ],
+   "plants": 4,
+   "averages": {
+    "soil": 49.4,
+    "temperature": 23.35,
+    "humidity": 73.55,
+    "light": 1.5
+   },
+   "severityCounts": {
+    "healthy": 0,
+    "low": 2,
+    "moderate": 2,
+    "high": 0,
+    "unmeasured": 0
+   },
+   "topCondition": "Unclassified Stress"
+  }
+ ],
+ "recentAlerts": [
+  {
+   "kind": "recommendation",
+   "plantId": 16,
+   "plantName": "Pot 16: Krishna Tulsi (Climate Trial)",
+   "timestamp": "2026-10-18T22:05:15+05:30",
+   "message": "Monitor and inspect: The model rates this plant's recent readings as stressed, but no single sensor condition explains it. Keep monitoring and inspect the plant and sensors in person.",
+   "severity": "high",
+   "recordId": "R-5376",
+   "recommendationId": "rec-7"
+  },
+  {
+   "kind": "recommendation",
+   "plantId": 15,
+   "plantName": "Pot 15: Rama Tulsi (Climate Trial)",
+   "timestamp": "2026-10-18T22:05:15+05:30",
+   "message": "Monitor and inspect: The model rates this plant's recent readings as stressed, but no single sensor condition explains it. Keep monitoring and inspect the plant and sensors in person.",
+   "severity": "high",
+   "recordId": "R-5375",
+   "recommendationId": "rec-6"
+  },
+  {
+   "kind": "anomaly",
+   "plantId": 16,
+   "plantName": "Pot 16: Krishna Tulsi (Climate Trial)",
+   "timestamp": "2026-10-17T08:05:15+05:30",
+   "message": "Unusual reading, check the sensor. Not a plant-health verdict. (anomaly score 0.04, threshold 0)",
+   "severity": null,
+   "recordId": "R-5072",
+   "recommendationId": null
+  }
+ ],
+ "topRecommendations": [
+  {
+   "id": "rec-7",
+   "plant_id": 16,
+   "plant_name": "Pot 16: Krishna Tulsi (Climate Trial)",
+   "cluster": "Cluster 4",
+   "title": "Monitor and inspect",
+   "simpleAction": "The model rates this plant's recent readings as stressed, but no single sensor condition explains it. Keep monitoring and inspect the plant and sensors in person.",
+   "priority": "high",
+   "status": "new",
+   "category": "monitoring",
+   "supporting_sensor_values": [
+    {
+     "metric": "Soil moisture",
+     "value": "55.9 %",
+     "target": "25–75 %",
+     "status": "good"
+    },
+    {
+     "metric": "Temperature",
+     "value": "19.7 °C",
+     "target": "18–32 °C",
+     "status": "good"
+    },
+    {
+     "metric": "Humidity",
+     "value": "81.3 %",
+     "target": "40–90 %",
+     "status": "good"
+    },
+    {
+     "metric": "Light",
+     "value": "0 lux",
+     "target": "night (no target)",
+     "status": "good"
+    }
+   ],
+   "reason": "Predicted class is 'moderate' without a persistent out-of-range sensor condition under the configured ranges. Model P(moderate)=0.96. Priority raised to high: the model has rated the last 3 consecutive readings 'moderate' or higher.",
+   "scientificContext": "The model gives a statistical estimate learned from a synthetic dataset and has not been validated on real plants. When it is unsure, or no single sensor explains a stress rating, inspecting the plant and sensors in person is the most reliable check.",
+   "guidance_source": "ML heuristic rules · model 1.0.0 (run v1.0.0_20261021T145244Z)",
+   "created_at": "2026-10-25T17:05:48.085023+05:30",
+   "updated_at": "2026-10-25T17:05:48.085024+05:30",
+   "resolved_at": null,
+   "source": "ml",
+   "confidence": 0.9561293721199036,
+   "basedOn": {
+    "timestamp": "2026-10-18T22:05:15+05:30",
+    "modelVersion": "1.0.0",
+    "runId": "v1.0.0_20261021T145244Z"
+   },
+   "disclaimer": true,
+   "mlRecId": "monitor_and_inspect"
+  },
+  {
+   "id": "rec-6",
+   "plant_id": 15,
+   "plant_name": "Pot 15: Rama Tulsi (Climate Trial)",
+   "cluster": "Cluster 4",
+   "title": "Monitor and inspect",
+   "simpleAction": "The model rates this plant's recent readings as stressed, but no single sensor condition explains it. Keep monitoring and inspect the plant and sensors in person.",
+   "priority": "high",
+   "status": "new",
+   "category": "monitoring",
+   "supporting_sensor_values": [
+    {
+     "metric": "Soil moisture",
+     "value": "42.7 %",
+     "target": "25–75 %",
+     "status": "good"
+    },
+    {
+     "metric": "Temperature",
+     "value": "19.7 °C",
+     "target": "18–32 °C",
+     "status": "good"
+    },
+    {
+     "metric": "Humidity",
+     "value": "83.5 %",
+     "target": "40–90 %",
+     "status": "good"
+    },
+    {
+     "metric": "Light",
+     "value": "4 lux",
+     "target": "night (no target)",
+     "status": "good"
+    }
+   ],
+   "reason": "Predicted class is 'moderate' without a persistent out-of-range sensor condition under the configured ranges. Model P(moderate)=0.98. Priority raised to high: the model has rated the last 3 consecutive readings 'moderate' or higher.",
+   "scientificContext": "The model gives a statistical estimate learned from a synthetic dataset and has not been validated on real plants. When it is unsure, or no single sensor explains a stress rating, inspecting the plant and sensors in person is the most reliable check.",
+   "guidance_source": "ML heuristic rules · model 1.0.0 (run v1.0.0_20261021T145244Z)",
+   "created_at": "2026-10-25T17:05:48.084109+05:30",
+   "updated_at": "2026-10-25T17:05:48.084110+05:30",
+   "resolved_at": null,
+   "source": "ml",
+   "confidence": 0.9809846878051758,
+   "basedOn": {
+    "timestamp": "2026-10-18T22:05:15+05:30",
+    "modelVersion": "1.0.0",
+    "runId": "v1.0.0_20261021T145244Z"
+   },
+   "disclaimer": true,
+   "mlRecId": "monitor_and_inspect"
+  }
+ ],
+ "latestSession": {
+  "session_id": 4,
+  "scheduled_at": "2026-10-12T00:00:00+05:30",
+  "started_at": "2026-10-12T00:00:00+05:30",
+  "ended_at": "2026-10-18T22:05:15+05:30",
+  "status": "completed",
+  "expected_records": 1344,
+  "received_records": 1344,
+  "rejected_records": 0,
+  "flagged_records": 56,
+  "duration_seconds": 597915,
+  "trigger_type": "scheduled",
+  "node_progress": {
+   "1": {
+    "expected": 672,
+    "received": 672,
+    "status": "completed"
+   },
+   "2": {
+    "expected": 672,
+    "received": 672,
+    "status": "completed"
+   }
+  }
+ },
+ "devicesSummary": {
+  "total": 3,
+  "online": 0,
+  "offline": 0,
+  "unknown": 3,
+  "lastTransmission": "2026-10-18T22:05:15+05:30"
+ },
+ "modelVersion": "1.0.0",
+ "provenance": "synthetic",
+ "disclaimer": "These results come from models trained on a synthetic dataset and have not been validated on real plants. They are decision-support hints, not diagnoses.",
+ "pipeline": {
+  "runId": 1,
+  "state": "completed",
+  "total": 5376,
+  "processed": 5376,
+  "failed": 0,
+  "percent": 100.0,
+  "currentPlantId": null,
+  "startedAt": "2026-10-25T17:04:34.032460+05:30",
+  "finishedAt": "2026-10-25T17:05:48.086106+05:30",
+  "message": "Completed: 5376 predicted",
+  "mlServiceOk": true,
+  "modelVersion": "1.0.0",
+  "readyToRun": true
+ }
+}

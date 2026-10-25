@@ -1,6 +1,5 @@
 import type {
   AiInsights,
-  AnomalyRecord,
   ApiErrorEnvelope,
   Device,
   GlobalShapData,
@@ -91,47 +90,76 @@ interface RequestOptions {
   method?: string;
   query?: Query;
   body?: unknown;
+  /** Per-request timeout in ms (default `REQUEST_TIMEOUT_MS`). */
+  timeoutMs?: number;
 }
 
-async function send(path: string, opts: RequestOptions = {}): Promise<Response> {
-  const init: RequestInit = { method: opts.method ?? 'GET', headers: { Accept: 'application/json' } };
+/** Every request is aborted after this long and fails with ApiError code `timeout`. */
+export const REQUEST_TIMEOUT_MS = 10000;
+
+/**
+ * One request with a timeout: the timer covers the headers and the body read. Non-2xx answers become ApiErrors,
+ * unreachable backends become `network`, and an aborted request becomes `timeout`.
+ */
+async function request<T>(path: string, opts: RequestOptions, read: (res: Response) => Promise<T>): Promise<T> {
+  const timeoutMs = opts.timeoutMs ?? REQUEST_TIMEOUT_MS;
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  const init: RequestInit = { method: opts.method ?? 'GET', headers: { Accept: 'application/json' }, signal: controller.signal };
   if (opts.body !== undefined) {
     init.headers = { ...init.headers, 'Content-Type': 'application/json' };
     init.body = JSON.stringify(opts.body);
   }
-  let res: Response;
   try {
-    res = await fetch(`${API_BASE}${path}${buildQuery(opts.query)}`, init);
+    const res = await fetch(`${API_BASE}${path}${buildQuery(opts.query)}`, init);
+    if (!res.ok) throw await parseError(res);
+    return await read(res);
   } catch (err) {
+    if (err instanceof ApiError) throw err;
+    if (timedOut) throw new ApiError(0, 'timeout', `Request timed out after ${Math.round(timeoutMs / 1000)} s`);
     const reason = err instanceof Error ? err.message : 'request failed';
     throw new ApiError(0, 'network', `Backend not reachable (${reason})`);
+  } finally {
+    clearTimeout(timer);
   }
-  if (!res.ok) throw await parseError(res);
-  return res;
 }
 
-async function getJson<T>(path: string, query?: Query): Promise<T> {
-  const res = await send(path, { query });
-  return (await res.json()) as T;
+function getJson<T>(path: string, query?: Query): Promise<T> {
+  return request(path, { query }, async (res) => (await res.json()) as T);
 }
 
-async function getPage<T>(path: string, query?: Query): Promise<Page<T>> {
-  const res = await send(path, { query });
-  const items = (await res.json()) as T[];
-  const header = res.headers.get('X-Total-Count');
-  const parsed = header === null ? NaN : Number(header);
-  return { items, total: Number.isFinite(parsed) ? parsed : items.length };
+function sendJson<T>(path: string, method: string, body: unknown): Promise<T> {
+  return request(path, { method, body }, async (res) => (await res.json()) as T);
 }
 
-/** GET that answers `null` on 404 (any other failure still throws). */
-async function getOrNull<T>(path: string, query?: Query): Promise<T | null> {
+function getPage<T>(path: string, query?: Query): Promise<Page<T>> {
+  return request(path, { query }, async (res) => {
+    const items = (await res.json()) as T[];
+    const header = res.headers.get('X-Total-Count');
+    const parsed = header === null ? NaN : Number(header);
+    return { items, total: Number.isFinite(parsed) ? parsed : items.length };
+  });
+}
+
+/**
+ * GET that answers `null` only for the intended "nothing there yet" 404s (error codes in `nullCodes`).
+ * Any other 404 (wrong URL, unknown route) and every other failure still throws.
+ */
+async function getOrNull<T>(path: string, nullCodes: readonly string[], query?: Query): Promise<T | null> {
   try {
     return await getJson<T>(path, query);
   } catch (err) {
-    if (err instanceof ApiError && err.status === 404) return null;
+    if (err instanceof ApiError && err.status === 404 && nullCodes.includes(err.code)) return null;
     throw err;
   }
 }
+
+/** Error codes the backend uses when a plant id does not exist. */
+const PLANT_NOT_FOUND = ['not_found'] as const;
 
 function plantNumber(id: number | string): number {
   return typeof id === 'string' ? parseInt(id.replace('plant-', ''), 10) : id;
@@ -215,8 +243,7 @@ class ApiClient {
   }
 
   public async runPipeline(reset = false): Promise<PipelineRunResponse> {
-    const res = await send('/pipeline/run', { method: 'POST', body: { reset } });
-    return (await res.json()) as PipelineRunResponse;
+    return sendJson<PipelineRunResponse>('/pipeline/run', 'POST', { reset });
   }
 
   public getPipelineStatus(): Promise<PipelineStatus> {
@@ -229,7 +256,7 @@ class ApiClient {
   }
 
   public getPlantMonitoring(id: number | string, limit?: number): Promise<PlantMonitoring | null> {
-    return getOrNull<PlantMonitoring>(`/monitoring/plants/${plantNumber(id)}`, { limit });
+    return getOrNull<PlantMonitoring>(`/monitoring/plants/${plantNumber(id)}`, PLANT_NOT_FOUND, { limit });
   }
 
   // Plants
@@ -237,12 +264,8 @@ class ApiClient {
     return getPage<Plant>('/plants', { limit: params?.limit ?? 100, offset: params?.offset });
   }
 
-  public async getPlants(): Promise<Plant[]> {
-    return (await this.getPlantsPage()).items;
-  }
-
   public getPlantById(id: number | string): Promise<Plant | null> {
-    return getOrNull<Plant>(`/plants/${plantNumber(id)}`);
+    return getOrNull<Plant>(`/plants/${plantNumber(id)}`, PLANT_NOT_FOUND);
   }
 
   // Readings and data logs
@@ -250,16 +273,8 @@ class ApiClient {
     return getPage<SensorRecord>('/sensors/readings', readingQuery(filter));
   }
 
-  public async getRecords(filter?: ReadingFilter): Promise<SensorRecord[]> {
-    return (await this.getRecordsPage(filter)).items;
-  }
-
   public getDataLogsPage(filter?: ReadingFilter): Promise<Page<SensorRecord>> {
     return getPage<SensorRecord>('/data-logs', readingQuery(filter));
-  }
-
-  public async getDataLogs(filter?: ReadingFilter): Promise<SensorRecord[]> {
-    return (await this.getDataLogsPage(filter)).items;
   }
 
   /** URL of the server-side CSV export for the same filters (page params are ignored by the server). */
@@ -281,47 +296,31 @@ class ApiClient {
     });
   }
 
-  public async getPredictions(filter?: PredictionFilter): Promise<Prediction[]> {
-    return (await this.getPredictionsPage(filter)).items;
-  }
-
-  public getSessionsPage(params?: PageParams): Promise<Page<Session>> {
-    return getPage<Session>('/sessions', { ...params });
-  }
-
   public async getSessions(): Promise<Session[]> {
-    return (await this.getSessionsPage()).items;
-  }
-
-  public getDevicesPage(params?: PageParams): Promise<Page<Device>> {
-    return getPage<Device>('/devices', { ...params });
+    return (await getPage<Session>('/sessions')).items;
   }
 
   public async getDevices(): Promise<Device[]> {
-    return (await this.getDevicesPage()).items;
+    return (await getPage<Device>('/devices')).items;
   }
 
   // AI
   /** 404 `explanation_unavailable` (before a Run) maps to null. */
   public getLocalShap(plantId: number | string): Promise<LocalShapExplanation | null> {
-    return getOrNull<LocalShapExplanation>(`/ai/shap/${plantNumber(plantId)}`);
+    return getOrNull<LocalShapExplanation>(`/ai/shap/${plantNumber(plantId)}`, ['explanation_unavailable']);
   }
 
   public async getGlobalShapResult(): Promise<GlobalShapResult> {
     try {
       return { data: await getJson<GlobalShapData>('/ai/shap/global'), unavailable: null };
     } catch (err) {
-      if (err instanceof ApiError && err.status === 404) {
+      if (err instanceof ApiError && err.status === 404 && err.code === 'global_shap_unavailable') {
         const details = err.details as { hint?: unknown } | null;
         const hint = details && typeof details.hint === 'string' ? details.hint : null;
         return { data: null, unavailable: { message: err.message, hint } };
       }
       throw err;
     }
-  }
-
-  public async getGlobalShap(): Promise<GlobalShapData | null> {
-    return (await this.getGlobalShapResult()).data;
   }
 
   public getModelMetrics(): Promise<ModelMetrics> {
@@ -332,31 +331,14 @@ class ApiClient {
     return getJson<AiInsights>('/ai/insights');
   }
 
-  public getAnomaliesPage(params?: PageParams & { plantId?: number | string }): Promise<Page<AnomalyRecord>> {
-    return getPage<AnomalyRecord>('/ai/anomalies', {
-      plantId: params?.plantId === undefined || params.plantId === 'all' ? undefined : plantNumber(params.plantId),
-      limit: params?.limit,
-      offset: params?.offset,
-    });
-  }
-
-  public async getAnomalies(params?: PageParams & { plantId?: number | string }): Promise<AnomalyRecord[]> {
-    return (await this.getAnomaliesPage(params)).items;
-  }
-
   // Recommendations
   public getRecommendationsPage(filter?: RecommendationFilter): Promise<Page<Recommendation>> {
     return getPage<Recommendation>('/recommendations', recommendationQuery(filter));
   }
 
-  public async getRecommendations(filter?: RecommendationFilter): Promise<Recommendation[]> {
-    return (await this.getRecommendationsPage(filter)).items;
-  }
-
   /** Rejects with an `ApiError` (status 409, code `conflict`) when reopening would duplicate an active one. */
   public async updateRecommendationStatus(id: string, status: UserRecommendationStatus): Promise<Recommendation> {
-    const res = await send(`/recommendations/${encodeURIComponent(id)}`, { method: 'PATCH', body: { status } });
-    return (await res.json()) as Recommendation;
+    return sendJson<Recommendation>(`/recommendations/${encodeURIComponent(id)}`, 'PATCH', { status });
   }
 
   // Settings
@@ -365,8 +347,7 @@ class ApiClient {
   }
 
   public async updateSettings(patch: Partial<SystemSettings>): Promise<SystemSettings> {
-    const res = await send('/settings', { method: 'PUT', body: patch });
-    return (await res.json()) as SystemSettings;
+    return sendJson<SystemSettings>('/settings', 'PUT', patch);
   }
 }
 

@@ -1,18 +1,26 @@
+import { useContext } from 'react';
 import { apiClient } from '../api/client';
 import type {
   AiInsights,
-  AnomalyRecord,
   Device,
   LocalShapExplanation,
   ModelMetrics,
   Overview,
-  Prediction,
   Session,
 } from '../types';
 import { useAsync, type AsyncState } from './useApi';
-import type { GlobalShapResult, PredictionFilter } from '../api/client';
+import { SharedDataContext } from './sharedData';
+import type { GlobalShapResult } from '../api/client';
 
-export const useOverview = (): AsyncState<Overview> => useAsync(() => apiClient.getOverview(), ['overview']);
+/** Fetches the overview itself. The app shell uses this once and shares the result via `SharedDataContext`. */
+export const useOverviewSource = (): AsyncState<Overview> => useAsync(() => apiClient.getOverview(), ['overview']);
+
+/** The shared overview from the app shell, or its own fetch when rendered without one. */
+export function useOverview(): AsyncState<Overview> {
+  const shared = useContext(SharedDataContext).overview;
+  const own = useAsync(() => apiClient.getOverview(), ['overview'], { enabled: shared === null });
+  return shared ?? own;
+}
 
 export const useInsights = (): AsyncState<AiInsights> => useAsync(() => apiClient.getInsights(), ['insights']);
 
@@ -31,8 +39,3 @@ export const useLocalShap = (plantId: number | string | null | undefined): Async
 /** `data.unavailable.hint` carries the command to run when the report does not exist. */
 export const useGlobalShap = (): AsyncState<GlobalShapResult> => useAsync(() => apiClient.getGlobalShapResult(), ['globalShap']);
 
-export const useAnomalies = (limit = 100): AsyncState<AnomalyRecord[]> =>
-  useAsync(async () => (await apiClient.getAnomaliesPage({ limit })).items, ['anomalies', limit]);
-
-export const usePredictions = (filter?: PredictionFilter): AsyncState<Prediction[]> =>
-  useAsync(async () => (await apiClient.getPredictionsPage(filter)).items, ['predictions', filter]);

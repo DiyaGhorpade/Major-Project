@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDateTime(isoString?: string | null): string {
-  if (!isoString) return "N/A";
+  if (!isoString) return "n/a";
   try {
     const d = new Date(isoString);
     if (isNaN(d.getTime())) return isoString;
@@ -48,6 +48,11 @@ export function formatRelativeTime(isoString?: string | null): string {
 
 export function formatPercent(value: number | null | undefined, decimals: number = 1): string {
   return value === null || value === undefined ? 'n/a' : `${value.toFixed(decimals)}%`;
+}
+
+/** A 0-1 fraction as a percentage, e.g. 0.912 -> "91.2%". Null, undefined and non-finite values give "n/a". */
+export function formatFraction(value: number | null | undefined, decimals: number = 1): string {
+  return value === null || value === undefined || !Number.isFinite(value) ? 'n/a' : formatPercent(value * 100, decimals);
 }
 
 export function formatTemp(value: number | null | undefined, decimals: number = 1): string {

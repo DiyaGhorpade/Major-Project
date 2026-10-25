@@ -13,6 +13,8 @@ interface TopBarProps {
   isRefreshing?: boolean;
   /** Recent alerts from /api/monitoring/overview (empty = no badge). */
   alerts?: Alert[];
+  /** Plants from the data, used by the search box and the page titles (empty until loaded). */
+  plants?: Array<{ id: number; name: string }>;
   onNavigate: (route: NavRoute, plantId?: number | string) => void;
 }
 
@@ -23,32 +25,54 @@ export const TopBar: React.FC<TopBarProps> = ({
   onRefresh,
   isRefreshing = false,
   alerts = [],
+  plants = [],
   onNavigate,
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchMiss, setSearchMiss] = useState(false);
   const [clock, setClock] = useState(() => formatIstClock());
-  const { run, isActive, hasCompletedRun, processed, total, percent, state } = usePipeline();
+  const { run, isActive, hasCompletedRun, processed, total, percent } = usePipeline();
 
   useEffect(() => {
     const id = setInterval(() => setClock(formatIstClock()), 15000);
     return () => clearInterval(id);
   }, []);
 
+  const plantCount = plants.length;
+  const plantCountText = plantCount > 0 ? ` (${plantCount} Plants)` : '';
+
+  // Jump to a plant by id ("5", "#5", "pot 5") or by (part of) its name.
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return;
+    const idMatch = /^(?:pot\s*)?#?(\d+)$/.exec(q);
+    const found = idMatch
+      ? plants.find((p) => p.id === Number(idMatch[1]))
+      : plants.find((p) => p.name.toLowerCase().includes(q));
+    if (found) {
+      setSearchMiss(false);
+      setSearchQuery('');
+      onNavigate('plant-detail', found.id);
+    } else {
+      setSearchMiss(true);
+    }
+  };
+
   const runLabel = hasCompletedRun ? 'Re-run' : 'Run';
   const RunIcon = hasCompletedRun ? RotateCcw : Play;
-  const progressText =
-    state === 'queued' && total === 0
-      ? 'Starting analysis...'
-      : `Analyzing ${formatCount(processed)} / ${formatCount(total)} readings...`;
+  const starting = total === 0;
+  const progressText = starting ? 'Starting analysis...' : `Analyzing ${formatCount(processed)} / ${formatCount(total)} readings...`;
+  const compactText = starting ? 'Starting...' : `${Math.round(percent)}%`;
 
   // Page titles mapping
   const routeTitles: Record<NavRoute, { title: string; category: string }> = {
     overview: { title: 'Tulsi Telemetry & Collection Health', category: 'Workspace' },
-    'live-monitoring': { title: 'Live Sensor Stream Monitoring', category: 'Workspace' },
-    plants: { title: 'Tulsi Stress Trial Specimens (16 Plants)', category: 'Workspace' },
+    'live-monitoring': { title: `Plant Sensor Monitoring${plantCountText}`, category: 'Workspace' },
+    plants: { title: `Tulsi Stress Trial Specimens${plantCountText}`, category: 'Workspace' },
     'plant-detail': {
-      title: activePlantId ? `Specimen Dossier — ${String(activePlantId).toUpperCase()}` : 'Plant Specification',
+      title: activePlantId ? `Specimen Dossier: Pot ${String(activePlantId)}` : 'Plant Specification',
       category: 'Workspace / Plants',
     },
     'ai-insights': { title: 'Tulsi Stress ML Inference Insights', category: 'Intelligence' },
@@ -90,9 +114,10 @@ export const TopBar: React.FC<TopBarProps> = ({
         {/* Run pipeline + progress */}
         <div className="flex items-center gap-3">
           {isActive && (
-            <div className="hidden sm:block w-48" data-testid="run-progress">
+            <div className="w-20 sm:w-48" data-testid="run-progress">
               <div className="text-[11px] text-[#426B4F] font-medium leading-tight truncate" aria-live="polite">
-                {progressText}
+                <span className="sm:hidden">{compactText}</span>
+                <span className="hidden sm:inline">{progressText}</span>
               </div>
               <div
                 className="mt-1 h-1.5 rounded-full bg-[#DCE4D9] overflow-hidden"
@@ -117,17 +142,32 @@ export const TopBar: React.FC<TopBarProps> = ({
           </button>
         </div>
 
-        {/* Contextual Search */}
-        <div className="relative hidden lg:block w-64">
-          <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        {/* Jump to a plant */}
+        <form onSubmit={handleSearch} role="search" className="relative hidden lg:block w-64">
+          <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
           <input
             type="text"
-            placeholder="Search plant, node, record..."
+            list="topbar-plants"
+            aria-label="Jump to a plant by number or name"
+            placeholder="Jump to plant (number or name)..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full text-xs bg-[#F6F7F0] border border-[#DCE4D9] rounded-lg pl-9 pr-3 py-1.5 outline-none focus:border-[#2E8B57] focus:bg-white transition-all text-[#1C2B23]"
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setSearchMiss(false);
+            }}
+            className={`w-full text-xs bg-[#F6F7F0] border rounded-lg pl-9 pr-3 py-1.5 outline-none focus:border-[#2E8B57] focus:bg-white transition-all text-[#1C2B23] ${searchMiss ? 'border-red-400' : 'border-[#DCE4D9]'}`}
           />
-        </div>
+          <datalist id="topbar-plants">
+            {plants.map((p) => (
+              <option key={p.id} value={p.name} />
+            ))}
+          </datalist>
+          {searchMiss && (
+            <span role="alert" className="absolute left-0 top-full mt-1 text-[11px] text-red-700">
+              No matching plant.
+            </span>
+          )}
+        </form>
 
         {/* Refresh button */}
         <button

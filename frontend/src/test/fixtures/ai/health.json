@@ -1,0 +1,1 @@
+{"status":"ok","db":{"ok":true,"readings":5376,"plants":16},"mlService":{"ok":true,"url":"http://127.0.0.1:8001","detail":"ok","status":"ok","modelsLoaded":true,"explainabilityAvailable":true},"modelVersion":"1.0.0","runId":"v1.0.0_20261021T145244Z","datasetName":"plant_sensor_data.csv","seeded":true}

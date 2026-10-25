@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Download,
   Search,
@@ -9,9 +9,12 @@ import { apiClient, type ReadingFilter } from '../api/client';
 import { SensorRecord } from '../types';
 import { useDataLogs } from '../hooks/useReadings';
 import { usePlants } from '../hooks/usePlants';
+import { useSessions } from '../hooks/useData';
 import { ErrorState } from '../components/shared/ErrorState';
+import { StatusBadge } from '../components/shared/StatusBadge';
 import { RecordDetailDrawer } from '../components/shared/RecordDetailDrawer';
-import { formatPercent, formatTemp, formatLux } from '../lib/utils';
+import { clearSessionFilter, peekSessionFilter } from '../components/monitoring/format';
+import { formatPercent, formatTemp, formatLux, formatCount, formatDateTime, orNA } from '../lib/utils';
 
 export const DataLogsPage: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<SensorRecord | null>(null);
@@ -21,6 +24,15 @@ export const DataLogsPage: React.FC = () => {
   const [plantFilter, setPlantFilter] = useState('all');
   const [nodeFilter, setNodeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  // A session picked on the Sessions page is handed over through sessionStorage. Reading it is pure (safe when React
+  // double-invokes initializers under StrictMode); it is consumed in an effect once the page has taken it.
+  const [sessionFilter, setSessionFilter] = useState<string>(() => {
+    const id = peekSessionFilter();
+    return id === null ? 'all' : String(id);
+  });
+  useEffect(() => {
+    clearSessionFilter();
+  }, []);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -31,13 +43,16 @@ export const DataLogsPage: React.FC = () => {
     plantId: plantFilter,
     nodeId: nodeFilter,
     status: statusFilter,
+    sessionId: sessionFilter === 'all' ? undefined : Number(sessionFilter),
     q: searchQuery.trim() || undefined,
     limit: pageSize,
     offset: (currentPage - 1) * pageSize,
   };
   const logs = useDataLogs(filter);
   const plantsQuery = usePlants();
+  const sessionsQuery = useSessions();
   const plants = plantsQuery.data ?? [];
+  const sessions = sessionsQuery.data ?? [];
   const paginatedRecords: SensorRecord[] = logs.data ?? [];
   const totalRecords = logs.total;
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
@@ -55,14 +70,14 @@ export const DataLogsPage: React.FC = () => {
               Raw Telemetry Repository
             </span>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#EDF4EB] text-[#2E8B57] font-semibold border border-[#DDE8D8]">
-              {totalRecords} Logged Records
+              {formatCount(totalRecords)} {totalRecords === 1 ? 'Record' : 'Records'} Match
             </span>
           </div>
           <h1 className="text-lg font-bold text-[#1C2B23]">
             Historical Sensor Telemetry Database
           </h1>
           <p className="text-xs text-[#6B786E] mt-1">
-            Exact physical telemetry records from Node 1 and Node 2. Click any row for raw JSON payload inspection.
+            Stored sensor records from the bundled dataset. Click any row for the full record, model output and dataset labels.
           </p>
         </div>
 
@@ -72,7 +87,7 @@ export const DataLogsPage: React.FC = () => {
           className="px-4 py-2 bg-[#2E8B57] hover:bg-[#236e44] text-white text-xs font-bold rounded-lg flex items-center gap-2 transition-all shadow-sm"
         >
           <Download className="w-4 h-4" />
-          <span>Download Filtered CSV ({totalRecords})</span>
+          <span>Download Filtered CSV ({formatCount(totalRecords)})</span>
         </a>
       </div>
 
@@ -84,7 +99,7 @@ export const DataLogsPage: React.FC = () => {
             <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search by Pot #, Session, or date..."
+              placeholder="Search by pot, session, node, record id or date..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -96,6 +111,7 @@ export const DataLogsPage: React.FC = () => {
 
           {/* Plant filter */}
           <select
+            aria-label="Pot filter"
             value={plantFilter}
             onChange={(e) => {
               setPlantFilter(e.target.value);
@@ -103,7 +119,7 @@ export const DataLogsPage: React.FC = () => {
             }}
             className="text-xs bg-white border border-[#DCE4D9] rounded-lg px-3 py-1.5 text-[#1C2B23] outline-none shadow-sm cursor-pointer"
           >
-            <option value="all">All Pots (1 to 16)</option>
+            <option value="all">All Pots ({plants.length || 'n/a'})</option>
             {plants.map((p) => (
               <option key={p.id} value={p.id}>
                 Pot #{p.id} ({p.variety})
@@ -113,6 +129,7 @@ export const DataLogsPage: React.FC = () => {
 
           {/* Node filter */}
           <select
+            aria-label="Node filter"
             value={nodeFilter}
             onChange={(e) => {
               setNodeFilter(e.target.value);
@@ -121,12 +138,13 @@ export const DataLogsPage: React.FC = () => {
             className="text-xs bg-white border border-[#DCE4D9] rounded-lg px-3 py-1.5 text-[#1C2B23] outline-none shadow-sm cursor-pointer"
           >
             <option value="all">All Nodes</option>
-            <option value="1">Node 1 (odd-numbered pots)</option>
-            <option value="2">Node 2 (even-numbered pots)</option>
+            <option value="1">Node 1</option>
+            <option value="2">Node 2</option>
           </select>
 
           {/* Status filter */}
           <select
+            aria-label="Status filter"
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
@@ -135,8 +153,27 @@ export const DataLogsPage: React.FC = () => {
             className="text-xs bg-white border border-[#DCE4D9] rounded-lg px-3 py-1.5 text-[#1C2B23] outline-none shadow-sm cursor-pointer"
           >
             <option value="all">All Statuses</option>
-            <option value="accepted">Accepted Only</option>
-            <option value="flagged">Flagged Alerts</option>
+            <option value="accepted">Accepted</option>
+            <option value="flagged">Flagged (missing or out-of-range values)</option>
+            <option value="rejected">Rejected</option>
+          </select>
+
+          {/* Session filter */}
+          <select
+            aria-label="Session filter"
+            value={sessionFilter}
+            onChange={(e) => {
+              setSessionFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="text-xs bg-white border border-[#DCE4D9] rounded-lg px-3 py-1.5 text-[#1C2B23] outline-none shadow-sm cursor-pointer"
+          >
+            <option value="all">All Sessions</option>
+            {sessions.map((sess) => (
+              <option key={sess.session_id} value={sess.session_id}>
+                Session #{sess.session_id}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -167,7 +204,7 @@ export const DataLogsPage: React.FC = () => {
           <table className="w-full text-xs text-left">
             <thead>
               <tr className="border-b border-[#DCE4D9] text-[#6B786E] bg-[#F6F7F0]/60">
-                <th className="py-3 px-4 font-semibold">timestamp</th>
+                <th className="py-3 px-4 font-semibold">timestamp (IST)</th>
                 <th className="py-3 px-4 font-semibold">session_id</th>
                 <th className="py-3 px-4 font-semibold">node_id</th>
                 <th className="py-3 px-4 font-semibold">sampling_point</th>
@@ -176,27 +213,36 @@ export const DataLogsPage: React.FC = () => {
                 <th className="py-3 px-4 font-semibold">temperature (°C)</th>
                 <th className="py-3 px-4 font-semibold">humidity (%)</th>
                 <th className="py-3 px-4 font-semibold">light (lux)</th>
+                <th className="py-3 px-4 font-semibold">status</th>
+                <th className="py-3 px-4 font-semibold">validation_error</th>
                 <th className="py-3 px-4 font-semibold text-right">Inspect</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#DCE4D9]/60 font-mono">
-              {paginatedRecords.map((r, idx) => (
+              {paginatedRecords.length === 0 && (
+                <tr>
+                  <td colSpan={12} className="py-8 px-4 text-center text-stone-500 font-sans">
+                    {logs.loading ? 'Loading records...' : 'No records match these filters.'}
+                  </td>
+                </tr>
+              )}
+              {paginatedRecords.map((r) => (
                 <tr
-                  key={r.record_id || idx}
+                  key={r.record_id}
                   onClick={() => setSelectedRecord(r)}
                   className="hover:bg-[#EDF4EB]/40 transition-colors cursor-pointer"
                 >
-                  <td className="py-3 px-4 text-[#1C2B23] font-medium">
-                    {r.timestamp}
+                  <td className="py-3 px-4 text-[#1C2B23] font-medium" title={r.timestamp}>
+                    {formatDateTime(r.timestamp)}
                   </td>
                   <td className="py-3 px-4 text-stone-700">
-                    {r.session_id ?? 'n/a'}
+                    {orNA(r.session_id)}
                   </td>
                   <td className="py-3 px-4 font-bold text-stone-800">
-                    "{r.node_id}"
+                    {r.node_id}
                   </td>
                   <td className="py-3 px-4 text-stone-700">
-                    {r.sampling_point ?? 'n/a'}
+                    {orNA(r.sampling_point)}
                   </td>
                   <td className="py-3 px-4 font-bold text-[#102F26]">
                     Pot #{r.plant_id}
@@ -212,6 +258,12 @@ export const DataLogsPage: React.FC = () => {
                   </td>
                   <td className="py-3 px-4 text-[#1C2B23]">
                     {formatLux(r.light)}
+                  </td>
+                  <td className="py-3 px-4 font-sans">
+                    <StatusBadge status={r.status} size="sm" />
+                  </td>
+                  <td className="py-3 px-4 text-amber-800" data-testid="validation-cell">
+                    {orNA(r.validation_error)}
                   </td>
                   <td className="py-3 px-4 text-right">
                     <button

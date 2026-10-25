@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { usePipelineMachine } from './usePipeline';
-import { mockFetch, statusBody } from '../test/helpers';
+import { jsonResponse, mockFetch, statusBody } from '../test/helpers';
+import { REQUEST_TIMEOUT_MS } from '../api/client';
 
 const tick = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
 
@@ -123,5 +124,92 @@ describe('usePipelineMachine', () => {
     expect(calls.length).toBe(before);
     await tick(3500);
     expect(calls.length).toBe(before + 1);
+  });
+
+  /** fetch whose handler may return a never-settling promise that rejects on abort (like a hung server). */
+  const hangUntilAborted = (init?: RequestInit) =>
+    new Promise<Response>((_res, reject) => {
+      init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+    });
+
+  it('keeps polling after a status request times out', async () => {
+    let statusCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).endsWith('/pipeline/status')) {
+          statusCalls += 1;
+          if (statusCalls === 1) return hangUntilAborted(init);
+        }
+        return Promise.resolve(jsonResponse({ body: statusBody({ state: 'idle', runId: null }) }));
+      }),
+    );
+    const { result } = renderHook(() => usePipelineMachine(vi.fn()));
+    await tick(REQUEST_TIMEOUT_MS + 1);
+    expect(result.current.error?.code).toBe('timeout');
+    expect(statusCalls).toBe(1);
+
+    await tick(5100); // the idle cadence reschedules even though the previous request failed
+    expect(statusCalls).toBe(2);
+    expect(result.current.error).toBeNull();
+    expect(result.current.state).toBe('idle');
+  });
+
+  it('re-enables Run and shows the error when starting a run times out', async () => {
+    let postCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.method === 'POST') {
+          postCalls += 1;
+          if (postCalls === 1) return hangUntilAborted(init);
+          return Promise.resolve(jsonResponse({ status: 202, body: { runId: 2, state: 'queued' } }));
+        }
+        const body = postCalls >= 2 ? statusBody({ state: 'queued', total: 10 }) : statusBody({ state: 'idle', runId: null });
+        return Promise.resolve(jsonResponse({ body }));
+      }),
+    );
+    const { result } = renderHook(() => usePipelineMachine(vi.fn()));
+    await tick(0);
+
+    let first: Promise<void> = Promise.resolve();
+    act(() => {
+      first = result.current.run();
+    });
+    expect(result.current.isActive).toBe(true); // "starting" while the POST is pending
+    await tick(REQUEST_TIMEOUT_MS + 1);
+    await act(async () => first);
+    expect(result.current.error?.code).toBe('timeout');
+    expect(result.current.isActive).toBe(false);
+    expect(result.current.state).toBe('idle');
+
+    await act(async () => {
+      await result.current.run(); // Run works again
+    });
+    expect(postCalls).toBe(2);
+    expect(result.current.error).toBeNull();
+    expect(result.current.state).toBe('queued');
+  });
+
+  it('reports no stale totals while a re-run is starting', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
+        init?.method === 'POST'
+          ? hangUntilAborted(init)
+          : Promise.resolve(jsonResponse({ body: statusBody({ state: 'completed', total: 5376, processed: 5376, percent: 100 }) })),
+      ),
+    );
+    const { result } = renderHook(() => usePipelineMachine(vi.fn()));
+    await tick(0);
+    expect(result.current.total).toBe(5376);
+
+    act(() => {
+      void result.current.run();
+    });
+    expect(result.current.state).toBe('queued');
+    expect(result.current.total).toBe(0);
+    expect(result.current.processed).toBe(0);
+    await tick(REQUEST_TIMEOUT_MS + 1);
   });
 });

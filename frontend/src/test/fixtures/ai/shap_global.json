@@ -1,0 +1,927 @@
+{
+ "model_version": "1.0.0",
+ "sample_count": 500,
+ "features": [
+  {
+   "name": "soil_roll12_mean",
+   "displayName": "Soil moisture, 12-reading average",
+   "mean_abs_shap": 0.46215739846229553,
+   "importance_rank": 1,
+   "interpretation": "Rank 1: on average it moved the model's score by about 0.46 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "laymanTip": "Average soil moisture over this plant's last 12 readings. Larger bars mean the model relies on this input more."
+  },
+  {
+   "name": "light_roll12_std",
+   "displayName": "Light, 12-reading variability",
+   "mean_abs_shap": 0.424699068069458,
+   "importance_rank": 2,
+   "interpretation": "Rank 2: on average it moved the model's score by about 0.42 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "laymanTip": "How much light varied (standard deviation) over this plant's last 12 readings. Larger bars mean the model relies on this input more."
+  },
+  {
+   "name": "light_roll12_mean",
+   "displayName": "Light, 12-reading average",
+   "mean_abs_shap": 0.39965710043907166,
+   "importance_rank": 3,
+   "interpretation": "Rank 3: on average it moved the model's score by about 0.40 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "laymanTip": "Average light over this plant's last 12 readings. Larger bars mean the model relies on this input more."
+  },
+  {
+   "name": "temperature_roll12_mean",
+   "displayName": "Temperature, 12-reading average",
+   "mean_abs_shap": 0.30455803871154785,
+   "importance_rank": 4,
+   "interpretation": "Rank 4: on average it moved the model's score by about 0.30 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "laymanTip": "Average temperature over this plant's last 12 readings. Larger bars mean the model relies on this input more."
+  },
+  {
+   "name": "humidity_roll12_mean",
+   "displayName": "Humidity, 12-reading average",
+   "mean_abs_shap": 0.2138771116733551,
+   "importance_rank": 5,
+   "interpretation": "Rank 5: on average it moved the model's score by about 0.21 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "laymanTip": "Average humidity over this plant's last 12 readings. Larger bars mean the model relies on this input more."
+  },
+  {
+   "name": "vpd_roll12_mean",
+   "displayName": "Vapour pressure deficit, 12-reading average",
+   "mean_abs_shap": 0.18141597509384155,
+   "importance_rank": 6,
+   "interpretation": "Rank 6: on average it moved the model's score by about 0.18 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "laymanTip": "Average vapour pressure deficit over this plant's last 12 readings. Larger bars mean the model relies on this input more."
+  },
+  {
+   "name": "soil_base_dev",
+   "displayName": "Soil moisture, difference from usual",
+   "mean_abs_shap": 0.17609478533267975,
+   "importance_rank": 7,
+   "interpretation": "Rank 7: on average it moved the model's score by about 0.18 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "laymanTip": "How far soil moisture is from this plant's own recent baseline (the average of its previous 48 readings). Larger bars mean the model relies on this input more."
+  },
+  {
+   "name": "soil_roll6_mean",
+   "displayName": "Soil moisture, 6-reading average",
+   "mean_abs_shap": 0.15692676603794098,
+   "importance_rank": 8,
+   "interpretation": "Rank 8: on average it moved the model's score by about 0.16 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "laymanTip": "Average soil moisture over this plant's last 6 readings. Larger bars mean the model relies on this input more."
+  },
+  {
+   "name": "soil_lag1",
+   "displayName": "Soil moisture, previous reading",
+   "mean_abs_shap": 0.11995009332895279,
+   "importance_rank": 9,
+   "interpretation": "Rank 9: on average it moved the model's score by about 0.12 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "laymanTip": "Soil moisture at this plant's previous reading. Larger bars mean the model relies on this input more."
+  },
+  {
+   "name": "soil",
+   "displayName": "Soil moisture",
+   "mean_abs_shap": 0.112359918653965,
+   "importance_rank": 10,
+   "interpretation": "Rank 10: on average it moved the model's score by about 0.11 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "laymanTip": "The soil moisture measured in this reading. Larger bars mean the model relies on this input more."
+  },
+  {
+   "name": "dayofweek",
+   "displayName": "Day of week",
+   "mean_abs_shap": 0.088065005838871,
+   "importance_rank": 11,
+   "interpretation": "Rank 11: on average it moved the model's score by about 0.09 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "laymanTip": "Day of the week of the reading (0 = Monday ... 6 = Sunday). Larger bars mean the model relies on this input more."
+  },
+  {
+   "name": "soil_roll3_mean",
+   "displayName": "Soil moisture, 3-reading average",
+   "mean_abs_shap": 0.06657209992408752,
+   "importance_rank": 12,
+   "interpretation": "Rank 12: on average it moved the model's score by about 0.07 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "laymanTip": "Average soil moisture over this plant's last 3 readings. Larger bars mean the model relies on this input more."
+  },
+  {
+   "name": "soil_roll12_std",
+   "displayName": "Soil moisture, 12-reading variability",
+   "mean_abs_shap": 0.05157463625073433,
+   "importance_rank": 13,
+   "interpretation": "Rank 13: on average it moved the model's score by about 0.05 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "laymanTip": "How much soil moisture varied (standard deviation) over this plant's last 12 readings. Larger bars mean the model relies on this input more."
+  },
+  {
+   "name": "temperature_roll6_mean",
+   "displayName": "Temperature, 6-reading average",
+   "mean_abs_shap": 0.04889916256070137,
+   "importance_rank": 14,
+   "interpretation": "Rank 14: on average it moved the model's score by about 0.05 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "laymanTip": "Average temperature over this plant's last 6 readings. Larger bars mean the model relies on this input more."
+  },
+  {
+   "name": "temperature_base_dev",
+   "displayName": "Temperature, difference from usual",
+   "mean_abs_shap": 0.047427259385585785,
+   "importance_rank": 15,
+   "interpretation": "Rank 15: on average it moved the model's score by about 0.05 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "laymanTip": "How far temperature is from this plant's own recent baseline (the average of its previous 48 readings). Larger bars mean the model relies on this input more."
+  }
+ ],
+ "beeswarm_points": [
+  {
+   "id": "1294:humidity_roll12_mean",
+   "feature": "humidity_roll12_mean",
+   "feature_value_norm": 0.2198534310459688,
+   "shap_value": 0.1500670462846756,
+   "plant_id": null,
+   "predicted_class": "low"
+  },
+  {
+   "id": "1294:light_roll12_std",
+   "feature": "light_roll12_std",
+   "feature_value_norm": 0.20281544704698845,
+   "shap_value": 0.1270078867673874,
+   "plant_id": null,
+   "predicted_class": "low"
+  },
+  {
+   "id": "1294:temperature_base_dev",
+   "feature": "temperature_base_dev",
+   "feature_value_norm": 0.9160794128193308,
+   "shap_value": 0.11382172256708145,
+   "plant_id": null,
+   "predicted_class": "low"
+  },
+  {
+   "id": "1294:light_roll12_mean",
+   "feature": "light_roll12_mean",
+   "feature_value_norm": 0.18484794593633294,
+   "shap_value": 0.10470583289861679,
+   "plant_id": null,
+   "predicted_class": "low"
+  },
+  {
+   "id": "1294:vpd_diff1",
+   "feature": "vpd_diff1",
+   "feature_value_norm": 0.0,
+   "shap_value": 0.08128701150417328,
+   "plant_id": null,
+   "predicted_class": "low"
+  },
+  {
+   "id": "1269:temperature_base_dev",
+   "feature": "temperature_base_dev",
+   "feature_value_norm": 0.9951848843420918,
+   "shap_value": 0.13897253572940826,
+   "plant_id": null,
+   "predicted_class": "low"
+  },
+  {
+   "id": "1269:humidity_roll12_mean",
+   "feature": "humidity_roll12_mean",
+   "feature_value_norm": 0.18754163890739492,
+   "shap_value": 0.12200181186199188,
+   "plant_id": null,
+   "predicted_class": "low"
+  },
+  {
+   "id": "1269:light_roll12_mean",
+   "feature": "light_roll12_mean",
+   "feature_value_norm": 0.1008612586062346,
+   "shap_value": 0.12035117298364639,
+   "plant_id": null,
+   "predicted_class": "low"
+  },
+  {
+   "id": "1269:light_roll12_std",
+   "feature": "light_roll12_std",
+   "feature_value_norm": 0.1005856057847142,
+   "shap_value": 0.10741690546274185,
+   "plant_id": null,
+   "predicted_class": "low"
+  },
+  {
+   "id": "1269:dayofweek",
+   "feature": "dayofweek",
+   "feature_value_norm": 0.0,
+   "shap_value": 0.08296860009431839,
+   "plant_id": null,
+   "predicted_class": "low"
+  },
+  {
+   "id": "3987:light_roll12_std",
+   "feature": "light_roll12_std",
+   "feature_value_norm": 0.7208576134192919,
+   "shap_value": 2.2184901237487793,
+   "plant_id": null,
+   "predicted_class": "high"
+  },
+  {
+   "id": "3987:light_roll12_mean",
+   "feature": "light_roll12_mean",
+   "feature_value_norm": 0.812904328465417,
+   "shap_value": 1.13219153881073,
+   "plant_id": null,
+   "predicted_class": "high"
+  },
+  {
+   "id": "3987:humidity_roll12_mean",
+   "feature": "humidity_roll12_mean",
+   "feature_value_norm": 0.16622251832111862,
+   "shap_value": -0.4889540374279022,
+   "plant_id": null,
+   "predicted_class": "high"
+  },
+  {
+   "id": "3987:vpd_roll12_mean",
+   "feature": "vpd_roll12_mean",
+   "feature_value_norm": 0.28129288123010326,
+   "shap_value": -0.2020190805196762,
+   "plant_id": null,
+   "predicted_class": "high"
+  },
+  {
+   "id": "3987:temperature_roll12_mean",
+   "feature": "temperature_roll12_mean",
+   "feature_value_norm": 0.480524978831499,
+   "shap_value": -0.17357081174850464,
+   "plant_id": null,
+   "predicted_class": "high"
+  },
+  {
+   "id": "966:soil_roll12_mean",
+   "feature": "soil_roll12_mean",
+   "feature_value_norm": 0.8659779224455136,
+   "shap_value": 0.24559424817562103,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "966:light_roll12_std",
+   "feature": "light_roll12_std",
+   "feature_value_norm": 0.09898391657469716,
+   "shap_value": 0.24458162486553192,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "966:light_roll12_mean",
+   "feature": "light_roll12_mean",
+   "feature_value_norm": 0.10098828789918957,
+   "shap_value": 0.23966583609580994,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "966:soil_base_dev",
+   "feature": "soil_base_dev",
+   "feature_value_norm": 0.1494602839375807,
+   "shap_value": -0.15770047903060913,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "966:temperature_roll12_mean",
+   "feature": "temperature_roll12_mean",
+   "feature_value_norm": 0.3873835732430145,
+   "shap_value": 0.11136972904205322,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "977:light_roll12_std",
+   "feature": "light_roll12_std",
+   "feature_value_norm": 0.0931487619420146,
+   "shap_value": 0.2694017291069031,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "977:light_roll12_mean",
+   "feature": "light_roll12_mean",
+   "feature_value_norm": 0.09502299230202485,
+   "shap_value": 0.2558782994747162,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "977:soil_base_dev",
+   "feature": "soil_base_dev",
+   "feature_value_norm": 0.07361844420978522,
+   "shap_value": 0.23972880840301514,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "977:soil_roll12_mean",
+   "feature": "soil_roll12_mean",
+   "feature_value_norm": 0.8243702236060005,
+   "shap_value": 0.22999535501003265,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "977:humidity_roll6_mean",
+   "feature": "humidity_roll6_mean",
+   "feature_value_norm": 1.0,
+   "shap_value": -0.1393945962190628,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "3305:light_roll12_mean",
+   "feature": "light_roll12_mean",
+   "feature_value_norm": 0.008683722466400754,
+   "shap_value": 1.054370403289795,
+   "plant_id": null,
+   "predicted_class": "moderate"
+  },
+  {
+   "id": "3305:light_roll12_std",
+   "feature": "light_roll12_std",
+   "feature_value_norm": 0.007976386136122228,
+   "shap_value": 0.8056831955909729,
+   "plant_id": null,
+   "predicted_class": "moderate"
+  },
+  {
+   "id": "3305:temperature_roll12_mean",
+   "feature": "temperature_roll12_mean",
+   "feature_value_norm": 0.46729466553768,
+   "shap_value": -0.17680831253528595,
+   "plant_id": null,
+   "predicted_class": "moderate"
+  },
+  {
+   "id": "3305:temperature_diff1",
+   "feature": "temperature_diff1",
+   "feature_value_norm": null,
+   "shap_value": 0.13780803978443146,
+   "plant_id": null,
+   "predicted_class": "moderate"
+  },
+  {
+   "id": "3305:soil_base_dev",
+   "feature": "soil_base_dev",
+   "feature_value_norm": 0.1011087645195355,
+   "shap_value": -0.08953035622835159,
+   "plant_id": null,
+   "predicted_class": "moderate"
+  },
+  {
+   "id": "3962:light_roll12_std",
+   "feature": "light_roll12_std",
+   "feature_value_norm": 1.0,
+   "shap_value": 2.348405361175537,
+   "plant_id": null,
+   "predicted_class": "high"
+  },
+  {
+   "id": "3962:light_roll12_mean",
+   "feature": "light_roll12_mean",
+   "feature_value_norm": 1.0,
+   "shap_value": 1.1045079231262207,
+   "plant_id": null,
+   "predicted_class": "high"
+  },
+  {
+   "id": "3962:humidity_roll12_mean",
+   "feature": "humidity_roll12_mean",
+   "feature_value_norm": 0.12473502513475825,
+   "shap_value": -0.4709484875202179,
+   "plant_id": null,
+   "predicted_class": "high"
+  },
+  {
+   "id": "3962:temperature_roll12_mean",
+   "feature": "temperature_roll12_mean",
+   "feature_value_norm": 0.43924640135478416,
+   "shap_value": -0.17866748571395874,
+   "plant_id": null,
+   "predicted_class": "high"
+  },
+  {
+   "id": "3962:soil_roll12_mean",
+   "feature": "soil_roll12_mean",
+   "feature_value_norm": 0.804981602037928,
+   "shap_value": -0.1692819446325302,
+   "plant_id": null,
+   "predicted_class": "high"
+  },
+  {
+   "id": "667:light_roll12_mean",
+   "feature": "light_roll12_mean",
+   "feature_value_norm": 0.07998272401615814,
+   "shap_value": 0.2875915765762329,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "667:soil_roll12_mean",
+   "feature": "soil_roll12_mean",
+   "feature_value_norm": 0.748938579111237,
+   "shap_value": 0.25730881094932556,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "667:light_roll12_std",
+   "feature": "light_roll12_std",
+   "feature_value_norm": 0.07753646654381947,
+   "shap_value": 0.20837141573429108,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "667:dayofweek",
+   "feature": "dayofweek",
+   "feature_value_norm": 1.0,
+   "shap_value": 0.12673556804656982,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "667:temperature_roll12_mean",
+   "feature": "temperature_roll12_mean",
+   "feature_value_norm": 0.38526672311600363,
+   "shap_value": 0.10956526547670364,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "5005:humidity_roll12_mean",
+   "feature": "humidity_roll12_mean",
+   "feature_value_norm": 0.6848767488341109,
+   "shap_value": 2.2066123485565186,
+   "plant_id": null,
+   "predicted_class": "high"
+  },
+  {
+   "id": "5005:vpd_roll12_mean",
+   "feature": "vpd_roll12_mean",
+   "feature_value_norm": 0.06624929466388559,
+   "shap_value": 0.84395831823349,
+   "plant_id": null,
+   "predicted_class": "high"
+  },
+  {
+   "id": "5005:temperature_roll12_mean",
+   "feature": "temperature_roll12_mean",
+   "feature_value_norm": 0.0,
+   "shap_value": 0.47797930240631104,
+   "plant_id": null,
+   "predicted_class": "high"
+  },
+  {
+   "id": "5005:light_roll12_std",
+   "feature": "light_roll12_std",
+   "feature_value_norm": 0.014966373898389148,
+   "shap_value": -0.2906092703342438,
+   "plant_id": null,
+   "predicted_class": "high"
+  },
+  {
+   "id": "5005:dayofweek",
+   "feature": "dayofweek",
+   "feature_value_norm": 0.6666666666666666,
+   "shap_value": 0.1950867921113968,
+   "plant_id": null,
+   "predicted_class": "high"
+  },
+  {
+   "id": "328:light_roll12_mean",
+   "feature": "light_roll12_mean",
+   "feature_value_norm": 0.06505424150809176,
+   "shap_value": 0.2770080864429474,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "328:soil_roll12_mean",
+   "feature": "soil_roll12_mean",
+   "feature_value_norm": 0.8506934616473253,
+   "shap_value": 0.2571244537830353,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "328:light_roll12_std",
+   "feature": "light_roll12_std",
+   "feature_value_norm": 0.06148846875940204,
+   "shap_value": 0.1817726194858551,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "328:dayofweek",
+   "feature": "dayofweek",
+   "feature_value_norm": 1.0,
+   "shap_value": 0.11075098067522049,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "328:temperature_roll12_mean",
+   "feature": "temperature_roll12_mean",
+   "feature_value_norm": 0.36145215918712975,
+   "shap_value": 0.09669509530067444,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "2604:soil_roll12_mean",
+   "feature": "soil_roll12_mean",
+   "feature_value_norm": 0.37491958932660885,
+   "shap_value": 1.259335994720459,
+   "plant_id": null,
+   "predicted_class": "moderate"
+  },
+  {
+   "id": "2604:soil",
+   "feature": "soil",
+   "feature_value_norm": 0.3717728055077453,
+   "shap_value": 0.5025712847709656,
+   "plant_id": null,
+   "predicted_class": "moderate"
+  },
+  {
+   "id": "2604:soil_roll3_mean",
+   "feature": "soil_roll3_mean",
+   "feature_value_norm": 1.0,
+   "shap_value": 0.3704204261302948,
+   "plant_id": null,
+   "predicted_class": "moderate"
+  },
+  {
+   "id": "2604:soil_base_dev",
+   "feature": "soil_base_dev",
+   "feature_value_norm": 0.016934777236064912,
+   "shap_value": -0.26812106370925903,
+   "plant_id": null,
+   "predicted_class": "moderate"
+  },
+  {
+   "id": "2604:soil_roll6_mean",
+   "feature": "soil_roll6_mean",
+   "feature_value_norm": 1.0,
+   "shap_value": 0.263502836227417,
+   "plant_id": null,
+   "predicted_class": "moderate"
+  },
+  {
+   "id": "931:soil_roll12_mean",
+   "feature": "soil_roll12_mean",
+   "feature_value_norm": 0.8562128502688934,
+   "shap_value": 0.25059035420417786,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "931:light_roll12_mean",
+   "feature": "light_roll12_mean",
+   "feature_value_norm": 0.10763446050659284,
+   "shap_value": 0.22665870189666748,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "931:light_roll12_std",
+   "feature": "light_roll12_std",
+   "feature_value_norm": 0.11972540142323584,
+   "shap_value": 0.11809558421373367,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "931:dayofweek",
+   "feature": "dayofweek",
+   "feature_value_norm": 0.0,
+   "shap_value": -0.10998892784118652,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  },
+  {
+   "id": "931:temperature_roll12_mean",
+   "feature": "temperature_roll12_mean",
+   "feature_value_norm": 0.3593353090601189,
+   "shap_value": 0.08668718487024307,
+   "plant_id": null,
+   "predicted_class": "healthy"
+  }
+ ],
+ "perClassTop15": {
+  "healthy": [
+   {
+    "name": "soil_roll12_mean",
+    "displayName": "Soil moisture, 12-reading average",
+    "mean_abs_shap": 0.6970706582069397
+   },
+   {
+    "name": "light_roll12_mean",
+    "displayName": "Light, 12-reading average",
+    "mean_abs_shap": 0.47500452399253845
+   },
+   {
+    "name": "light_roll12_std",
+    "displayName": "Light, 12-reading variability",
+    "mean_abs_shap": 0.42155471444129944
+   },
+   {
+    "name": "temperature_roll12_mean",
+    "displayName": "Temperature, 12-reading average",
+    "mean_abs_shap": 0.36440974473953247
+   },
+   {
+    "name": "soil_lag1",
+    "displayName": "Soil moisture, previous reading",
+    "mean_abs_shap": 0.28922560811042786
+   },
+   {
+    "name": "vpd_roll12_mean",
+    "displayName": "Vapour pressure deficit, 12-reading average",
+    "mean_abs_shap": 0.2657501697540283
+   },
+   {
+    "name": "soil_roll6_mean",
+    "displayName": "Soil moisture, 6-reading average",
+    "mean_abs_shap": 0.19760386645793915
+   },
+   {
+    "name": "soil_base_dev",
+    "displayName": "Soil moisture, difference from usual",
+    "mean_abs_shap": 0.19263675808906555
+   },
+   {
+    "name": "soil",
+    "displayName": "Soil moisture",
+    "mean_abs_shap": 0.13844943046569824
+   },
+   {
+    "name": "humidity_roll12_mean",
+    "displayName": "Humidity, 12-reading average",
+    "mean_abs_shap": 0.0705256536602974
+   },
+   {
+    "name": "dayofweek",
+    "displayName": "Day of week",
+    "mean_abs_shap": 0.05375140905380249
+   },
+   {
+    "name": "soil_roll12_std",
+    "displayName": "Soil moisture, 12-reading variability",
+    "mean_abs_shap": 0.047268953174352646
+   },
+   {
+    "name": "humidity_roll12_std",
+    "displayName": "Humidity, 12-reading variability",
+    "mean_abs_shap": 0.038528457283973694
+   },
+   {
+    "name": "light_roll6_mean",
+    "displayName": "Light, 6-reading average",
+    "mean_abs_shap": 0.03538941964507103
+   },
+   {
+    "name": "soil_roll3_mean",
+    "displayName": "Soil moisture, 3-reading average",
+    "mean_abs_shap": 0.0338541604578495
+   }
+  ],
+  "low": [
+   {
+    "name": "soil_roll12_mean",
+    "displayName": "Soil moisture, 12-reading average",
+    "mean_abs_shap": 0.27616411447525024
+   },
+   {
+    "name": "light_roll12_std",
+    "displayName": "Light, 12-reading variability",
+    "mean_abs_shap": 0.22382314503192902
+   },
+   {
+    "name": "dayofweek",
+    "displayName": "Day of week",
+    "mean_abs_shap": 0.17227931320667267
+   },
+   {
+    "name": "soil_roll6_mean",
+    "displayName": "Soil moisture, 6-reading average",
+    "mean_abs_shap": 0.15882548689842224
+   },
+   {
+    "name": "light_roll12_mean",
+    "displayName": "Light, 12-reading average",
+    "mean_abs_shap": 0.14844945073127747
+   },
+   {
+    "name": "soil_base_dev",
+    "displayName": "Soil moisture, difference from usual",
+    "mean_abs_shap": 0.12569814920425415
+   },
+   {
+    "name": "temperature_base_dev",
+    "displayName": "Temperature, difference from usual",
+    "mean_abs_shap": 0.11242669075727463
+   },
+   {
+    "name": "temperature_roll6_mean",
+    "displayName": "Temperature, 6-reading average",
+    "mean_abs_shap": 0.09670665115118027
+   },
+   {
+    "name": "humidity_roll12_mean",
+    "displayName": "Humidity, 12-reading average",
+    "mean_abs_shap": 0.09343379735946655
+   },
+   {
+    "name": "temperature_roll12_mean",
+    "displayName": "Temperature, 12-reading average",
+    "mean_abs_shap": 0.09215957671403885
+   },
+   {
+    "name": "soil",
+    "displayName": "Soil moisture",
+    "mean_abs_shap": 0.09051930159330368
+   },
+   {
+    "name": "soil_roll3_mean",
+    "displayName": "Soil moisture, 3-reading average",
+    "mean_abs_shap": 0.07124069333076477
+   },
+   {
+    "name": "humidity_roll12_std",
+    "displayName": "Humidity, 12-reading variability",
+    "mean_abs_shap": 0.062496040016412735
+   },
+   {
+    "name": "vpd_roll12_std",
+    "displayName": "Vapour pressure deficit, 12-reading variability",
+    "mean_abs_shap": 0.054840441793203354
+   },
+   {
+    "name": "humidity_base_dev",
+    "displayName": "Humidity, difference from usual",
+    "mean_abs_shap": 0.04665553942322731
+   }
+  ],
+  "moderate": [
+   {
+    "name": "light_roll12_mean",
+    "displayName": "Light, 12-reading average",
+    "mean_abs_shap": 0.5540075898170471
+   },
+   {
+    "name": "temperature_roll12_mean",
+    "displayName": "Temperature, 12-reading average",
+    "mean_abs_shap": 0.31810152530670166
+   },
+   {
+    "name": "light_roll12_std",
+    "displayName": "Light, 12-reading variability",
+    "mean_abs_shap": 0.3064369261264801
+   },
+   {
+    "name": "soil_roll12_mean",
+    "displayName": "Soil moisture, 12-reading average",
+    "mean_abs_shap": 0.2598869800567627
+   },
+   {
+    "name": "soil_base_dev",
+    "displayName": "Soil moisture, difference from usual",
+    "mean_abs_shap": 0.21885795891284943
+   },
+   {
+    "name": "soil_roll6_mean",
+    "displayName": "Soil moisture, 6-reading average",
+    "mean_abs_shap": 0.16253706812858582
+   },
+   {
+    "name": "soil",
+    "displayName": "Soil moisture",
+    "mean_abs_shap": 0.14773119986057281
+   },
+   {
+    "name": "vpd_roll12_mean",
+    "displayName": "Vapour pressure deficit, 12-reading average",
+    "mean_abs_shap": 0.12925176322460175
+   },
+   {
+    "name": "light_soil_interaction",
+    "displayName": "Light x soil moisture",
+    "mean_abs_shap": 0.11069253832101822
+   },
+   {
+    "name": "soil_roll3_mean",
+    "displayName": "Soil moisture, 3-reading average",
+    "mean_abs_shap": 0.09525536000728607
+   },
+   {
+    "name": "soil_lag1",
+    "displayName": "Soil moisture, previous reading",
+    "mean_abs_shap": 0.0869259163737297
+   },
+   {
+    "name": "humidity_roll12_mean",
+    "displayName": "Humidity, 12-reading average",
+    "mean_abs_shap": 0.07232721149921417
+   },
+   {
+    "name": "humidity_roll12_std",
+    "displayName": "Humidity, 12-reading variability",
+    "mean_abs_shap": 0.061556145548820496
+   },
+   {
+    "name": "dayofweek",
+    "displayName": "Day of week",
+    "mean_abs_shap": 0.058872807770967484
+   },
+   {
+    "name": "soil_roll12_std",
+    "displayName": "Soil moisture, 12-reading variability",
+    "mean_abs_shap": 0.05603441596031189
+   }
+  ],
+  "high": [
+   {
+    "name": "light_roll12_std",
+    "displayName": "Light, 12-reading variability",
+    "mean_abs_shap": 0.746982991695404
+   },
+   {
+    "name": "humidity_roll12_mean",
+    "displayName": "Humidity, 12-reading average",
+    "mean_abs_shap": 0.619221568107605
+   },
+   {
+    "name": "soil_roll12_mean",
+    "displayName": "Soil moisture, 12-reading average",
+    "mean_abs_shap": 0.6155082583427429
+   },
+   {
+    "name": "temperature_roll12_mean",
+    "displayName": "Temperature, 12-reading average",
+    "mean_abs_shap": 0.4435608685016632
+   },
+   {
+    "name": "light_roll12_mean",
+    "displayName": "Light, 12-reading average",
+    "mean_abs_shap": 0.4211670756340027
+   },
+   {
+    "name": "vpd_roll12_mean",
+    "displayName": "Vapour pressure deficit, 12-reading average",
+    "mean_abs_shap": 0.29775625467300415
+   },
+   {
+    "name": "soil_base_dev",
+    "displayName": "Soil moisture, difference from usual",
+    "mean_abs_shap": 0.1671866923570633
+   },
+   {
+    "name": "soil_roll6_mean",
+    "displayName": "Soil moisture, 6-reading average",
+    "mean_abs_shap": 0.10874085128307343
+   },
+   {
+    "name": "soil_lag1",
+    "displayName": "Soil moisture, previous reading",
+    "mean_abs_shap": 0.0804985910654068
+   },
+   {
+    "name": "soil",
+    "displayName": "Soil moisture",
+    "mean_abs_shap": 0.0727398544549942
+   },
+   {
+    "name": "temperature_lag1",
+    "displayName": "Temperature, previous reading",
+    "mean_abs_shap": 0.06888390332460403
+   },
+   {
+    "name": "dayofweek",
+    "displayName": "Day of week",
+    "mean_abs_shap": 0.06735643744468689
+   },
+   {
+    "name": "temperature_roll6_mean",
+    "displayName": "Temperature, 6-reading average",
+    "mean_abs_shap": 0.06686782836914062
+   },
+   {
+    "name": "soil_roll3_mean",
+    "displayName": "Soil moisture, 3-reading average",
+    "mean_abs_shap": 0.06593818217515945
+   },
+   {
+    "name": "soil_roll12_std",
+    "displayName": "Soil moisture, 12-reading variability",
+    "mean_abs_shap": 0.06468033790588379
+   }
+  ]
+ },
+ "source": {
+  "path": "money_plant_ml_pipeline/reports/v1.0.0_20261021T145244Z/evaluation_20261025T085725Z/shap_global_importance.json",
+  "generatedAt": "2026-10-25T14:27:26.030581+05:30"
+ },
+ "approximate": {
+  "beeswarm": "sample of 50 test rows, top-5 features each (not all rows or features)"
+ },
+ "units": "log-odds (mean absolute SHAP over the explained rows and all four classes)",
+ "note": "SHAP contributions show how each input moved the model's score for the predicted class (positive = pushed towards that class). They reflect model behaviour and correlation in the training data, not biological causation."
+}

@@ -1,21 +1,28 @@
+import { useContext } from 'react';
 import { apiClient } from '../api/client';
 import type { Plant, PlantMonitoring } from '../types';
 import { useAsync, type AsyncState } from './useApi';
+import { SharedDataContext } from './sharedData';
 
 export interface PlantsState extends AsyncState<Plant[]> {
   total: number;
 }
 
-/** All 16 plants with latest reading and latest ML prediction. */
-export function usePlants(): PlantsState {
-  const state = useAsync(() => apiClient.getPlantsPage(), ['plants']);
+function toPlantsState(state: AsyncState<{ items: Plant[]; total: number }>): PlantsState {
   const page = state.data;
   return { ...state, data: page ? page.items : null, total: page ? page.total : 0 };
 }
 
-/** One plant (null once loaded means the id does not exist). */
-export function usePlant(id: number | string | null | undefined): AsyncState<Plant | null> {
-  return useAsync(() => apiClient.getPlantById(id as number | string), ['plant', id], { enabled: id !== null && id !== undefined });
+/** Fetches all plants itself. The app shell uses this once and shares the result via `SharedDataContext`. */
+export function usePlantsSource(): PlantsState {
+  return toPlantsState(useAsync(() => apiClient.getPlantsPage(), ['plants']));
+}
+
+/** All plants with latest reading and latest ML prediction (shared with the app shell when available). */
+export function usePlants(): PlantsState {
+  const shared = useContext(SharedDataContext).plants;
+  const own = toPlantsState(useAsync(() => apiClient.getPlantsPage(), ['plants'], { enabled: shared === null }));
+  return shared ?? own;
 }
 
 /** Plant + recent series + prediction history + active recommendations. */

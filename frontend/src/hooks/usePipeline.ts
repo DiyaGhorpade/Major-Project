@@ -54,7 +54,9 @@ export function usePipelineMachine(onDataChanged: () => void): PipelineValue {
   const [status, setStatus] = useState<PipelineStatus | null>(null);
   const [starting, setStarting] = useState(false);
   const [everCompleted, setEverCompleted] = useState(false);
-  const [error, setError] = useState<ApiError | null>(null);
+  // Failing to read the status and failing to start a run are tracked apart so a good status poll cannot erase a run error.
+  const [pollError, setPollError] = useState<ApiError | null>(null);
+  const [runError, setRunError] = useState<ApiError | null>(null);
 
   const onChangedRef = useRef(onDataChanged);
   useEffect(() => {
@@ -67,6 +69,7 @@ export function usePipelineMachine(onDataChanged: () => void): PipelineValue {
   const lastBump = useRef(0);
   const pendingBump = useRef(false);
   const activeHint = useRef(false);
+  const startingRef = useRef(false);
   const pollRef = useRef<() => Promise<void>>(async () => undefined);
 
   const schedule = useCallback((ms: number) => {
@@ -82,36 +85,41 @@ export function usePipelineMachine(onDataChanged: () => void): PipelineValue {
   }, []);
 
   const poll = useCallback(async () => {
-    let next: PipelineStatus | null = null;
+    // Polling must always continue (a failed or timed-out status request just tries again), so reschedule in `finally`.
     try {
-      next = await apiClient.getPipelineStatus();
-      if (!alive.current) return;
-      setError(null);
-    } catch (err) {
-      if (!alive.current) return;
-      setError(toApiError(err));
-    }
-    if (next) {
-      const before = prev.current;
-      const finished = next.state === 'completed' || next.state === 'failed';
-      const progressed = before !== null && (next.processed !== before.processed || next.runId !== before.runId);
-      const justFinished =
-        before !== null && finished && (isActiveState(before.state) || next.runId !== before.runId);
-      if (next.state === 'completed') setEverCompleted(true);
-      if (justFinished) {
-        bump();
-      } else if (progressed && isActiveState(next.state)) {
-        if (Date.now() - lastBump.current >= BUMP_THROTTLE_MS) bump();
-        else pendingBump.current = true;
-      } else if (pendingBump.current && Date.now() - lastBump.current >= BUMP_THROTTLE_MS) {
-        bump();
+      let next: PipelineStatus | null = null;
+      try {
+        next = await apiClient.getPipelineStatus();
+        if (!alive.current) return;
+        setPollError(null);
+      } catch (err) {
+        if (!alive.current) return;
+        setPollError(toApiError(err));
+        setStarting(false); // never leave the Run button locked on "Starting" when the status cannot be read
       }
-      prev.current = { state: next.state, processed: next.processed, runId: next.runId };
-      activeHint.current = isActiveState(next.state);
-      setStatus(next);
-      setStarting(false);
+      if (next) {
+        const before = prev.current;
+        const finished = next.state === 'completed' || next.state === 'failed';
+        const progressed = before !== null && (next.processed !== before.processed || next.runId !== before.runId);
+        const justFinished =
+          before !== null && finished && (isActiveState(before.state) || next.runId !== before.runId);
+        if (next.state === 'completed') setEverCompleted(true);
+        if (justFinished) {
+          bump();
+        } else if (progressed && isActiveState(next.state)) {
+          if (Date.now() - lastBump.current >= BUMP_THROTTLE_MS) bump();
+          else pendingBump.current = true;
+        } else if (pendingBump.current && Date.now() - lastBump.current >= BUMP_THROTTLE_MS) {
+          bump();
+        }
+        prev.current = { state: next.state, processed: next.processed, runId: next.runId };
+        activeHint.current = isActiveState(next.state);
+        setStatus(next);
+        setStarting(false);
+      }
+    } finally {
+      if (alive.current) schedule(activeHint.current ? ACTIVE_POLL_MS : IDLE_POLL_MS);
     }
-    schedule(activeHint.current ? ACTIVE_POLL_MS : IDLE_POLL_MS);
   }, [bump, schedule]);
   useEffect(() => {
     pollRef.current = poll;
@@ -128,18 +136,22 @@ export function usePipelineMachine(onDataChanged: () => void): PipelineValue {
 
   const run = useCallback(
     async (reset = false) => {
+      if (startingRef.current) return; // a start request is already in flight
+      startingRef.current = true;
       setStarting(true);
-      setError(null);
+      setRunError(null);
       activeHint.current = true;
       try {
         await apiClient.runPipeline(reset);
       } catch (err) {
+        startingRef.current = false;
         if (!alive.current) return;
         activeHint.current = false;
         setStarting(false);
-        setError(toApiError(err));
+        setRunError(toApiError(err));
         return;
       }
+      startingRef.current = false;
       if (!alive.current) return;
       // Poll right away so the UI leaves "idle" without waiting for the next tick.
       await pollRef.current();
@@ -155,12 +167,13 @@ export function usePipelineMachine(onDataChanged: () => void): PipelineValue {
       state,
       percent: starting && !isActiveState(backendState) ? 0 : (status?.percent ?? 0),
       processed: starting && !isActiveState(backendState) ? 0 : (status?.processed ?? 0),
-      total: status?.total ?? 0,
+      // While starting, the previous run's numbers are stale: report 0 so the UI shows "Starting..." rather than "0 / <old total>".
+      total: starting && !isActiveState(backendState) ? 0 : (status?.total ?? 0),
       message: status?.message ?? null,
       isActive: isActiveState(state),
       hasCompletedRun: everCompleted || backendState === 'completed',
-      error,
+      error: runError ?? pollError,
       run,
     };
-  }, [status, starting, everCompleted, error, run]);
+  }, [status, starting, everCompleted, runError, pollError, run]);
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FlaskConical, X } from 'lucide-react';
-import { DISCLAIMERS } from './Disclaimers';
+import { DISCLAIMERS } from './disclaimerText';
 
 /**
  * Persistent provenance notice shown on every page. The full banner can be collapsed, but a compact

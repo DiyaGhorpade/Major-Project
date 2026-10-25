@@ -1,0 +1,102 @@
+[
+ {
+  "session_id": 4,
+  "scheduled_at": "2026-10-12T00:00:00+05:30",
+  "started_at": "2026-10-12T00:00:00+05:30",
+  "ended_at": "2026-10-18T22:05:15+05:30",
+  "status": "completed",
+  "expected_records": 1344,
+  "received_records": 1344,
+  "rejected_records": 0,
+  "flagged_records": 56,
+  "duration_seconds": 597915,
+  "trigger_type": "scheduled",
+  "node_progress": {
+   "1": {
+    "expected": 672,
+    "received": 672,
+    "status": "completed"
+   },
+   "2": {
+    "expected": 672,
+    "received": 672,
+    "status": "completed"
+   }
+  }
+ },
+ {
+  "session_id": 3,
+  "scheduled_at": "2026-10-05T00:00:00+05:30",
+  "started_at": "2026-10-05T00:00:00+05:30",
+  "ended_at": "2026-10-11T22:05:15+05:30",
+  "status": "completed",
+  "expected_records": 1344,
+  "received_records": 1344,
+  "rejected_records": 0,
+  "flagged_records": 52,
+  "duration_seconds": 597915,
+  "trigger_type": "scheduled",
+  "node_progress": {
+   "1": {
+    "expected": 672,
+    "received": 672,
+    "status": "completed"
+   },
+   "2": {
+    "expected": 672,
+    "received": 672,
+    "status": "completed"
+   }
+  }
+ },
+ {
+  "session_id": 2,
+  "scheduled_at": "2026-09-28T00:00:00+05:30",
+  "started_at": "2026-09-28T00:00:00+05:30",
+  "ended_at": "2026-10-04T22:05:15+05:30",
+  "status": "completed",
+  "expected_records": 1344,
+  "received_records": 1344,
+  "rejected_records": 0,
+  "flagged_records": 71,
+  "duration_seconds": 597915,
+  "trigger_type": "scheduled",
+  "node_progress": {
+   "1": {
+    "expected": 672,
+    "received": 672,
+    "status": "completed"
+   },
+   "2": {
+    "expected": 672,
+    "received": 672,
+    "status": "completed"
+   }
+  }
+ },
+ {
+  "session_id": 1,
+  "scheduled_at": "2026-09-21T00:00:00+05:30",
+  "started_at": "2026-09-21T00:00:00+05:30",
+  "ended_at": "2026-09-27T22:05:15+05:30",
+  "status": "completed",
+  "expected_records": 1344,
+  "received_records": 1344,
+  "rejected_records": 0,
+  "flagged_records": 54,
+  "duration_seconds": 597915,
+  "trigger_type": "scheduled",
+  "node_progress": {
+   "1": {
+    "expected": 672,
+    "received": 672,
+    "status": "completed"
+   },
+   "2": {
+    "expected": 672,
+    "received": 672,
+    "status": "completed"
+   }
+  }
+ }
+]

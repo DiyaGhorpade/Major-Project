@@ -1,0 +1,33 @@
+[
+ {
+  "id": 1680,
+  "readingId": 5365,
+  "record_id": "R-5365",
+  "plant_id": 5,
+  "timestamp": "2026-10-18T22:01:30+05:30",
+  "status": "ok",
+  "error": null,
+  "warnings": [],
+  "modelVersion": "1.0.0",
+  "runId": "v1.0.0_20261021T145244Z",
+  "severity": "high",
+  "probabilities": {
+   "healthy": 0.018970690667629242,
+   "low": 0.22982674837112427,
+   "moderate": 0.1270640790462494,
+   "high": 0.6241384744644165
+  },
+  "confidence": 0.6241384744644165,
+  "condition": "Water Stress",
+  "conditionSource": "heuristic",
+  "envState": {
+   "id": 1,
+   "distance": 5.659156409605634,
+   "label": "Environmental state group 1"
+  },
+  "anomaly": {
+   "isAnomaly": false,
+   "score": -0.14056766938118048
+  }
+ }
+]

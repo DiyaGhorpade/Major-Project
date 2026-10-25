@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   LayoutGrid,
   List,
@@ -10,8 +10,12 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { usePlants } from '../hooks/usePlants';
-import { StatusBadge } from '../components/shared/StatusBadge';
-import { formatRelativeTime, formatPercent, formatTemp, formatLux } from '../lib/utils';
+import { ErrorState } from '../components/shared/ErrorState';
+import { PlantStatusBadge, PredictionSummary, SeverityBadge, AnomalyFlag, EnvStateLabel } from '../components/monitoring/PredictionBadges';
+import { InfoTip } from '../components/shared/Disclaimers';
+import { DISCLAIMERS } from '../components/shared/disclaimerText';
+import { formatConfidence } from '../components/monitoring/format';
+import { formatDateTime, formatPercent, formatTemp, formatLux, orNA } from '../lib/utils';
 import { NavRoute } from '../components/layout/Sidebar';
 
 interface PlantsPageProps {
@@ -24,8 +28,19 @@ export const PlantsPage: React.FC<PlantsPageProps> = ({ onNavigate }) => {
   const [selectedCluster, setSelectedCluster] = useState<string>('all');
   const [selectedNode, setSelectedNode] = useState<string>('all');
   const plantsQuery = usePlants();
-  const plants = plantsQuery.data ?? [];
-  const loading = plantsQuery.loading;
+  const plants = useMemo(() => plantsQuery.data ?? [], [plantsQuery.data]);
+
+  // Filter options come from the data (group labels, nodes and the pots they read).
+  const clusterOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const p of plants) if (!seen.has(p.cluster)) seen.set(p.cluster, p.clusterLabel || p.cluster);
+    return [...seen.entries()];
+  }, [plants]);
+  const nodeOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of plants) counts.set(p.nodeId, (counts.get(p.nodeId) ?? 0) + 1);
+    return [...counts.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [plants]);
 
   const filteredPlants = plants.filter((plant) => {
     if (selectedCluster !== 'all' && plant.cluster !== selectedCluster) return false;
@@ -52,7 +67,7 @@ export const PlantsPage: React.FC<PlantsPageProps> = ({ onNavigate }) => {
             <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search by Pot #, Rama/Krishna, or stress condition..."
+              placeholder="Search by Pot #, Rama/Krishna, or group..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full text-xs bg-[#F6F7F0] border border-[#DCE4D9] rounded-lg pl-9 pr-3 py-2 outline-none focus:border-[#2E8B57] focus:bg-white text-[#1C2B23]"
@@ -65,11 +80,12 @@ export const PlantsPage: React.FC<PlantsPageProps> = ({ onNavigate }) => {
             onChange={(e) => setSelectedCluster(e.target.value)}
             className="text-xs bg-white border border-[#DCE4D9] rounded-lg px-3 py-2 text-[#1C2B23] outline-none shadow-sm cursor-pointer"
           >
-            <option value="all">All Tulsi Clusters (4 Groups)</option>
-            <option value="Cluster 1">Cluster 1: Healthy Control (Pots 1–4)</option>
-            <option value="Cluster 2">Cluster 2: Water Stress (Pots 5–8)</option>
-            <option value="Cluster 3">Cluster 3: Light Stress (Pots 9–12)</option>
-            <option value="Cluster 4">Cluster 4: Temperature/Humidity Stress (Pots 13–16)</option>
+            <option value="all">All experimental groups ({clusterOptions.length})</option>
+            {clusterOptions.map(([id, label]) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
           </select>
 
           {/* Node filter */}
@@ -78,9 +94,12 @@ export const PlantsPage: React.FC<PlantsPageProps> = ({ onNavigate }) => {
             onChange={(e) => setSelectedNode(e.target.value)}
             className="text-xs bg-white border border-[#DCE4D9] rounded-lg px-3 py-2 text-[#1C2B23] outline-none shadow-sm cursor-pointer"
           >
-            <option value="all">All ESP32 Nodes</option>
-            <option value="1">Node 1 (Multiplexer Points 1–12)</option>
-            <option value="2">Node 2 (Direct Analog Points 1–4)</option>
+            <option value="all">All sensor nodes</option>
+            {nodeOptions.map(([id, count]) => (
+              <option key={id} value={id}>
+                Node {id} ({count} pots)
+              </option>
+            ))}
           </select>
         </div>
 
@@ -111,46 +130,62 @@ export const PlantsPage: React.FC<PlantsPageProps> = ({ onNavigate }) => {
         </div>
       </div>
 
+      {plantsQuery.error && <ErrorState message={plantsQuery.error.message} onRetry={() => void plantsQuery.refetch()} />}
+      {plantsQuery.loading && <div className="p-6 text-center text-xs text-stone-500">Loading plants...</div>}
+      {!plantsQuery.loading && !plantsQuery.error && filteredPlants.length === 0 && (
+        <div className="rounded-card border border-[#DCE4D9] bg-white p-8 text-center text-xs text-stone-500">
+          {plants.length === 0 ? 'No plants found.' : 'No pots match these filters.'}
+        </div>
+      )}
+      {!plantsQuery.loading && plants.length > 0 && !plants.some((p) => p.conditionPrediction) && (
+        <div className="rounded-lg border border-dashed border-stone-300 bg-white px-4 py-2.5 text-xs text-stone-600">
+          Not analyzed yet. {DISCLAIMERS.runPrompt}
+        </div>
+      )}
+
       {/* Grid Mode */}
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {filteredPlants.map((plant) => {
             const reading = plant.latestReading;
-            const pred = plant.conditionPrediction;
 
             return (
               <div
                 key={plant.id}
+                data-testid={`plant-card-${plant.id}`}
                 onClick={() => onNavigate('plant-detail', plant.id)}
                 className="bg-white rounded-card border border-[#DCE4D9] p-5 shadow-card hover:shadow-card-hover hover:border-[#2E8B57] transition-all cursor-pointer flex flex-col justify-between group"
               >
                 <div>
-                  {/* Card Header with Pot Badge and Stress Condition */}
+                  {/* Card header: pot badge, experimental group, model status */}
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2">
                       <span className="w-8 h-8 rounded-xl bg-[#EDF4EB] text-[#2E8B57] flex items-center justify-center font-extrabold text-xs shadow-sm">
                         #{plant.id}
                       </span>
                       <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#6B786E]">
-                          {plant.cluster}
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-wider text-[#6B786E]"
+                          title="Experimental group (designed treatment), not a model cluster"
+                        >
+                          {plant.clusterLabel || plant.cluster}
                         </span>
                         <h3 className="text-sm font-bold text-[#1C2B23] group-hover:text-[#2E8B57] transition-colors leading-tight">
                           {plant.name}
                         </h3>
                       </div>
                     </div>
-                    <StatusBadge status={plant.stressType} size="sm" />
+                    <PlantStatusBadge status={plant.status} />
                   </div>
 
                   <p className="text-[11px] text-stone-500 italic mb-3">
                     {plant.variety} • {plant.species}
                   </p>
 
-                  {/* Node & Point mapping */}
+                  {/* Node & point mapping (from the data) */}
                   <div className="flex items-center justify-between text-[11px] text-stone-600 bg-stone-50 px-2.5 py-1.5 rounded-lg mb-3 border border-stone-200/60 font-mono">
                     <span>Node {plant.nodeId}</span>
-                    <span>Point {plant.samplingPoint}</span>
+                    <span>Point {orNA(plant.samplingPoint)}</span>
                   </div>
 
                   {/* Sensor metrics snapshot */}
@@ -181,7 +216,11 @@ export const PlantsPage: React.FC<PlantsPageProps> = ({ onNavigate }) => {
                         <span className="font-bold text-[#1C2B23]">{formatLux(reading.light)}</span>
                       </div>
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="mb-3 rounded-lg border border-dashed border-stone-300 px-2.5 py-2 text-[11px] text-stone-500">No reading stored.</div>
+                  )}
+
+                  <PredictionSummary prediction={plant.conditionPrediction} className="mb-3" />
 
                   {/* Simple Care Tip Box */}
                   <div className="p-2 rounded-lg bg-stone-50 border border-stone-200 text-[11px] text-stone-700 mb-3">
@@ -191,7 +230,7 @@ export const PlantsPage: React.FC<PlantsPageProps> = ({ onNavigate }) => {
 
                 {/* Footer */}
                 <div className="pt-3 border-t border-[#DCE4D9] flex items-center justify-between text-[11px] text-stone-500">
-                  <span>{reading ? formatRelativeTime(reading.timestamp) : 'Ready'}</span>
+                  <span>{reading ? formatDateTime(reading.timestamp) : 'No reading'}</span>
                   <span className="text-[#2E8B57] font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
                     Inspect Pot <ChevronRight className="w-3.5 h-3.5" />
                   </span>
@@ -208,19 +247,27 @@ export const PlantsPage: React.FC<PlantsPageProps> = ({ onNavigate }) => {
               <thead>
                 <tr className="border-b border-[#DCE4D9] text-[#6B786E] bg-[#F6F7F0]/60">
                   <th className="py-3 px-4 font-semibold">Pot # & Variety</th>
-                  <th className="py-3 px-4 font-semibold">Cluster</th>
-                  <th className="py-3 px-4 font-semibold">ESP32 Node / Channel</th>
+                  <th className="py-3 px-4 font-semibold">Group</th>
+                  <th className="py-3 px-4 font-semibold">Node / Channel</th>
                   <th className="py-3 px-4 font-semibold">Soil (%)</th>
                   <th className="py-3 px-4 font-semibold">Temp (°C)</th>
                   <th className="py-3 px-4 font-semibold">Humidity (%)</th>
                   <th className="py-3 px-4 font-semibold">Light (lux)</th>
-                  <th className="py-3 px-4 font-semibold">Diagnosis</th>
+                  <th className="py-3 px-4 font-semibold">Model status</th>
+                  <th className="py-3 px-4 font-semibold">
+                    <span className="inline-flex items-center gap-1">
+                      Stress type guess <InfoTip text={DISCLAIMERS.conditionGuess} />
+                    </span>
+                  </th>
+                  <th className="py-3 px-4 font-semibold">Environmental state</th>
+                  <th className="py-3 px-4 font-semibold">Reading check</th>
                   <th className="py-3 px-4 font-semibold text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#DCE4D9]/60">
                 {filteredPlants.map((plant) => {
                   const r = plant.latestReading;
+                  const pred = plant.conditionPrediction;
                   return (
                     <tr
                       key={plant.id}
@@ -233,23 +280,25 @@ export const PlantsPage: React.FC<PlantsPageProps> = ({ onNavigate }) => {
                       </td>
                       <td className="py-3 px-4 text-stone-600">{plant.cluster}</td>
                       <td className="py-3 px-4 font-mono text-stone-600">
-                        Node {plant.nodeId} • Point {plant.samplingPoint}
+                        Node {plant.nodeId} • Point {orNA(plant.samplingPoint)}
                       </td>
-                      <td className="py-3 px-4 font-bold text-[#2E8B57]">
-                        {r ? formatPercent(r.soil) : 'N/A'}
-                      </td>
-                      <td className="py-3 px-4 font-medium text-[#1C2B23]">
-                        {r ? formatTemp(r.temperature) : 'N/A'}
-                      </td>
-                      <td className="py-3 px-4 font-medium text-[#1C2B23]">
-                        {r ? formatPercent(r.humidity) : 'N/A'}
-                      </td>
-                      <td className="py-3 px-4 font-medium text-[#1C2B23]">
-                        {r ? formatLux(r.light) : 'N/A'}
-                      </td>
+                      <td className="py-3 px-4 font-bold text-[#2E8B57]">{r ? formatPercent(r.soil) : 'n/a'}</td>
+                      <td className="py-3 px-4 font-medium text-[#1C2B23]">{r ? formatTemp(r.temperature) : 'n/a'}</td>
+                      <td className="py-3 px-4 font-medium text-[#1C2B23]">{r ? formatPercent(r.humidity) : 'n/a'}</td>
+                      <td className="py-3 px-4 font-medium text-[#1C2B23]">{r ? formatLux(r.light) : 'n/a'}</td>
                       <td className="py-3 px-4">
-                        <StatusBadge status={plant.stressType} size="sm" />
+                        <div className="flex flex-col items-start gap-1">
+                          <PlantStatusBadge status={plant.status} />
+                          {pred && (
+                            <span className="flex items-center gap-1 text-[10px] text-stone-500">
+                              <SeverityBadge severity={pred.severity} /> {formatConfidence(pred.confidence)}
+                            </span>
+                          )}
+                        </div>
                       </td>
+                      <td className="py-3 px-4 text-stone-700">{pred ? orNA(pred.condition) : 'n/a'}</td>
+                      <td className="py-3 px-4 text-stone-700">{pred ? <EnvStateLabel envState={pred.envState} /> : 'n/a'}</td>
+                      <td className="py-3 px-4">{pred ? <AnomalyFlag isAnomaly={pred.anomaly?.isAnomaly} /> : 'n/a'}</td>
                       <td className="py-3 px-4 text-right">
                         <button
                           onClick={(e) => {
@@ -258,7 +307,7 @@ export const PlantsPage: React.FC<PlantsPageProps> = ({ onNavigate }) => {
                           }}
                           className="px-2.5 py-1 text-xs rounded bg-[#EDF4EB] text-[#2E8B57] font-semibold hover:bg-[#DDE8D8] transition-colors"
                         >
-                          Dossier
+                          Details
                         </button>
                       </td>
                     </tr>

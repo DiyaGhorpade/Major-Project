@@ -1,0 +1,390 @@
+[
+ {
+  "id": 1,
+  "name": "Pot 1: Rama Tulsi (Control Group)",
+  "species": "Ocimum sanctum",
+  "variety": "Rama Tulsi (Green)",
+  "cluster": "Cluster 1",
+  "clusterLabel": "Cluster 1: Healthy Control",
+  "stressType": "Healthy",
+  "nodeId": "1",
+  "samplingPoint": 12,
+  "optimalRanges": {
+   "soil": {
+    "min": 25,
+    "max": 75,
+    "unit": "%",
+    "lowLabel": "Too Dry (<25%)",
+    "idealLabel": "Ideal (25–75%)",
+    "highLabel": "Too Wet (>75%)"
+   },
+   "temperature": {
+    "min": 18,
+    "max": 32,
+    "unit": "°C",
+    "lowLabel": "Cold (<18°C)",
+    "idealLabel": "Comfortable (18–32°C)",
+    "highLabel": "Hot (>32°C)"
+   },
+   "humidity": {
+    "min": 40,
+    "max": 90,
+    "unit": "%",
+    "lowLabel": "Dry Air (<40%)",
+    "idealLabel": "Comfortable (40–90%)",
+    "highLabel": "Very Humid (>90%)"
+   },
+   "light": {
+    "min": 300,
+    "max": 20000,
+    "unit": "lux",
+    "lowLabel": "Dim (<300 lux)",
+    "idealLabel": "Bright (300–20,000 lux)",
+    "highLabel": "Intense (>20,000 lux)"
+   }
+  },
+  "latestReading": {
+   "record_id": "R-5361",
+   "timestamp": "2026-10-18T22:00:00+05:30",
+   "session_id": 4,
+   "node_id": "1",
+   "sampling_point": 12,
+   "plant_id": 1,
+   "soil": 49.4,
+   "temperature": 23.4,
+   "humidity": 78.1,
+   "light": 0.0,
+   "received_at": null,
+   "accepted_at": null,
+   "status": "accepted",
+   "validation_error": null,
+   "rssi": null,
+   "crc_ok": null,
+   "datasetLabels": {
+    "stressLevel": "healthy",
+    "stressType": "none",
+    "isSyntheticAnomaly": false
+   }
+  },
+  "status": "healthy",
+  "conditionPrediction": {
+   "condition": "Healthy",
+   "conditionSource": "heuristic",
+   "severity": "healthy",
+   "probabilities": {
+    "healthy": 0.7996052503585815,
+    "low": 0.19003401696681976,
+    "moderate": 0.007757444866001606,
+    "high": 0.0026033022440969944
+   },
+   "confidence": 0.7996052503585815,
+   "timestamp": "2026-10-18T22:00:00+05:30",
+   "modelVersion": "1.0.0",
+   "recordId": "R-5361",
+   "simpleExplanation": "Model rates stress 'healthy' (P=0.80) from the latest reading at 2026-10-18T22:00:00+05:30; no stress type is suggested.",
+   "envState": {
+    "id": 1,
+    "distance": 1.941949440810624,
+    "label": "Environmental state group 1"
+   },
+   "anomaly": {
+    "isAnomaly": false,
+    "score": -0.17324527725472694
+   }
+  },
+  "description": "Rama Tulsi (Ocimum sanctum) is the green-leaved variety. Part of the control group, kept under the standard conditions the other groups are compared with.",
+  "simpleCareTip": "Water when the top of the soil feels dry, avoid waterlogging, and give bright light.",
+  "location": "Bay 1 — Control Bench"
+ },
+ {
+  "id": 5,
+  "name": "Pot 5: Rama Tulsi (Watering Trial)",
+  "species": "Ocimum sanctum",
+  "variety": "Rama Tulsi (Green)",
+  "cluster": "Cluster 2",
+  "clusterLabel": "Cluster 2: Water Stress",
+  "stressType": "Water Stress",
+  "nodeId": "1",
+  "samplingPoint": 12,
+  "optimalRanges": {
+   "soil": {
+    "min": 25,
+    "max": 75,
+    "unit": "%",
+    "lowLabel": "Too Dry (<25%)",
+    "idealLabel": "Ideal (25–75%)",
+    "highLabel": "Too Wet (>75%)"
+   },
+   "temperature": {
+    "min": 18,
+    "max": 32,
+    "unit": "°C",
+    "lowLabel": "Cold (<18°C)",
+    "idealLabel": "Comfortable (18–32°C)",
+    "highLabel": "Hot (>32°C)"
+   },
+   "humidity": {
+    "min": 40,
+    "max": 90,
+    "unit": "%",
+    "lowLabel": "Dry Air (<40%)",
+    "idealLabel": "Comfortable (40–90%)",
+    "highLabel": "Very Humid (>90%)"
+   },
+   "light": {
+    "min": 300,
+    "max": 20000,
+    "unit": "lux",
+    "lowLabel": "Dim (<300 lux)",
+    "idealLabel": "Bright (300–20,000 lux)",
+    "highLabel": "Intense (>20,000 lux)"
+   }
+  },
+  "latestReading": {
+   "record_id": "R-5365",
+   "timestamp": "2026-10-18T22:01:30+05:30",
+   "session_id": 4,
+   "node_id": "1",
+   "sampling_point": 12,
+   "plant_id": 5,
+   "soil": 7.2,
+   "temperature": 22.8,
+   "humidity": 75.3,
+   "light": 1.0,
+   "received_at": null,
+   "accepted_at": null,
+   "status": "accepted",
+   "validation_error": null,
+   "rssi": null,
+   "crc_ok": null,
+   "datasetLabels": {
+    "stressLevel": "high",
+    "stressType": "water",
+    "isSyntheticAnomaly": false
+   }
+  },
+  "status": "critical",
+  "conditionPrediction": {
+   "condition": "Water Stress",
+   "conditionSource": "heuristic",
+   "severity": "high",
+   "probabilities": {
+    "healthy": 0.018970690667629242,
+    "low": 0.22982674837112427,
+    "moderate": 0.1270640790462494,
+    "high": 0.6241384744644165
+   },
+   "confidence": 0.6241384744644165,
+   "timestamp": "2026-10-18T22:01:30+05:30",
+   "modelVersion": "1.0.0",
+   "recordId": "R-5365",
+   "simpleExplanation": "Model rates stress 'high' (P=0.62) from the latest reading at 2026-10-18T22:01:30+05:30; the stress type ('Water Stress') is a heuristic guess, not a diagnosis.",
+   "envState": {
+    "id": 1,
+    "distance": 5.659156409605634,
+    "label": "Environmental state group 1"
+   },
+   "anomaly": {
+    "isAnomaly": false,
+    "score": -0.14056766938118048
+   }
+  },
+  "description": "Rama Tulsi (Ocimum sanctum) is the green-leaved variety. Part of the watering trial, where the watering routine is varied on purpose.",
+  "simpleCareTip": "Check the soil by hand before watering and follow the trial's watering plan; avoid waterlogging.",
+  "location": "Bay 2 — Watering Trial Row"
+ },
+ {
+  "id": 9,
+  "name": "Pot 9: Rama Tulsi (Light Trial)",
+  "species": "Ocimum sanctum",
+  "variety": "Rama Tulsi (Green)",
+  "cluster": "Cluster 3",
+  "clusterLabel": "Cluster 3: Light Stress",
+  "stressType": "Light Stress",
+  "nodeId": "1",
+  "samplingPoint": 12,
+  "optimalRanges": {
+   "soil": {
+    "min": 25,
+    "max": 75,
+    "unit": "%",
+    "lowLabel": "Too Dry (<25%)",
+    "idealLabel": "Ideal (25–75%)",
+    "highLabel": "Too Wet (>75%)"
+   },
+   "temperature": {
+    "min": 18,
+    "max": 32,
+    "unit": "°C",
+    "lowLabel": "Cold (<18°C)",
+    "idealLabel": "Comfortable (18–32°C)",
+    "highLabel": "Hot (>32°C)"
+   },
+   "humidity": {
+    "min": 40,
+    "max": 90,
+    "unit": "%",
+    "lowLabel": "Dry Air (<40%)",
+    "idealLabel": "Comfortable (40–90%)",
+    "highLabel": "Very Humid (>90%)"
+   },
+   "light": {
+    "min": 300,
+    "max": 20000,
+    "unit": "lux",
+    "lowLabel": "Dim (<300 lux)",
+    "idealLabel": "Bright (300–20,000 lux)",
+    "highLabel": "Intense (>20,000 lux)"
+   }
+  },
+  "latestReading": {
+   "record_id": "R-5369",
+   "timestamp": "2026-10-18T22:03:00+05:30",
+   "session_id": 4,
+   "node_id": "1",
+   "sampling_point": 12,
+   "plant_id": 9,
+   "soil": 44.5,
+   "temperature": 23.0,
+   "humidity": 71.7,
+   "light": 1.0,
+   "received_at": null,
+   "accepted_at": null,
+   "status": "accepted",
+   "validation_error": null,
+   "rssi": null,
+   "crc_ok": null,
+   "datasetLabels": {
+    "stressLevel": "healthy",
+    "stressType": "none",
+    "isSyntheticAnomaly": false
+   }
+  },
+  "status": "healthy",
+  "conditionPrediction": {
+   "condition": "Healthy",
+   "conditionSource": "heuristic",
+   "severity": "healthy",
+   "probabilities": {
+    "healthy": 0.851685106754303,
+    "low": 0.12782423198223114,
+    "moderate": 0.01628851145505905,
+    "high": 0.004202129319310188
+   },
+   "confidence": 0.851685106754303,
+   "timestamp": "2026-10-18T22:03:00+05:30",
+   "modelVersion": "1.0.0",
+   "recordId": "R-5369",
+   "simpleExplanation": "Model rates stress 'healthy' (P=0.85) from the latest reading at 2026-10-18T22:03:00+05:30; no stress type is suggested.",
+   "envState": {
+    "id": 1,
+    "distance": 2.3711724961430165,
+    "label": "Environmental state group 1"
+   },
+   "anomaly": {
+    "isAnomaly": false,
+    "score": -0.18477686235727858
+   }
+  },
+  "description": "Rama Tulsi (Ocimum sanctum) is the green-leaved variety. Part of the light trial, where the amount of light is varied on purpose.",
+  "simpleCareTip": "Follow the trial's lighting plan and keep the sensor and plant positions unchanged.",
+  "location": "Bay 3 — Light Trial Box"
+ },
+ {
+  "id": 13,
+  "name": "Pot 13: Rama Tulsi (Climate Trial)",
+  "species": "Ocimum sanctum",
+  "variety": "Rama Tulsi (Green)",
+  "cluster": "Cluster 4",
+  "clusterLabel": "Cluster 4: Temperature/Humidity Stress",
+  "stressType": "Temperature/Humidity Stress",
+  "nodeId": "1",
+  "samplingPoint": 12,
+  "optimalRanges": {
+   "soil": {
+    "min": 25,
+    "max": 75,
+    "unit": "%",
+    "lowLabel": "Too Dry (<25%)",
+    "idealLabel": "Ideal (25–75%)",
+    "highLabel": "Too Wet (>75%)"
+   },
+   "temperature": {
+    "min": 18,
+    "max": 32,
+    "unit": "°C",
+    "lowLabel": "Cold (<18°C)",
+    "idealLabel": "Comfortable (18–32°C)",
+    "highLabel": "Hot (>32°C)"
+   },
+   "humidity": {
+    "min": 40,
+    "max": 90,
+    "unit": "%",
+    "lowLabel": "Dry Air (<40%)",
+    "idealLabel": "Comfortable (40–90%)",
+    "highLabel": "Very Humid (>90%)"
+   },
+   "light": {
+    "min": 300,
+    "max": 20000,
+    "unit": "lux",
+    "lowLabel": "Dim (<300 lux)",
+    "idealLabel": "Bright (300–20,000 lux)",
+    "highLabel": "Intense (>20,000 lux)"
+   }
+  },
+  "latestReading": {
+   "record_id": "R-5373",
+   "timestamp": "2026-10-18T22:04:30+05:30",
+   "session_id": 4,
+   "node_id": "1",
+   "sampling_point": 12,
+   "plant_id": 13,
+   "soil": 50.2,
+   "temperature": 25.7,
+   "humidity": 67.4,
+   "light": 1.0,
+   "received_at": null,
+   "accepted_at": null,
+   "status": "accepted",
+   "validation_error": null,
+   "rssi": null,
+   "crc_ok": null,
+   "datasetLabels": {
+    "stressLevel": "low",
+    "stressType": "none",
+    "isSyntheticAnomaly": false
+   }
+  },
+  "status": "attention",
+  "conditionPrediction": {
+   "condition": "Unclassified Stress",
+   "conditionSource": "heuristic",
+   "severity": "low",
+   "probabilities": {
+    "healthy": 0.1928439885377884,
+    "low": 0.7273368239402771,
+    "moderate": 0.07251948863267899,
+    "high": 0.007299704011529684
+   },
+   "confidence": 0.7273368239402771,
+   "timestamp": "2026-10-18T22:04:30+05:30",
+   "modelVersion": "1.0.0",
+   "recordId": "R-5373",
+   "simpleExplanation": "Model rates stress 'low' (P=0.73) from the latest reading at 2026-10-18T22:04:30+05:30; the stress type ('Unclassified Stress') is a heuristic guess, not a diagnosis.",
+   "envState": {
+    "id": 1,
+    "distance": 3.8669639546423844,
+    "label": "Environmental state group 1"
+   },
+   "anomaly": {
+    "isAnomaly": false,
+    "score": -0.12740522437124624
+   }
+  },
+  "description": "Rama Tulsi (Ocimum sanctum) is the green-leaved variety. Part of the climate trial, where temperature and humidity are varied on purpose.",
+  "simpleCareTip": "Follow the trial's climate plan and keep the pot away from direct heat sources and draughts.",
+  "location": "Bay 4 — Climate Trial Row"
+ }
+]

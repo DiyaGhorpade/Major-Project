@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { TopBar } from './TopBar';
 import { PipelineContext, idlePipeline, type PipelineValue } from '../../hooks/usePipeline';
 import type { Alert } from '../../types';
@@ -37,10 +37,49 @@ describe('TopBar Run button', () => {
     expect(screen.queryByTestId('run-progress')).not.toBeInTheDocument();
   });
 
-  it('shows an IST clock instead of a hard-coded time', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('shows the current time in IST (not the machine zone) and keeps it ticking', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-18T10:00:00Z')); // 15:30 in IST (UTC+5:30)
     renderTopBar({});
-    expect(screen.getByText(/^IST \d{2}:\d{2}$/)).toBeInTheDocument();
-    expect(screen.queryByText(/UTC 12:00/)).not.toBeInTheDocument();
+    expect(screen.getByText('IST 15:30')).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(60000);
+    });
+    expect(screen.getByText('IST 15:31')).toBeInTheDocument();
+  });
+
+  it('shows "Starting..." instead of the previous run total right after clicking Run', () => {
+    renderTopBar({ state: 'queued', isActive: true, processed: 0, total: 0 });
+    expect(screen.getAllByText(/Starting/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Analyzing 0 \/ 5,376/)).not.toBeInTheDocument();
+  });
+
+  it('jumps to a plant by number or name from the search box', () => {
+    const onNavigate = vi.fn();
+    const plants = [
+      { id: 5, name: 'Pot 5: Rama Tulsi (Watering Trial)' },
+      { id: 12, name: 'Pot 12: Krishna Tulsi (Light Trial)' },
+    ];
+    render(
+      <PipelineContext.Provider value={idlePipeline}>
+        <TopBar currentRoute="overview" onOpenMobile={() => undefined} onRefresh={() => undefined} onNavigate={onNavigate} plants={plants} />
+      </PipelineContext.Provider>,
+    );
+    const input = screen.getByLabelText('Jump to a plant by number or name');
+    fireEvent.change(input, { target: { value: '#12' } });
+    fireEvent.submit(input.closest('form')!);
+    expect(onNavigate).toHaveBeenLastCalledWith('plant-detail', 12);
+
+    fireEvent.change(input, { target: { value: 'watering' } });
+    fireEvent.submit(input.closest('form')!);
+    expect(onNavigate).toHaveBeenLastCalledWith('plant-detail', 5);
+
+    fireEvent.change(input, { target: { value: 'nothing here' } });
+    fireEvent.submit(input.closest('form')!);
+    expect(screen.getByRole('alert')).toHaveTextContent('No matching plant.');
+    expect(onNavigate).toHaveBeenCalledTimes(2);
   });
 
   it('lists real alerts in the bell and hides the badge when there are none', () => {

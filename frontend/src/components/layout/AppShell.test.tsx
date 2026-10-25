@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { OverviewPage } from '../../pages/OverviewPage';
+import { monitoringFixture, overviewFixture, plantsFixture, preRunOverview, readingsFixture } from '../../test/monitoringFixtures';
 import { AppShell } from './AppShell';
 import { healthBody, mockFetch, statusBody } from '../../test/helpers';
 
@@ -68,5 +70,45 @@ describe('AppShell', () => {
     renderShell();
     const banner = await screen.findByTestId('error-banner');
     expect(banner).toHaveTextContent('Backend not reachable');
+  });
+
+  it('loads the overview and plants once and shares them with the page', async () => {
+    const { calls } = mockFetch({
+      'GET /api/pipeline/status': { body: statusBody() },
+      'GET /api/health': { body: healthBody() },
+      'GET /api/monitoring/overview': { body: preRunOverview() },
+      'GET /api/plants': { body: plantsFixture(), headers: { 'X-Total-Count': '4' } },
+      'GET /api/sensors/readings': { body: readingsFixture(), headers: { 'X-Total-Count': '5376' } },
+      'GET /api/monitoring/plants/5': { body: monitoringFixture() },
+    });
+    render(
+      <AppShell currentRoute="overview" onNavigate={() => undefined}>
+        <OverviewPage onNavigate={() => undefined} />
+      </AppShell>,
+    );
+    expect(await screen.findByText('5,376 records logged (233 flagged)')).toBeInTheDocument();
+    await screen.findByText(/Loading trend|Telemetry Trends/);
+    expect(calls.filter((c) => c.key === 'GET /api/monitoring/overview')).toHaveLength(1);
+    expect(calls.filter((c) => c.key === 'GET /api/plants')).toHaveLength(1);
+  });
+
+  it('puts the plant count from the data in the page title and navigates with the plant id from the bell', async () => {
+    const onNavigate = vi.fn();
+    mockFetch({
+      'GET /api/pipeline/status': { body: statusBody() },
+      'GET /api/health': { body: healthBody() },
+      'GET /api/monitoring/overview': { body: overviewFixture() },
+      'GET /api/plants': { body: plantsFixture(), headers: { 'X-Total-Count': '4' } },
+    });
+    render(
+      <AppShell currentRoute="live-monitoring" onNavigate={onNavigate}>
+        <div>page</div>
+      </AppShell>,
+    );
+    expect(await screen.findByText('Plant Sensor Monitoring (4 Plants)')).toBeInTheDocument();
+    expect(screen.queryByText(/16 Plants/)).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByTitle('Recent alerts'));
+    fireEvent.click((await screen.findAllByText(/unusual reading/))[0]);
+    expect(onNavigate).toHaveBeenCalledWith('plant-detail', expect.any(Number));
   });
 });

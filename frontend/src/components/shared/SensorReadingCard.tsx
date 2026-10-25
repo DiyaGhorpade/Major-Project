@@ -1,8 +1,8 @@
 import React from 'react';
-import { Droplets, Thermometer, Wind, Sun, Beaker, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Droplets, Thermometer, Wind, Sun, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-export type SensorType = 'soil' | 'temperature' | 'humidity' | 'light' | 'ph';
+export type SensorType = 'soil' | 'temperature' | 'humidity' | 'light';
 
 interface SensorReadingCardProps {
   type: SensorType;
@@ -45,8 +45,8 @@ export const SensorReadingCard: React.FC<SensorReadingCardProps> = ({
       simpleName: 'Room Temperature',
       unit: '°C',
       icon: <Thermometer className="w-4 h-4 text-amber-600" />,
-      minBound: 10,
-      maxBound: 40,
+      minBound: null,
+      maxBound: null,
       lowText: 'Chilly',
       idealText: 'Warm & Cosy',
       highText: 'Too Hot',
@@ -67,22 +67,11 @@ export const SensorReadingCard: React.FC<SensorReadingCardProps> = ({
       simpleName: 'Sunlight / Photoperiod',
       unit: 'lux',
       icon: <Sun className="w-4 h-4 text-yellow-600" />,
-      minBound: 0,
-      maxBound: 8000,
+      minBound: null,
+      maxBound: null,
       lowText: 'Shaded / Dim',
       idealText: 'Sunny & Bright',
       highText: 'Blinding',
-    },
-    ph: {
-      title: 'Substrate pH',
-      simpleName: 'Soil Acidity',
-      unit: 'pH',
-      icon: <Beaker className="w-4 h-4 text-purple-600" />,
-      minBound: 4,
-      maxBound: 9,
-      lowText: 'Acidic',
-      idealText: 'Balanced',
-      highText: 'Alkaline',
     },
   };
 
@@ -91,6 +80,9 @@ export const SensorReadingCard: React.FC<SensorReadingCardProps> = ({
 
   let status: 'optimal' | 'low' | 'high' | 'unconfigured' = 'optimal';
   let percentage = 50;
+  // Zone widths follow the real optimal range on the gauge scale (not a fixed 30/45/25 split).
+  let lowWidth = 30;
+  let idealWidth = 45;
 
   if (isUnconfigured) {
     status = 'unconfigured';
@@ -103,9 +95,16 @@ export const SensorReadingCard: React.FC<SensorReadingCardProps> = ({
       status = 'optimal';
     }
 
-    const minB = cfg.minBound;
-    const maxB = cfg.maxBound;
-    percentage = Math.max(5, Math.min(95, ((value - minB) / (maxB - minB)) * 100));
+    // Percent sensors use 0-100. Temperature and light have no natural bounds, so the gauge scale is the plant's
+    // optimal range plus half its width on each side (never below 0), instead of a fixed number.
+    const half = (optimalRange.max - optimalRange.min) / 2;
+    const minB = cfg.minBound ?? Math.max(0, optimalRange.min - half);
+    const maxB = cfg.maxBound ?? optimalRange.max + half;
+    const span = maxB - minB || 1;
+    const pct = (v: number) => Math.max(0, Math.min(100, ((v - minB) / span) * 100));
+    percentage = Math.max(3, Math.min(97, pct(value)));
+    lowWidth = pct(optimalRange.min);
+    idealWidth = Math.max(0, pct(optimalRange.max) - lowWidth);
   }
 
   return (
@@ -144,7 +143,7 @@ export const SensorReadingCard: React.FC<SensorReadingCardProps> = ({
         )}
         {status === 'unconfigured' && (
           <span className="text-[11px] font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full">
-            Not Installed
+            No value
           </span>
         )}
       </div>
@@ -153,7 +152,7 @@ export const SensorReadingCard: React.FC<SensorReadingCardProps> = ({
       <div className="my-2">
         {isUnconfigured ? (
           <div className="text-xs font-medium text-stone-400 py-1">
-            Optional sensor probe not attached
+            n/a: this reading has no value for this sensor
           </div>
         ) : (
           <div className="flex items-baseline gap-1.5">
@@ -171,9 +170,9 @@ export const SensorReadingCard: React.FC<SensorReadingCardProps> = ({
           <div className="relative">
             {/* Visual segmented zone bar */}
             <div className="w-full h-2 rounded-full overflow-hidden flex bg-stone-100">
-              <div className="w-[30%] bg-amber-200" title="Low zone" />
-              <div className="w-[45%] bg-[#79B86A]" title="Ideal zone" />
-              <div className="w-[25%] bg-red-200" title="High zone" />
+              <div className="bg-amber-200" style={{ width: `${lowWidth}%` }} title="Low zone" />
+              <div className="bg-[#79B86A]" style={{ width: `${idealWidth}%` }} title="Ideal zone" />
+              <div className="bg-red-200" style={{ width: `${Math.max(0, 100 - lowWidth - idealWidth)}%` }} title="High zone" />
             </div>
 
             {/* Current value marker pin */}
