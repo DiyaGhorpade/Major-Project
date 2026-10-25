@@ -8,6 +8,7 @@ Readings with null sensor values are kept: the ML service accepts nulls and hand
 
 import logging
 from collections.abc import Sequence
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +42,21 @@ def read_ml_limits(config_path: Path) -> tuple[int, int]:
             config_path, type(exc).__name__, exc, DEFAULT_MAX_HISTORY_ROWS, DEFAULT_MAX_BATCH_ITEMS,
         )  # fmt: skip
         return DEFAULT_MAX_HISTORY_ROWS, DEFAULT_MAX_BATCH_ITEMS
+
+
+DEFAULT_DAYTIME_HOURS = (9, 16)
+
+
+@lru_cache(maxsize=8)
+def read_daytime_hours(config_path: Path) -> tuple[int, int]:
+    """Inclusive local daytime hours from the ML YAML (`recommendations.daytime_hours`), default 9-16."""
+    try:
+        start, end = (int(x) for x in (yaml.safe_load(config_path.read_text()) or {})["recommendations"]["daytime_hours"])
+        if not 0 <= start <= end <= 23:
+            raise ValueError(f"invalid hours {start}-{end}")
+        return start, end
+    except Exception:  # missing file/key or bad values: the documented default applies
+        return DEFAULT_DAYTIME_HOURS
 
 
 def history_rows_for(max_history_rows: int, required_rows: int | None, default_rows: int) -> int:

@@ -21,7 +21,7 @@ from app.db import repositories as repo
 from app.db.models import AnomalyRecord, MlPrediction, SensorReading
 from app.integrations.ml_client import MLClient, MLRejected
 from app.integrations.ml_types import BatchResult, MLReading, PredictRequest, PredictResponse, format_rejection
-from app.services import history_builder
+from app.services import history_builder, recommendation_service
 
 logger = logging.getLogger("app.predictions")
 
@@ -157,6 +157,9 @@ def _load_inputs(
 def _store(session_factory: sessionmaker, reading: SensorReading, outcome: Outcome) -> MlPrediction:
     with session_factory() as db:
         pred = persist_prediction(db, reading, outcome)
+        latest = repo.latest_reading_for_plant(db, reading.plant_id)
+        if outcome.status == "ok" and latest is not None and latest.id == reading.id:
+            recommendation_service.refresh_plant(db, reading.plant_id)  # the plant's current state just changed
         db.commit()
         return pred
 

@@ -72,7 +72,7 @@ def create_app(
         allow_origins=settings.CORS_ORIGINS,
         allow_methods=["*"],
         allow_headers=["*"],
-        expose_headers=["X-Request-ID"],
+        expose_headers=["X-Request-ID", "X-Total-Count"],
     )
     app.add_middleware(RequestIDMiddleware)
     register_exception_handlers(app)

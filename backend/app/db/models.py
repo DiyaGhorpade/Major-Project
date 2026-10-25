@@ -201,7 +201,7 @@ class Recommendation(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     source: Mapped[str] = mapped_column(String(10))  # ml|heuristic
-    prediction_id: Mapped[int | None] = mapped_column(ForeignKey("ml_predictions.id"))
+    prediction_id: Mapped[int | None] = mapped_column(ForeignKey("ml_predictions.id", ondelete="SET NULL"))
     plant_id: Mapped[int] = mapped_column(ForeignKey("plants.id"))
     category: Mapped[str] = mapped_column(String(20))
     ml_rec_id: Mapped[str | None] = mapped_column(String(40))

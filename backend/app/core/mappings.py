@@ -185,6 +185,15 @@ ML_REC_TITLES: dict[str, str] = {
 }
 
 
+PRIORITY_RANK: dict[str, int] = {"high": 0, "medium": 1, "low": 2}  # sort key: lower = more urgent
+
+# Stress type -> the recommendation category that addresses it (derived from the two tables above).
+CATEGORY_BY_STRESS_TYPE: dict[str, RecommendationCategory] = {
+    stress_type: _CATEGORY_BY_ML_CATEGORY[ml_category] for ml_category, stress_type in _TYPE_BY_ML_CATEGORY.items()
+}
+CONDITION_CATEGORIES: tuple[RecommendationCategory, ...] = tuple(CATEGORY_BY_STRESS_TYPE.values())
+
+
 def map_ml_category(ml_category: str) -> RecommendationCategory:
     """ML recommendation category -> frontend RecommendationCategory (unknown -> 'monitoring')."""
     return _CATEGORY_BY_ML_CATEGORY.get(ml_category, "monitoring")

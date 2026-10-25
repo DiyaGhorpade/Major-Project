@@ -3,10 +3,11 @@
 from collections.abc import Sequence
 from typing import Any
 
-from sqlalchemy import Select, delete, func, select
+from sqlalchemy import Select, case, delete, func, select, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
+from app.core.mappings import PRIORITY_RANK
 from app.db.models import (
     AcquisitionSession,
     AnomalyRecord,
@@ -16,6 +17,7 @@ from app.db.models import (
     ModelInfo,
     PipelineRun,
     Plant,
+    Recommendation,
     SensorReading,
 )
 
@@ -237,6 +239,138 @@ def delete_all_predictions(db: Session) -> tuple[int, int]:
     anomalies = db.execute(delete(AnomalyRecord)).rowcount
     predictions = db.execute(delete(MlPrediction)).rowcount
     return predictions, anomalies
+
+
+# --- recommendations ------------------------------------------------------------------------
+_PRIORITY_RANK = case(PRIORITY_RANK, value=Recommendation.priority, else_=len(PRIORITY_RANK))
+
+
+def latest_ok_reading(db: Session, plant_id: int) -> SensorReading | None:
+    """The plant's newest reading that has an `ok` prediction."""
+    return db.scalars(
+        select(SensorReading)
+        .join(MlPrediction, MlPrediction.reading_id == SensorReading.id)
+        .where(SensorReading.plant_id == plant_id, MlPrediction.status == "ok")
+        .order_by(SensorReading.timestamp.desc(), SensorReading.id.desc())
+        .limit(1)
+    ).first()
+
+
+def readings_with_predictions_upto(
+    db: Session, plant_id: int, upto: SensorReading, limit: int
+) -> list[tuple[SensorReading, MlPrediction | None]]:
+    """Up to `limit` readings of the plant ending at `upto` (newest first, `upto` included) with their prediction row."""
+    rows = db.execute(
+        select(SensorReading, MlPrediction)
+        .outerjoin(MlPrediction, MlPrediction.reading_id == SensorReading.id)
+        .where(SensorReading.plant_id == plant_id, SensorReading.timestamp <= upto.timestamp)
+        .order_by(SensorReading.timestamp.desc(), SensorReading.id.desc())
+        .limit(limit)
+    )
+    return [(reading, pred) for reading, pred in rows]
+
+
+def get_prediction_by_reading(db: Session, reading_id: int) -> MlPrediction | None:
+    return db.scalars(select(MlPrediction).where(MlPrediction.reading_id == reading_id)).first()
+
+
+def list_plants(db: Session) -> list[Plant]:
+    return list(db.scalars(select(Plant).order_by(Plant.id)))
+
+
+def recommendations_for_plant(db: Session, plant_id: int) -> list[Recommendation]:
+    return list(db.scalars(select(Recommendation).where(Recommendation.plant_id == plant_id).order_by(Recommendation.id)))
+
+
+def other_active_recommendation(db: Session, rec: Recommendation) -> Recommendation | None:
+    """Another active (`new`/`in_progress`) recommendation for the same plant and category, if any."""
+    return db.scalars(
+        select(Recommendation)
+        .where(
+            Recommendation.plant_id == rec.plant_id,
+            Recommendation.category == rec.category,
+            Recommendation.id != rec.id,
+            Recommendation.status.in_(("new", "in_progress")),
+        )
+        .order_by(Recommendation.id.desc())
+        .limit(1)
+    ).first()
+
+
+def recommendations_by_plant(db: Session) -> dict[int, list[Recommendation]]:
+    out: dict[int, list[Recommendation]] = {}
+    for rec in db.scalars(select(Recommendation).order_by(Recommendation.id)):
+        out.setdefault(rec.plant_id, []).append(rec)
+    return out
+
+
+def delete_generated_recommendations(db: Session) -> int:
+    """Delete every recommendation the user has not touched. Returns how many were removed."""
+    return db.execute(delete(Recommendation).where(Recommendation.user_modified.is_(False))).rowcount
+
+
+def detach_recommendations_from_predictions(db: Session) -> int:
+    """Clear `prediction_id` on the remaining recommendations (their predictions are being deleted)."""
+    return db.execute(
+        update(Recommendation).where(Recommendation.prediction_id.is_not(None)).values(prediction_id=None)
+    ).rowcount
+
+
+def count_recommendations(db: Session) -> int:
+    return _count(db, select(Recommendation.id))
+
+
+def list_recommendations(
+    db: Session,
+    *,
+    plant_id: int | None = None,
+    status: str | None = None,
+    priority: str | None = None,
+    category: str | None = None,
+    source: str | None = None,
+    include_superseded: bool = False,
+    limit: int = 100,
+    offset: int = 0,
+) -> tuple[list[tuple[Recommendation, Plant, SensorReading]], int]:
+    """Filtered page of `(recommendation, plant, source reading)` ordered high -> low priority, then
+    newest first; plus the total number of matches."""
+    where = []
+    for column, value in (
+        (Recommendation.plant_id, plant_id),
+        (Recommendation.status, status),
+        (Recommendation.priority, priority),
+        (Recommendation.category, category),
+        (Recommendation.source, source),
+    ):
+        if value is not None:
+            where.append(column == value)
+    if not include_superseded and status != "superseded":
+        where.append(Recommendation.status != "superseded")
+    total = _count(db, select(Recommendation.id).where(*where))
+    rows = db.execute(
+        select(Recommendation, Plant, SensorReading)
+        .join(Plant, Plant.id == Recommendation.plant_id)
+        .join(SensorReading, SensorReading.id == Recommendation.source_reading_id)
+        .where(*where)
+        .order_by(_PRIORITY_RANK, Recommendation.created_at.desc(), Recommendation.id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return [(rec, plant, reading) for rec, plant, reading in rows], total
+
+
+def get_recommendation(db: Session, rec_id: int) -> Recommendation | None:
+    return db.get(Recommendation, rec_id)
+
+
+def get_recommendation_row(db: Session, rec_id: int) -> tuple[Recommendation, Plant, SensorReading] | None:
+    row = db.execute(
+        select(Recommendation, Plant, SensorReading)
+        .join(Plant, Plant.id == Recommendation.plant_id)
+        .join(SensorReading, SensorReading.id == Recommendation.source_reading_id)
+        .where(Recommendation.id == rec_id)
+    ).first()
+    return None if row is None else (row[0], row[1], row[2])
 
 
 # --- pipeline runs --------------------------------------------------------------------------

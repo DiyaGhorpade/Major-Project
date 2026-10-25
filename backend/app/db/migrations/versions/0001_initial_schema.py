@@ -209,7 +209,7 @@ def upgrade() -> None:
     sa.Column('updated_at', app.db.models.UTCDateTime(), nullable=False),
     sa.Column('resolved_at', app.db.models.UTCDateTime(), nullable=True),
     sa.ForeignKeyConstraint(['plant_id'], ['plants.id'], ),
-    sa.ForeignKeyConstraint(['prediction_id'], ['ml_predictions.id'], ),
+    sa.ForeignKeyConstraint(['prediction_id'], ['ml_predictions.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['source_reading_id'], ['sensor_readings.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('plant_id', 'category', 'source_reading_id', name='uq_rec_plant_cat_reading')

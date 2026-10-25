@@ -322,7 +322,8 @@ async def test_concurrent_starts_share_one_run_and_one_task(real_settings, fake)
     results = await asyncio.gather(*(service.start() for _ in range(5)))
     task = service._task
     assert len({run_id for run_id, _ in results}) == 1
-    assert sum(1 for _, state in results if state == "queued") == 1
+    # the creator reports "queued"; the others report the run's current DB state (queued or running)
+    assert all(state in ("queued", "running") for _, state in results)
     with sf() as db:
         assert db.scalar(select(func.count()).select_from(PipelineRun)) == 1
     fake.gate.set()

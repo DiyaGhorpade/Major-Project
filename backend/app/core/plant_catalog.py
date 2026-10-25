@@ -94,6 +94,14 @@ OPTIMAL_RANGES: dict[str, dict[str, Any]] = {
 }
 
 
+METRICS = (  # (reading attribute = OPTIMAL_RANGES key, display label)
+    ("soil", "Soil moisture"),
+    ("temperature", "Temperature"),
+    ("humidity", "Humidity"),
+    ("light", "Light"),
+)
+
+
 @dataclass(frozen=True)
 class PlantCatalogEntry:
     id: int
