@@ -3,11 +3,16 @@
 FastAPI + SQLAlchemy 2 + SQLite service (port 8000) that serves the bundled sensor dataset to the
 dashboard and, from Phase 2 on, runs it through the ML service (`money_plant_ml_pipeline`, port 8001).
 
-**Status: Phase 3** (Phase 2b + all read APIs and sensor ingestion: plants, sensor readings, data logs + CSV export,
-monitoring overview/plant detail, predictions list, AI insights, local/global SHAP, anomalies, model performance, devices,
-sessions, settings). `POST /api/sensors/readings` accepts single/batch readings for the future ESP32 path.
+**Status: complete.** All read APIs, sensor ingestion, the Run pipeline (`POST /api/pipeline/run` + status polling),
+ML-driven recommendations and the frontend wiring are implemented and covered by tests. The whole stack is started from
+the repository root with `./scripts/dev.sh` (see the root `README.md`); this file is the backend reference, including the
+numbered **Deviations** from the original spec below. "Frontend type changes required (deferred to Phase 4)" further down
+is kept as a history of what changed; those type changes are done.
 
 ## Setup and run
+
+Easiest: `./scripts/dev.sh` from the repository root does all of this (venvs, deps, ML service, backend, frontend);
+`make seed` seeds the DB without servers. Manually:
 
 ```bash
 cd backend
@@ -130,6 +135,11 @@ Phase 3 audit fixes:
 - **DEV-46** One rule for "usable sensor value" (`services/sensor_values.py`: not null and not listed under `out_of_range` for that metric), used by the recommendation "recent average" and the dashboard cluster averages (the cluster averages used to include flagged out-of-range values). One number format (`core/units.format_value`): lux 0 decimals with thousands separators, `%` and `°C` 1 decimal, any other unit 2 decimals (this makes SHAP sentences show e.g. `0.46 kPa` instead of a different rounding).
 - **DEV-47** `GET /api/plants`, `/api/sessions` and `/api/devices` accept `limit` (default 100, max 500) and `offset` and send `X-Total-Count`; the defaults return everything today (16 / 4 / 3 items).
 - **DEV-48** Non-finite numbers (NaN, Infinity) in the SHAP report, its CSV or a stored explanation never reach a response: such features, per-class entries and beeswarm points are dropped, and a non-finite observed value becomes `null`.
+
+Phase 5 (dev experience):
+
+- **DEV-49** `scripts/dev.sh` / `dev.ps1` need Python >= 3.12 because the pinned ML dependencies (`requirements-tested.txt`: numpy 2.5, scipy 1.18, xgboost 3.4, shap 0.54) require it (3.13 preferred, it is what they were tested on); the backend alone would run on 3.11. Both venvs use the same interpreter. A hash of the requirements file (plus the Python version) in `.venv/.deps-hash`, and of `package-lock.json` in `node_modules/.dev-lock-hash`, makes re-runs skip installs.
+- **DEV-50** `dev.sh` generates the global SHAP report once when `reports/<run_id>/evaluation_*/shap_global_importance.json` is missing (explanation only, never training; failure is a warning), refuses to start when a port is busy, and never trains. If only the ML service dies while running, it warns and keeps the backend and frontend up (they degrade to "ML unavailable"); losing the backend or frontend stops everything. `make test` runs the real-ML integration test only if the ML service is already up.
 
 ## Frontend type changes required (deferred to Phase 4)
 
