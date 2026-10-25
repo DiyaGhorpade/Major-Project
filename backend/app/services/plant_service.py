@@ -4,20 +4,23 @@
 from). Its `simpleExplanation` is generated from the stored numbers only.
 """
 
+from pathlib import Path
+
 from sqlalchemy.orm import Session
 
-from app.core.mappings import to_ist_iso
+from app.core.mappings import to_ist_iso, to_ist_text
 from app.db import repositories as repo
 from app.db.models import MlPrediction, Plant, SensorReading
 from app.schemas.plant import PlantOut, PlantPredictionOut
 from app.schemas.prediction import AnomalyInfo
 from app.services import prediction_service
+from app.services.history_builder import read_daytime_hours
 from app.services.sensor_service import to_record
 
 
 def simple_explanation(pred: MlPrediction) -> str:
     """Plain sentence built from stored values; says what the numbers are and that the type is a guess."""
-    when = to_ist_iso(pred.reading_timestamp)
+    when = to_ist_text(pred.reading_timestamp)
     probability = (pred.probabilities or {}).get(pred.severity or "", pred.confidence)
     p_text = f" (P={probability:.2f})" if probability is not None else ""
     text = f"Model rates stress '{pred.severity}'{p_text} from the latest reading at {when}"
@@ -47,7 +50,14 @@ def prediction_out(pred: MlPrediction) -> PlantPredictionOut:
     )
 
 
-def to_out(plant: Plant, reading: SensorReading | None, pred: MlPrediction | None) -> PlantOut:
+def optimal_ranges_out(plant: Plant, daytime: tuple[int, int]) -> dict:
+    """The catalog ranges plus `light.daytimeHours` (`[first, last]` IST hour, inclusive; from the ML config's
+    `recommendations.daytime_hours`): outside it light has no target, so a night reading is not "dim"."""
+    ranges = plant.optimal_ranges
+    return {**ranges, "light": {**ranges["light"], "daytimeHours": [daytime[0], daytime[1]]}}
+
+
+def to_out(plant: Plant, reading: SensorReading | None, pred: MlPrediction | None, daytime: tuple[int, int]) -> PlantOut:
     return PlantOut(
         id=plant.id,
         name=plant.name,
@@ -58,7 +68,7 @@ def to_out(plant: Plant, reading: SensorReading | None, pred: MlPrediction | Non
         stress_type=plant.stress_type,
         node_id=plant.node_id,
         sampling_point=reading.sampling_point if reading is not None else plant.sampling_point,
-        optimal_ranges=plant.optimal_ranges,
+        optimal_ranges=optimal_ranges_out(plant, daytime),
         latest_reading=to_record(reading) if reading is not None else None,
         status=plant.status,
         condition_prediction=prediction_out(pred) if pred is not None else None,
@@ -68,21 +78,22 @@ def to_out(plant: Plant, reading: SensorReading | None, pred: MlPrediction | Non
     )
 
 
-def list_plants(db: Session, limit: int = 100, offset: int = 0) -> tuple[list[PlantOut], int]:
+def list_plants(db: Session, config_path: Path, limit: int = 100, offset: int = 0) -> tuple[list[PlantOut], int]:
     """A page of plants (ordered by id) with their latest reading / prediction, plus the total plant count."""
     plants = repo.list_plants(db, limit, offset)
     ids = [p.id for p in plants]
     readings = {r.plant_id: r for r in repo.latest_reading_per_plant(db, ids)}
     preds = repo.latest_ok_prediction_per_plant(db, ids)
-    return [to_out(p, readings.get(p.id), preds.get(p.id)) for p in plants], repo.count_plants(db)
+    daytime = read_daytime_hours(config_path)
+    return [to_out(p, readings.get(p.id), preds.get(p.id), daytime) for p in plants], repo.count_plants(db)
 
 
-def get_plant(db: Session, plant_id: int) -> PlantOut | None:
+def get_plant(db: Session, config_path: Path, plant_id: int) -> PlantOut | None:
     plant = repo.get_plant(db, plant_id)
     if plant is None:
         return None
     pred = repo.latest_ok_prediction_per_plant(db, [plant_id]).get(plant_id)
-    return to_out(plant, repo.latest_reading_for_plant(db, plant_id), pred)
+    return to_out(plant, repo.latest_reading_for_plant(db, plant_id), pred, read_daytime_hours(config_path))
 
 
 def plant_exists(db: Session, plant_id: int) -> bool:

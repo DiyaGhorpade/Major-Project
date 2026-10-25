@@ -174,6 +174,7 @@ export const PlantDetailPage: React.FC<PlantDetailPageProps> = ({ plantId, onNav
               value={latest?.[k]}
               optimalRange={plant.optimalRanges[k]}
               timestamp={latest ? formatDateTime(latest.timestamp) : undefined}
+              readingTime={latest?.timestamp}
             />
           ))}
         </div>

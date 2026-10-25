@@ -32,14 +32,16 @@ def list_recommendations(
     priority: Priority | None = None,
     category: Category | None = None,
     source: Source | None = None,
+    q: Annotated[str | None, Query(max_length=100)] = None,
     include_superseded: Annotated[bool, Query(alias="includeSuperseded")] = False,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
     offset: Annotated[int, Query(ge=0, le=MAX_OFFSET)] = 0,
 ) -> list[RecommendationOut]:
-    """Ordered high -> low priority, then newest first. The total number of matches is in `X-Total-Count`."""
+    """Ordered high -> low priority, then newest first. The total number of matches is in `X-Total-Count`.
+    `q` is a case-insensitive substring over title, action, reason, plant name and plant id."""
     items, total = service.list_out(
         db, settings.ML_CONFIG_PATH, plant_id=plant_id, status=status, priority=priority, category=category,
-        source=source, include_superseded=include_superseded, limit=limit, offset=offset,
+        source=source, q=q, include_superseded=include_superseded, limit=limit, offset=offset,
     )  # fmt: skip
     response.headers["X-Total-Count"] = str(total)
     return items

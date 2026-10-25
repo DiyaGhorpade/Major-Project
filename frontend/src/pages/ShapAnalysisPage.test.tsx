@@ -30,6 +30,8 @@ describe('ShapWaterfallChart', () => {
     );
     // Layman summary and the explanation note are shown verbatim.
     expect(screen.getByText(/the model rated stress 'high'/)).toBeInTheDocument();
+    expect(screen.getByText(/For the reading at 18 Oct 2026, 22:01 IST/)).toBeInTheDocument();
+    expect(screen.queryByText(/\d{4}-\d{2}-\d{2}T\d{2}:/)).not.toBeInTheDocument();
     expect(screen.getByText(/Units: log-odds contribution/)).toBeInTheDocument();
   });
 
@@ -56,8 +58,11 @@ describe('ShapAnalysisPage', () => {
 
     // All 16 plants are selectable.
     const select = (await screen.findByRole('combobox')) as HTMLSelectElement;
-    await screen.findByText(/Pot #16:/);
+    await screen.findByRole('option', { name: /^Pot 16: / });
     expect(select.options).toHaveLength(16);
+    // The plant name already starts with "Pot N:", so the option must not repeat the prefix.
+    expect(select.options[2].textContent).toBe('Pot 3: Rama Tulsi (Control Group) (Cluster 1)');
+    expect(Array.from(select.options).some((o) => /Pot #\d+: Pot/.test(o.textContent ?? ''))).toBe(false);
   });
 
   it('shows the Run empty state when no local explanation exists yet (404)', async () => {

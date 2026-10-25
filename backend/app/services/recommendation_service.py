@@ -22,6 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
 from app.core.mappings import (
@@ -48,6 +49,7 @@ logger = logging.getLogger("app.recommendations")
 ACTIVE = ("new", "in_progress")
 CLOSED = ("completed", "dismissed")
 SUSTAINED_ROWS = 3  # consecutive readings that make "moderate" a sustained condition
+CONFLICT_RETRIES = 3  # per-plant redo attempts when another writer got there first
 RECENT_ROWS = 12  # readings fetched per plant (trend + averages)
 AVERAGE_ROWS = 6  # readings in the "recent average"
 COLD_START_HISTORY_ROWS = DEFAULT_REQUIRED_ROWS - 1  # the ML service warns below 48 prior rows
@@ -384,6 +386,12 @@ class _Tally:
     superseded: int = 0
     removed: int = 0
 
+    def add(self, other: "_Tally") -> None:
+        self.created += other.created
+        self.updated += other.updated
+        self.superseded += other.superseded
+        self.removed += other.removed
+
 
 def _sync_plant(db: Session, plant_id: int, state: PlantState, existing: list[Recommendation], tally: _Tally) -> None:
     cands = {c.category: c for c in build_candidates(state)}
@@ -444,31 +452,75 @@ def _sync_plant(db: Session, plant_id: int, state: PlantState, existing: list[Re
     db.flush()
 
 
-def _refresh(db: Session, plant: Plant, existing: list[Recommendation], tally: _Tally) -> None:
+def _refresh(db: Session, plant: Plant, tally: _Tally) -> None:
     state = load_state(db, plant)
     plant.status = severity_to_status(state.pred.severity if state else None)
     if state is not None:
-        _sync_plant(db, plant.id, state, existing, tally)
+        # Read the plant's recommendations now, in this plant's transaction (never from an earlier snapshot).
+        _sync_plant(db, plant.id, state, repo.recommendations_for_plant(db, plant.id), tally)
+
+
+def _is_write_conflict(exc: Exception) -> bool:
+    """A unique-key clash or a lost SQLite write race: another writer committed the same plant's rows first."""
+    return isinstance(exc, IntegrityError) or (isinstance(exc, OperationalError) and "locked" in str(exc).lower())
+
+
+def _refresh_committed(db: Session, plant_id: int, tally: _Tally) -> None:
+    """Refresh one plant in its own transaction and commit. If a concurrent writer (an ingestion's `refresh_plant`
+    or a Run) created the same recommendation first, roll back and redo it from the rows that exist now, which
+    turns "insert" into "update" (the unique key is `(plant, category, source reading)`)."""
+    for attempt in range(1, CONFLICT_RETRIES + 1):
+        attempt_tally = _Tally()
+        try:
+            plant = db.get(Plant, plant_id)
+            if plant is None:
+                return
+            _refresh(db, plant, attempt_tally)
+            db.commit()
+        except (IntegrityError, OperationalError) as exc:
+            db.rollback()
+            if not _is_write_conflict(exc) or attempt == CONFLICT_RETRIES:
+                raise
+            logger.warning("plant %d: concurrent recommendation write (%s); retrying from the stored rows", plant_id, type(exc).__name__)
+            continue
+        tally.add(attempt_tally)
+        return
 
 
 def refresh_plant(db: Session, plant_id: int) -> None:
-    """Recompute one plant's recommendations and `plants.status` from its stored predictions. The caller commits."""
-    plant = db.get(Plant, plant_id)
-    if plant is not None:
-        _refresh(db, plant, repo.recommendations_for_plant(db, plant_id), _Tally())
+    """Recompute one plant's recommendations and `plants.status` from its stored predictions, and commit."""
+    _refresh_committed(db, plant_id, _Tally())
+
+
+def refresh_statuses(db: Session) -> int:
+    """Re-derive every plant's `status` from its latest `ok` prediction (`unmeasured` if none) without touching
+    recommendations. Used when a run ends early so statuses never outlive the predictions they came from.
+    Commits; returns how many plants changed."""
+    latest = repo.latest_ok_prediction_per_plant(db)
+    changed = 0
+    for plant in repo.list_plants(db):
+        pred = latest.get(plant.id)
+        status = severity_to_status(pred.severity if pred else None)
+        if plant.status != status:
+            plant.status = status
+            changed += 1
+    db.commit()
+    return changed
 
 
 def build_for_run(db: Session, pipeline_run_id: int) -> int:
     """Rebuild the recommendations and plant statuses from the stored ML output. Returns how many were created.
 
     Idempotent: unchanged data changes nothing. A plant with no `ok` prediction keeps its recommendations and
-    gets status `unmeasured`.
+    gets status `unmeasured`. Each plant is read, synced and committed on its own, so predictions and
+    recommendations stored by ingestion while the run was working are seen and a concurrent write to the same
+    plant is retried instead of crashing the run.
     """
-    by_plant = repo.recommendations_by_plant(db)
     tally = _Tally()
-    for plant in repo.list_plants(db):
-        _refresh(db, plant, by_plant.get(plant.id, []), tally)
-    db.commit()
+    plant_ids = [plant.id for plant in repo.list_plants(db)]
+    db.commit()  # end the read transaction: every plant below starts from a fresh snapshot
+    for plant_id in plant_ids:
+        _refresh_committed(db, plant_id, tally)
     logger.info(
         "run %d recommendations: %d created, %d updated, %d superseded, %d duplicates removed (total %d)",
         pipeline_run_id, tally.created, tally.updated, tally.superseded, tally.removed, repo.count_recommendations(db),

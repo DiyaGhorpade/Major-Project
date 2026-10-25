@@ -35,7 +35,7 @@ class PlantOut(CamelModel):
     stress_type: StressType  # the group's designed treatment
     node_id: NodeId
     sampling_point: int | None  # multiplexer channel of the latest reading
-    optimal_ranges: dict[str, Any]
+    optimal_ranges: dict[str, Any]  # `light` also carries `daytimeHours: [first, last]` (IST hours, inclusive)
     latest_reading: SensorRecordOut | None
     status: PlantHealthStatus
     condition_prediction: PlantPredictionOut | None

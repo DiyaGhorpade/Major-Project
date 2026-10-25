@@ -44,6 +44,8 @@ def _response(request: Request, status: int, body: dict[str, Any], headers: dict
 
 async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     code = _CODES.get(exc.status_code, f"http_{exc.status_code}")
+    if exc.status_code == 404 and type(exc) is StarletteHTTPException:
+        code = "route_not_found"  # raised by the router itself (no such URL); routes raise FastAPI's subclass for a missing entity
     detail = exc.detail
     if isinstance(detail, dict) and "message" in detail:
         body = error_body(str(detail.get("code", code)), str(detail["message"]), detail.get("details"))

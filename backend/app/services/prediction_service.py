@@ -20,7 +20,7 @@ from app.core.mappings import env_state_label, stress_type_guess, to_ist_iso
 from app.db import repositories as repo
 from app.db.models import AnomalyRecord, MlPrediction, SensorReading
 from app.integrations.ml_client import MLClient, MLRejected
-from app.integrations.ml_types import BatchResult, MLReading, PredictRequest, PredictResponse, format_rejection
+from app.integrations.ml_types import BatchResult, MLReading, PredictRequest, PredictResponse, format_rejection, is_data_rejection
 from app.schemas.prediction import AnomalyInfo, EnvState, PredictionListItem
 from app.services import history_builder, recommendation_service
 
@@ -190,12 +190,24 @@ def _load_inputs(
 
 
 def _store(session_factory: sessionmaker, reading: SensorReading, outcome: Outcome) -> MlPrediction:
+    """Persist the outcome, then refresh the plant's recommendations/status when this is its newest reading.
+
+    The refresh is skipped while a pipeline run is queued or running: the run's own rebuild at the end reads the
+    stored predictions (this one included) and would otherwise race this write on the unique recommendation key
+    (DEV-27). It runs in a separate transaction, so a failure there never loses the prediction.
+    """
     with session_factory() as db:
         pred = persist_prediction(db, reading, outcome)
         latest = repo.latest_reading_for_plant(db, reading.plant_id)
-        if outcome.status == "ok" and latest is not None and latest.id == reading.id:
-            recommendation_service.refresh_plant(db, reading.plant_id)  # the plant's current state just changed
+        refresh = outcome.status == "ok" and latest is not None and latest.id == reading.id
         db.commit()
+        if refresh and repo.active_run(db) is None:
+            try:
+                recommendation_service.refresh_plant(db, reading.plant_id)  # the plant's current state just changed
+            except Exception:
+                db.rollback()
+                db.refresh(pred)  # the rollback expired it; the prediction itself is committed
+                logger.exception("could not refresh recommendations of plant %d; the next Run rebuilds them", reading.plant_id)
         return pred
 
 
@@ -211,7 +223,7 @@ async def predict_one(
 
     No DB session is held across the ML call (short read, await, short write). `EXPLAIN_MODE=none`
     forces `explain=false`. Returns the stored prediction. Raises `LookupError` for an unknown
-    plant/reading, `MLRejected` (after storing a `rejected` row) or `MLUnavailable` (nothing stored).
+    plant/reading, `MLRejected` (after storing a `rejected` row when the rejection is about the reading's data) or `MLUnavailable` (nothing stored).
     """
     history_rows, _ = await history_rows_and_run(ml, settings)
     reading, ml_reading, history = await asyncio.to_thread(_load_inputs, session_factory, plant_id, reading_id, history_rows)
@@ -220,6 +232,8 @@ async def predict_one(
     try:
         result = await ml.predict(request)
     except MLRejected as exc:
+        if not is_data_rejection(exc.code):
+            raise  # a config/request problem says nothing about this reading: store nothing (DEV-51)
         outcome = Outcome("rejected", error=format_rejection(exc.code, exc.message, exc.issues), history_rows_sent=len(history))
         await asyncio.to_thread(_store, session_factory, reading, outcome)
         raise

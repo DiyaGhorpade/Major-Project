@@ -1,6 +1,6 @@
 import React from 'react';
-import { Droplets, Thermometer, Wind, Sun, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { Droplets, Thermometer, Wind, Sun, Moon, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { cn, isNightReading } from '../../lib/utils';
 
 export type SensorType = 'soil' | 'temperature' | 'humidity' | 'light';
 
@@ -14,8 +14,12 @@ interface SensorReadingCardProps {
     lowLabel?: string;
     idealLabel?: string;
     highLabel?: string;
+    /** Light only: first and last IST hour (inclusive) with a light target. */
+    daytimeHours?: readonly [number, number];
   };
   timestamp?: string;
+  /** The reading's raw ISO time; with `optimalRange.daytimeHours` it tells a night-time light reading apart. */
+  readingTime?: string | null;
   isStale?: boolean;
   className?: string;
 }
@@ -25,6 +29,7 @@ export const SensorReadingCard: React.FC<SensorReadingCardProps> = ({
   value,
   optimalRange,
   timestamp,
+  readingTime,
   isStale = false,
   className,
 }) => {
@@ -78,7 +83,10 @@ export const SensorReadingCard: React.FC<SensorReadingCardProps> = ({
   const cfg = configs[type];
   const isUnconfigured = value === null || value === undefined;
 
-  let status: 'optimal' | 'low' | 'high' | 'unconfigured' = 'optimal';
+  // Outside the daytime hours light has no target (the backend's recommendations say "night (no target)").
+  const isNight = type === 'light' && !isUnconfigured && isNightReading(readingTime, optimalRange?.daytimeHours);
+
+  let status: 'optimal' | 'low' | 'high' | 'unconfigured' | 'night' = 'optimal';
   let percentage = 50;
   // Zone widths follow the real optimal range on the gauge scale (not a fixed 30/45/25 split).
   let lowWidth = 30;
@@ -86,6 +94,8 @@ export const SensorReadingCard: React.FC<SensorReadingCardProps> = ({
 
   if (isUnconfigured) {
     status = 'unconfigured';
+  } else if (isNight) {
+    status = 'night';
   } else if (optimalRange) {
     if (value < optimalRange.min) {
       status = 'low';
@@ -141,6 +151,11 @@ export const SensorReadingCard: React.FC<SensorReadingCardProps> = ({
             <AlertCircle className="w-3 h-3 text-red-600" /> {cfg.highText}
           </span>
         )}
+        {status === 'night' && (
+          <span className="text-[11px] font-semibold text-stone-600 bg-stone-100 px-2.5 py-1 rounded-full flex items-center gap-1 border border-stone-200">
+            <Moon className="w-3 h-3 text-stone-500" /> Night
+          </span>
+        )}
         {status === 'unconfigured' && (
           <span className="text-[11px] font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full">
             No value
@@ -164,8 +179,18 @@ export const SensorReadingCard: React.FC<SensorReadingCardProps> = ({
         )}
       </div>
 
+      {status === 'night' && optimalRange?.daytimeHours && (
+        <div className="pt-2 border-t border-[#DCE4D9] flex justify-between items-center text-[10px] text-[#6B786E]">
+          <span>
+            No light target at night (judged {String(optimalRange.daytimeHours[0]).padStart(2, '0')}:00 to{' '}
+            {String(optimalRange.daytimeHours[1]).padStart(2, '0')}:59 IST)
+          </span>
+          {timestamp && <span className="text-stone-400">{timestamp}</span>}
+        </div>
+      )}
+
       {/* Visual Zone Gauge Bar */}
-      {!isUnconfigured && optimalRange && (
+      {!isUnconfigured && status !== 'night' && optimalRange && (
         <div className="space-y-1.5 pt-2 border-t border-[#DCE4D9]">
           <div className="relative">
             {/* Visual segmented zone bar */}

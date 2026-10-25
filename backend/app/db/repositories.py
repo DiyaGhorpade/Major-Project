@@ -241,6 +241,11 @@ def delete_all_predictions(db: Session) -> tuple[int, int]:
     return predictions, anomalies
 
 
+def reset_plant_statuses(db: Session) -> int:
+    """Set every plant's status to `unmeasured` (their predictions are gone). The caller commits."""
+    return db.execute(update(Plant).values(status="unmeasured")).rowcount
+
+
 # --- recommendations ------------------------------------------------------------------------
 _PRIORITY_RANK = case(PRIORITY_RANK, value=Recommendation.priority, else_=len(PRIORITY_RANK))
 
@@ -334,13 +339,15 @@ def list_recommendations(
     priority: str | None = None,
     category: str | None = None,
     source: str | None = None,
+    q: str | None = None,
     include_superseded: bool = False,
     active_only: bool = False,
     limit: int = 100,
     offset: int = 0,
 ) -> tuple[list[tuple[Recommendation, Plant, SensorReading]], int]:
     """Filtered page of `(recommendation, plant, source reading)` ordered high -> low priority, then
-    newest first; plus the total number of matches."""
+    newest first; plus the total number of matches. `q` is a case-insensitive substring over the title, action,
+    reason, plant name and plant id."""
     where = []
     for column, value in (
         (Recommendation.plant_id, plant_id),
@@ -355,7 +362,18 @@ def list_recommendations(
         where.append(Recommendation.status != "superseded")
     if active_only:
         where.append(Recommendation.status.in_(("new", "in_progress")))
-    total = _count(db, select(Recommendation.id).where(*where))
+    if q and q.strip():
+        like = _like_pattern(q)
+        where.append(
+            or_(
+                func.lower(Recommendation.title).like(like, escape="\\"),
+                func.lower(Recommendation.simple_action).like(like, escape="\\"),
+                func.lower(Recommendation.reason).like(like, escape="\\"),
+                func.lower(Plant.name).like(like, escape="\\"),
+                cast(Recommendation.plant_id, String).like(like, escape="\\"),
+            )
+        )
+    total = _count(db, select(Recommendation.id).join(Plant, Plant.id == Recommendation.plant_id).where(*where))
     rows = db.execute(
         select(Recommendation, Plant, SensorReading)
         .join(Plant, Plant.id == Recommendation.plant_id)
@@ -447,6 +465,12 @@ class ReadingFilters:
 _IST_TEXT = func.strftime("%Y-%m-%dT%H:%M:%S", SensorReading.timestamp, "+330 minutes")
 
 
+def _like_pattern(text: str) -> str:
+    """A case-insensitive substring pattern for `LIKE ... ESCAPE '\\'` (wildcards in `text` are literal)."""
+    needle = text.strip().lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{needle}%"
+
+
 def _reading_where(f: ReadingFilters) -> list[Any]:
     where: list[Any] = []
     if f.plant_id is not None:
@@ -465,8 +489,7 @@ def _reading_where(f: ReadingFilters) -> list[Any]:
     if f.end is not None:
         where.append(SensorReading.timestamp <= f.end)
     if f.q:
-        needle = f.q.strip().lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        like = f"%{needle}%"
+        like = _like_pattern(f.q)
         where.append(
             or_(
                 cast(SensorReading.plant_id, String).like(like, escape="\\"),

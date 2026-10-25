@@ -40,7 +40,11 @@
     "unit": "lux",
     "lowLabel": "Dim (<300 lux)",
     "idealLabel": "Bright (300–20,000 lux)",
-    "highLabel": "Intense (>20,000 lux)"
+    "highLabel": "Intense (>20,000 lux)",
+    "daytimeHours": [
+     9,
+     16
+    ]
    }
   },
   "latestReading": {
@@ -137,7 +141,11 @@
     "unit": "lux",
     "lowLabel": "Dim (<300 lux)",
     "idealLabel": "Bright (300–20,000 lux)",
-    "highLabel": "Intense (>20,000 lux)"
+    "highLabel": "Intense (>20,000 lux)",
+    "daytimeHours": [
+     9,
+     16
+    ]
    }
   },
   "latestReading": {
@@ -234,7 +242,11 @@
     "unit": "lux",
     "lowLabel": "Dim (<300 lux)",
     "idealLabel": "Bright (300–20,000 lux)",
-    "highLabel": "Intense (>20,000 lux)"
+    "highLabel": "Intense (>20,000 lux)",
+    "daytimeHours": [
+     9,
+     16
+    ]
    }
   },
   "latestReading": {
@@ -331,7 +343,11 @@
     "unit": "lux",
     "lowLabel": "Dim (<300 lux)",
     "idealLabel": "Bright (300–20,000 lux)",
-    "highLabel": "Intense (>20,000 lux)"
+    "highLabel": "Intense (>20,000 lux)",
+    "daytimeHours": [
+     9,
+     16
+    ]
    }
   },
   "latestReading": {

@@ -4,7 +4,8 @@ One run at a time (guarded by an asyncio lock and the DB). The run is a backgrou
 all blocking SQLAlchemy work happens in worker threads with short-lived sessions, so the API stays
 responsive and no connection is held across ML calls. Idempotent: a reading has one prediction row, and
 without `reset` readings that already have an `ok` (current model) or `rejected` prediction are skipped
-while `unavailable` ones are retried.
+while `unavailable` ones are retried. Only rejections about a reading's own data are stored as `rejected`; a
+request-level rejection (e.g. `bad_batch_size`) fails the run instead (DEV-51).
 """
 
 import asyncio
@@ -22,7 +23,7 @@ from app.core.mappings import to_ist_iso
 from app.db import repositories as repo
 from app.db.models import PipelineRun, SensorReading, utcnow
 from app.integrations.ml_client import MLClient, MLError, MLRejected, MLUnavailable
-from app.integrations.ml_types import MLReading, PredictRequest, format_rejection
+from app.integrations.ml_types import MLReading, PredictRequest, format_rejection, is_data_rejection, rejection_failure_text
 from app.schemas.pipeline import PipelineState, PipelineStatus
 from app.services import history_builder, model_service, recommendation_service
 from app.services.prediction_service import Outcome, effective_explain_mode, persist_predictions, to_ml_reading
@@ -68,6 +69,7 @@ class _Stats:
     current_plant_id: int | None = None
     internal_error: str | None = None
     abort_reason: str | None = None
+    fatal: str | None = None  # a request-level ML rejection: the run fails with this message
     last_error: str | None = None
     started: float = field(default_factory=time.perf_counter)
 
@@ -142,6 +144,11 @@ class PipelineService:
                 db.commit()
 
     def _fail_run(self, run_id: int, message: str) -> None:
+        try:
+            with self._sf() as db:  # statuses must match whatever `ok` predictions are left (DEV-25)
+                recommendation_service.refresh_statuses(db)
+        except Exception:
+            logger.exception("could not re-derive plant statuses after run %d failed", run_id)
         try:
             self._update_run(run_id, status="failed", message=message, finished_at=utcnow())
             self._changed()
@@ -221,8 +228,10 @@ class PipelineService:
             if reset:
                 recommendation_service.reset_generated(db)
                 predictions, anomalies = repo.delete_all_predictions(db)
+                repo.reset_plant_statuses(db)  # no predictions left, so no plant has a measured status
                 db.commit()
                 logger.info("reset: deleted %d predictions and %d anomaly records", predictions, anomalies)
+                self._changed()
             readings = repo.all_readings_ordered(db)
             existing = {} if reset else repo.all_predictions_light(db)
 
@@ -266,6 +275,9 @@ class PipelineService:
                         await asyncio.to_thread(self._persist_chunk, run_id, chunk, outcomes, stats)
             except asyncio.CancelledError:
                 raise
+            except PipelineFailure as exc:  # ML refused the request itself: stop, keep what is saved, report it
+                stats.stop = True
+                stats.fatal = stats.fatal or str(exc)
             except Exception as exc:  # a bug or DB failure: stop everything, report generically
                 logger.exception("pipeline worker crashed")
                 stats.stop = True
@@ -274,20 +286,31 @@ class PipelineService:
         workers = [asyncio.create_task(worker()) for _ in range(max(1, min(self._settings.ML_CONCURRENCY, len(chunks))))]
         await asyncio.gather(*workers)
         stats.stop = True
+        if stats.fatal:
+            raise PipelineFailure(stats.fatal)
         if stats.internal_error:
             raise PipelineFailure(f"Internal error: {stats.internal_error}")
 
     async def _predict_chunk(self, chunk: list[WorkItem]) -> list[Outcome]:
-        """ML outage -> every item unavailable; ML refusing the whole call -> every item rejected.
-        Anything else is a bug and propagates to the worker's internal-error path."""
+        """ML outage -> every item unavailable; a rejection of the reading's data -> `rejected`.
+
+        A request-level rejection (whole call, or per item, with a code that is not about the reading's data:
+        `bad_batch_size`, `history_too_long`, ...) raises `PipelineFailure` and nothing of the chunk is stored,
+        because it would otherwise mark readings `rejected` for good (DEV-51). Anything else is a bug and
+        propagates to the worker's internal-error path."""
         try:
             results = await self._ml.predict_batch([item.request() for item in chunk])
-            return [Outcome.from_batch(r, item.history_rows) for r, item in zip(results, chunk, strict=True)]
         except MLUnavailable as exc:
             return [Outcome("unavailable", error=exc.reason, history_rows_sent=item.history_rows) for item in chunk]
         except MLRejected as exc:
+            if not is_data_rejection(exc.code):
+                raise PipelineFailure(rejection_failure_text(exc.code, exc.message)) from exc
             error = format_rejection(exc.code, exc.message, exc.issues)
             return [Outcome("rejected", error=error, history_rows_sent=item.history_rows) for item in chunk]
+        for result in results:
+            if result.status == "rejected" and not is_data_rejection(result.code):
+                raise PipelineFailure(rejection_failure_text(result.code, result.message))
+        return [Outcome.from_batch(r, item.history_rows) for r, item in zip(results, chunk, strict=True)]
 
     def _count(self, chunk: list[WorkItem], outcomes: list[Outcome], stats: _Stats) -> None:
         for item, outcome in zip(chunk, outcomes, strict=True):

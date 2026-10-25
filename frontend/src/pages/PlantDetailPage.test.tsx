@@ -40,6 +40,14 @@ describe('PlantDetailPage', () => {
     expect(screen.getByText(/Advisory heuristic\./, { selector: 'p' })).toBeInTheDocument();
   });
 
+  it('shows a neutral Night state, not "Shaded / Dim", for a night-time light reading', async () => {
+    mockFetch(monitoringRoute(monitoringFixture())); // latest reading is 22:01 IST; daytime hours come from the API
+    render(<PlantDetailPage plantId={5} onNavigate={vi.fn()} />);
+    await screen.findByRole('heading', { level: 1, name: 'Pot 5: Rama Tulsi (Watering Trial)' });
+    expect(screen.getByText('Night')).toBeInTheDocument();
+    expect(screen.queryByText('Shaded / Dim')).not.toBeInTheDocument();
+  });
+
   it('explains a 409 conflict when reopening a recommendation', async () => {
     const m = monitoringFixture();
     const rec = m.recommendations[0];

@@ -159,17 +159,17 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
                   onClick={() => onNavigate('plants')}
                   className={`p-4 rounded-xl bg-white border shadow-card cursor-pointer transition-all flex flex-col gap-2 ${style.card}`}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0 flex-1 basis-40">
                       <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center font-bold ${style.icon}`}>
                         <Icon className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
-                        <span className={`text-xs font-bold block ${style.title}`}>{c.clusterLabel}</span>
+                        <span className={`text-xs font-bold block break-words ${style.title}`}>{c.clusterLabel}</span>
                         <span className="text-[11px] text-[#6B786E]">{formatPlantIds(c.plantIds)}</span>
                       </div>
                     </div>
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${style.pill}`}>
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap shrink-0 ${style.pill}`}>
                       {clusterBadge(c, hasPredictions)}
                     </span>
                   </div>

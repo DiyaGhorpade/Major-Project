@@ -90,7 +90,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   return (
     <header className="h-16 bg-white border-b border-[#DCE4D9] px-4 md:px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
       {/* Left: Mobile hamburger & Page Title */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
         <button
           onClick={onOpenMobile}
           className="md:hidden p-2 rounded-lg text-stone-600 hover:bg-stone-100 transition-colors"
@@ -110,7 +110,7 @@ export const TopBar: React.FC<TopBarProps> = ({
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 shrink-0">
         {/* Run pipeline + progress */}
         <div className="flex items-center gap-3">
           {isActive && (
@@ -135,7 +135,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             onClick={() => void run()}
             disabled={isActive}
             title={isActive ? 'Analysis in progress' : 'Analyze the bundled plant dataset with the ML model'}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#2E8B57] hover:bg-[#236e44] disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold shadow-sm transition-colors"
+            className="inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg bg-[#2E8B57] hover:bg-[#236e44] disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold shadow-sm transition-colors"
           >
             {isActive ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <RunIcon className="w-4 h-4" aria-hidden="true" />}
             <span>{runLabel}</span>

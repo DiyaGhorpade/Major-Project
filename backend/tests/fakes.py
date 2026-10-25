@@ -54,7 +54,8 @@ def make_response(req: PredictRequest, *, anomaly: bool, explain: bool, run_id: 
 
 
 class FakeML(MLClient):
-    """Knobs: `up`, `models_error`, `die_after_batches`, `reject_if(req)`, `gate`, `batch_status`, `ml_run_id`."""
+    """Knobs: `up`, `models_error`, `die_after_batches`, `reject_if(req)` (+ `reject_code`), `gate`, `batch_status`,
+    `batch_error` (a 422 detail dict that refuses the whole /predict/batch call), `ml_run_id`."""
 
     def __init__(self):
         self.up = True
@@ -65,6 +66,8 @@ class FakeML(MLClient):
         self.batch_status: int | None = None  # force /predict/batch to answer with this HTTP status
         self.item_500_if = lambda req: False  # per-item 500 on /predict (batch fallback path)
         self.reject_if = lambda req: False
+        self.reject_code = "invalid_readings"  # the 422 code `reject_if` answers with
+        self.batch_error: dict | None = None  # e.g. {"error": "bad_batch_size", "message": "..."}: refuses the whole call
         self.gate = threading.Event()  # clear it to hold batches
         self.gate.set()
         self.batches = 0
@@ -76,7 +79,7 @@ class FakeML(MLClient):
     def _item_result(self, i: int, req: PredictRequest) -> dict:
         self.seen.append(req)
         if self.reject_if(req):
-            err = {"status": 422, "error": "invalid_readings", "message": "fake rejection", "issues": [{"index": 0, "issues": ["soil_out_of_range"]}]}
+            err = {"status": 422, "error": self.reject_code, "message": "fake rejection", "issues": [{"index": 0, "issues": ["soil_out_of_range"]}]}
             return {"index": i, "ok": False, "result": None, "error": err}
         anomaly = (req.reading.plant_id + len(req.history)) % 40 == 0
         return {"index": i, "ok": True, "result": make_response(req, anomaly=anomaly, explain=bool(req.explain), run_id=self.ml_run_id), "error": None}
@@ -112,7 +115,7 @@ class FakeML(MLClient):
                 return httpx.Response(500, json={"detail": "boom"})
             item = self._item_result(0, req)
             if not item["ok"]:
-                return httpx.Response(422, json={"detail": {"error": "invalid_readings", "message": "fake rejection", "issues": item["error"]["issues"]}})
+                return httpx.Response(422, json={"detail": {"error": self.reject_code, "message": "fake rejection", "issues": item["error"]["issues"]}})
             return httpx.Response(200, json=item["result"])
         if path == "/predict/batch":
             while not self.gate.is_set():
@@ -122,6 +125,8 @@ class FakeML(MLClient):
                 raise httpx.ConnectError("refused")
             if self.batch_status:
                 return httpx.Response(self.batch_status, json={"detail": "forced"})
+            if self.batch_error:
+                return httpx.Response(422, json={"detail": self.batch_error})
             self.batches += 1
             items = [PredictRequest.model_validate(i) for i in body["items"]]
             self.max_items_seen = max(self.max_items_seen, len(items))

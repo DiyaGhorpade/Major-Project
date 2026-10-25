@@ -61,6 +61,14 @@ def to_ist_iso(value: datetime | None) -> str | None:
     return None if value is None else ensure_aware(value).astimezone(IST).isoformat()
 
 
+def to_ist_text(value: datetime | None) -> str:
+    """Human-readable IST time for plain-language text, e.g. `18 Oct 2026, 22:00 IST` (never a raw ISO string)."""
+    if value is None:
+        return "an unknown time"
+    local = ensure_aware(value).astimezone(IST)
+    return f"{local.day} {local:%b %Y, %H:%M} IST"
+
+
 # --- identifiers ----------------------------------------------------------------------------
 def normalise_node_id(value: object) -> NodeId | None:
     """Map 1, 2, "1", "1.0", 2.0 ... to "1"/"2"; anything else (incl. missing) -> None."""

@@ -146,8 +146,9 @@ function getPage<T>(path: string, query?: Query): Promise<Page<T>> {
 }
 
 /**
- * GET that answers `null` only for the intended "nothing there yet" 404s (error codes in `nullCodes`).
- * Any other 404 (wrong URL, unknown route) and every other failure still throws.
+ * GET that answers `null` only for the intended 404s whose error code is in `nullCodes` (e.g. `not_found` for a
+ * missing plant, `explanation_unavailable` for "nothing there yet"). The backend answers an unknown URL with the
+ * distinct code `route_not_found`, so a wrong path, like every other failure, still throws.
  */
 async function getOrNull<T>(path: string, nullCodes: readonly string[], query?: Query): Promise<T | null> {
   try {
@@ -189,6 +190,8 @@ export interface RecommendationFilter extends PageParams {
   priority?: RecommendationPriority;
   category?: RecommendationCategory;
   source?: RecommendationSource;
+  /** Case-insensitive text search over title, action, reason, plant name and plant id (server side). */
+  q?: string;
   includeSuperseded?: boolean;
 }
 
@@ -230,6 +233,7 @@ function recommendationQuery(f: RecommendationFilter = {}): Query {
     priority: f.priority,
     category: f.category,
     source: f.source,
+    q: f.q?.trim() || undefined,
     includeSuperseded: f.includeSuperseded,
     limit: f.limit,
     offset: f.offset,

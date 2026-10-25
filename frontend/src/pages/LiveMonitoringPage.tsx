@@ -240,6 +240,7 @@ export const LiveMonitoringPage: React.FC<LiveMonitoringPageProps> = ({ onNaviga
                   value={activeReading?.[m.key]}
                   optimalRange={activePlant.optimalRanges[m.key]}
                   timestamp={activeReading ? formatDateTime(activeReading.timestamp) : undefined}
+                  readingTime={activeReading?.timestamp}
                 />
                 <div className="bg-white p-2.5 rounded-xl border border-[#DCE4D9] text-[10px] text-[#6B786E] flex items-center justify-between shadow-sm">
                   <span className="font-semibold">Recent Trend</span>

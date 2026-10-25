@@ -6,7 +6,8 @@ export interface PlantOptimalRange {
   soil: { min: number; max: number; unit: string; lowLabel: string; idealLabel: string; highLabel: string };
   temperature: { min: number; max: number; unit: string; lowLabel: string; idealLabel: string; highLabel: string };
   humidity: { min: number; max: number; unit: string; lowLabel: string; idealLabel: string; highLabel: string };
-  light: { min: number; max: number; unit: string; lowLabel: string; idealLabel: string; highLabel: string };
+  /** `daytimeHours` = first and last IST hour (inclusive) in which light has a target; outside it light is "night". */
+  light: { min: number; max: number; unit: string; lowLabel: string; idealLabel: string; highLabel: string; daytimeHours: [number, number] };
 }
 
 export interface DatasetLabels {

@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.core import feature_dictionary as fd
 from app.core.cache import ResponseCache
 from app.core.config import Settings, display_path
-from app.core.mappings import env_state_label, to_ist_iso
+from app.core.mappings import env_state_label, to_ist_iso, to_ist_text
 from app.core.provenance import DISCLAIMER, PROVENANCE
 from app.core.units import format_value
 from app.db import repositories as repo
@@ -113,7 +113,7 @@ def local_shap(db: Session, plant_id: int) -> LocalShapOut:
         for f in ranked
     )
     summary = (
-        f"For the reading at {when}, the model rated stress '{target}'{p_text}. "
+        f"For the reading at {to_ist_text(pred.reading_timestamp)}, the model rated stress '{target}'{p_text}. "
         f"The inputs that moved this most: {named}. This describes the model's behaviour, not a proven cause."
     )
     note = (expl.get("note") or "").strip()

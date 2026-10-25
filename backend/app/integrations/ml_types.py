@@ -140,6 +140,25 @@ class ValidateResponse(_Tolerant):
     summary: dict[str, Any] = Field(default_factory=dict)
 
 
+# 422 codes that are about one reading's own data (or the history built for it). Anything else the ML service
+# refuses (`bad_batch_size`, `history_too_long`, a malformed request, ...) is a client/config mismatch: it says
+# nothing about the reading, so it must never be stored as a permanent `rejected` prediction (DEV-51).
+DATA_REJECTION_CODES = frozenset({"invalid_readings", "mixed_plants", "history_not_before_reading"})
+
+
+def is_data_rejection(code: str | None) -> bool:
+    return code in DATA_REJECTION_CODES
+
+
+def rejection_failure_text(code: str | None, message: str | None) -> str:
+    """The run-failure message for a request-level / config-mismatch rejection."""
+    detail = f": {message}" if message else ""
+    return (
+        f"ML service rejected the batch ({code or 'rejected'}){detail}. Check that api.max_batch_items and "
+        "api.max_history_rows in the ML config match the running ML service, then restart it and run again."
+    )
+
+
 def format_rejection(code: str | None, message: str | None, issues: list[Any] | None = None) -> str:
     """Human-readable one-liner for a rejection, e.g. `invalid_readings: ... [row 5: soil_out_of_range]`."""
     text = f"{code}: {message}" if code and message else (code or message or "rejected")

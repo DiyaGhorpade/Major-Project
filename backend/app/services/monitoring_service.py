@@ -136,7 +136,7 @@ def overview(db: Session, config_path: Path) -> OverviewCore:
 
 
 def plant_monitoring(db: Session, config_path: Path, plant_id: int, limit: int) -> PlantMonitoringOut | None:
-    plant = plant_service.get_plant(db, plant_id)
+    plant = plant_service.get_plant(db, config_path, plant_id)
     if plant is None:
         return None
     readings = repo.readings_series(db, plant_id, limit)

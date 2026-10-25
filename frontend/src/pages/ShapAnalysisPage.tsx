@@ -105,7 +105,7 @@ export const ShapAnalysisPage: React.FC<ShapAnalysisPageProps> = ({ initialPlant
                 {plants.length === 0 && <option value={selectedPlantId}>{selectedPlantId ? `Pot #${selectedPlantId}` : 'Loading plants...'}</option>}
                 {plants.map((p) => (
                   <option key={p.id} value={p.id}>
-                    Pot #{p.id}: {p.name} ({p.cluster})
+                    {p.name} ({p.cluster})
                   </option>
                 ))}
               </select>

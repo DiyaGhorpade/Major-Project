@@ -67,6 +67,26 @@ export function formatCount(value: number): string {
   return value.toLocaleString('en-US');
 }
 
+/** The IST hour (0-23) of an ISO timestamp, or null when it cannot be parsed. */
+export function istHour(isoString?: string | null): number | null {
+  if (!isoString) return null;
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return null;
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: IST_TIME_ZONE }).format(d));
+  return Number.isFinite(hour) ? hour : null;
+}
+
+/**
+ * True when the reading was taken outside the backend's daytime hours (inclusive IST hours, from the ML config's
+ * `recommendations.daytime_hours` via `optimalRanges.light.daytimeHours`). Light then has no target (DEV-29).
+ * False when either input is missing, so nothing is guessed.
+ */
+export function isNightReading(isoString: string | null | undefined, daytimeHours: readonly [number, number] | undefined): boolean {
+  const hour = istHour(isoString);
+  if (hour === null || !daytimeHours) return false;
+  return hour < daytimeHours[0] || hour > daytimeHours[1];
+}
+
 /** Current wall-clock time in IST, "HH:MM". */
 export function formatIstClock(date: Date = new Date()): string {
   return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: IST_TIME_ZONE });

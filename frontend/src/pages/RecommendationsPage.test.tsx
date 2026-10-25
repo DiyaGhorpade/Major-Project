@@ -73,7 +73,7 @@ describe('RecommendationsPage', () => {
     const { urls } = stubBackend({ list: () => ({ body: recommendationsFixture(), headers: { 'X-Total-Count': '30' } }) });
     renderPage();
     await screen.findByText('Check watering');
-    await screen.findByText(/Pot #16:/);
+    await screen.findByRole('option', { name: /^Pot 16: / });
 
     fireEvent.click(screen.getByRole('button', { name: /Next/ }));
     await waitFor(() => expect(urls.some((u) => u.includes('offset=12'))).toBe(true));
@@ -97,6 +97,32 @@ describe('RecommendationsPage', () => {
       expect(last).not.toContain('offset=12');
     });
     expect(await screen.findByText('Page 1 of 3')).toBeInTheDocument();
+  });
+
+  it('searches on the server (debounced), counts the total and returns to the first page', async () => {
+    const recs = recommendationsFixture();
+    const { urls } = stubBackend({
+      list: (p) => (p.get('q') === 'water' ? { body: [recs[0]], headers: { 'X-Total-Count': '1' } } : { body: recs, headers: { 'X-Total-Count': '30' } }),
+    });
+    renderPage();
+    await screen.findByText('Page 1 of 3');
+    fireEvent.click(screen.getByRole('button', { name: /Next/ }));
+    expect(await screen.findByText('Page 2 of 3')).toBeInTheDocument();
+    const before = urls.length;
+
+    const box = screen.getByLabelText('Search recommendations');
+    fireEvent.change(box, { target: { value: 'w' } });
+    fireEvent.change(box, { target: { value: 'water' } });
+    expect(urls.length).toBe(before); // debounced: nothing is requested while typing
+    await waitFor(() => expect(urls.some((u) => u.includes('q=water'))).toBe(true));
+    // Only one request for the final text, starting at the first page.
+    const searches = urls.filter((u) => u.includes('q='));
+    expect(searches).toHaveLength(1);
+    expect(searches[0]).not.toContain('offset=12');
+    // The total comes from the server's count, not from filtering the current page.
+    await waitFor(() => expect(screen.getByTestId('range-label')).toHaveTextContent('Showing 1-1 of 1 directives'));
+    expect(screen.getAllByTestId('rec-disclaimer').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/this page/i)).not.toBeInTheDocument();
   });
 
   it('shows the Run empty state when there are no recommendations yet', async () => {

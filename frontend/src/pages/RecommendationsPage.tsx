@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, ChevronLeft, ChevronRight, Info, Search, X } from 'lucide-react';
 import { useRecommendations } from '../hooks/useRecommendations';
 import { useRecommendationStatus } from '../hooks/useRecommendationStatus';
@@ -23,6 +23,8 @@ interface RecommendationsPageProps {
   onNavigate: (route: NavRoute, plantId?: number | string) => void;
 }
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 const SELECT_CLASS =
   'text-xs bg-white border border-[#DCE4D9] rounded-lg px-3 py-1.5 text-[#1C2B23] outline-none shadow-sm cursor-pointer';
 
@@ -33,7 +35,8 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ onNavi
   const [source, setSource] = useState<RecommendationSource | 'all'>('all');
   const [plantId, setPlantId] = useState<string>('all');
   const [includeSuperseded, setIncludeSuperseded] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // what the user typed
+  const [searchQuery, setSearchQuery] = useState(''); // what is sent to the server (debounced)
   const [pageIdx, setPageIdx] = useState(0);
   // Optimistic status changes by recommendation id. An override only applies while the server still reports
   // the status it was made from, so it disappears by itself once the refetched list agrees (or on rollback).
@@ -48,11 +51,12 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ onNavi
       category: category === 'all' ? undefined : category,
       source: source === 'all' ? undefined : source,
       plantId: plantId === 'all' ? undefined : Number(plantId),
+      q: searchQuery || undefined,
       includeSuperseded: includeSuperseded || undefined,
       limit: PAGE_SIZE,
       offset: pageIdx * PAGE_SIZE,
     }),
-    [status, priority, category, source, plantId, includeSuperseded, pageIdx],
+    [status, priority, category, source, plantId, searchQuery, includeSuperseded, pageIdx],
   );
   const recsQuery = useRecommendations(filter);
   const statusChange = useRecommendationStatus();
@@ -61,6 +65,17 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ onNavi
   const recommendations = recsQuery.data;
   const total = recsQuery.total;
   const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
+
+  // Search runs on the server (all pages, counted in the total). Typing is debounced; a new search starts at page 1.
+  useEffect(() => {
+    const typed = searchInput.trim();
+    if (typed === searchQuery) return;
+    const id = setTimeout(() => {
+      setSearchQuery(typed);
+      setPageIdx(0);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [searchInput, searchQuery]);
 
   // Clamp the page when the list shrinks (adjusting state during render, not in an effect).
   if (recommendations && pageIdx > lastPage) setPageIdx(lastPage);
@@ -85,21 +100,14 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ onNavi
     );
   };
 
-  const shown = useMemo(() => {
-    const withOverrides = (recommendations ?? []).map((r) => {
-      const o = overrides[r.id];
-      return o && o.from === r.status ? { ...r, status: o.to } : r;
-    });
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return withOverrides;
-    return withOverrides.filter(
-      (r) =>
-        r.title.toLowerCase().includes(q) ||
-        String(r.plant_id).includes(q) ||
-        r.plant_name.toLowerCase().includes(q) ||
-        r.reason.toLowerCase().includes(q),
-    );
-  }, [recommendations, overrides, searchQuery]);
+  const shown = useMemo(
+    () =>
+      (recommendations ?? []).map((r) => {
+        const o = overrides[r.id];
+        return o && o.from === r.status ? { ...r, status: o.to } : r;
+      }),
+    [recommendations, overrides],
+  );
 
   const filtersActive =
     status !== 'all' || priority !== 'all' || category !== 'all' || source !== 'all' || plantId !== 'all' || includeSuperseded;
@@ -181,10 +189,10 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ onNavi
             <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search this page..."
-              aria-label="Search recommendations on this page"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search title, action, reason or plant..."
+              aria-label="Search recommendations"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="w-full text-xs bg-[#F6F7F0] border border-[#DCE4D9] rounded-lg pl-9 pr-3 py-1.5 outline-none focus:border-[#2E8B57] focus:bg-white text-[#1C2B23]"
             />
           </div>
@@ -224,7 +232,7 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ onNavi
             <option value="all">All Plants</option>
             {plants.map((p) => (
               <option key={p.id} value={p.id}>
-                Pot #{p.id}: {p.name}
+                {p.name}
               </option>
             ))}
           </select>
@@ -261,14 +269,14 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ onNavi
             />
           ))}
         </div>
-      ) : recommendations && !filtersActive && total === 0 && !searchQuery.trim() ? (
+      ) : recommendations && !filtersActive && total === 0 && !searchQuery && !searchInput.trim() ? (
         <RunEmptyState title="No recommendations yet" />
       ) : recommendations ? (
         <EmptyState
           title="No Recommendations Match"
           description={
-            searchQuery.trim()
-              ? 'Nothing on this page matches the search text. Clear the search or go to another page.'
+            searchQuery
+              ? 'No recommendation matches the search text. Clear the search or adjust the filters.'
               : 'Try broadening the filters, or show superseded recommendations.'
           }
         />

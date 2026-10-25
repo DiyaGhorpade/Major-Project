@@ -18,5 +18,5 @@ def test_error_envelope(client):
     missing = client.get("/api/nope", headers={"X-Request-ID": "abc-123"})
 
     assert missing.status_code == 404
-    assert missing.json() == {"error": {"code": "not_found", "message": "Not Found", "details": None}}
+    assert missing.json() == {"error": {"code": "route_not_found", "message": "Not Found", "details": None}}
     assert missing.headers["X-Request-ID"] == "abc-123"
