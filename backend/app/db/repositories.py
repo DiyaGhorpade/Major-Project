@@ -1,13 +1,15 @@
 """All database queries and writes. Services and routes never build SQL themselves."""
 
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Select, case, delete, func, select, update
+from sqlalchemy import Select, String, and_, case, cast, delete, func, literal, or_, select, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
-from app.core.mappings import PRIORITY_RANK
+from app.core.mappings import EXPERIMENTAL_GROUPS, PRIORITY_RANK
 from app.db.models import (
     AcquisitionSession,
     AnomalyRecord,
@@ -108,9 +110,12 @@ def db_summary(db: Session) -> tuple[bool, int, int]:
         return False, 0, 0
 
 
-def session_stats(db: Session) -> dict[int, dict[str, Any]]:
-    """Per session: received/flagged/rejected counts, first/last timestamp, and per-node received."""
+def session_stats(db: Session, session_ids: Sequence[int] | None = None) -> dict[int, dict[str, Any]]:
+    """Per session: received/flagged/rejected counts and first/last timestamp (only `session_ids` if given)."""
     stats: dict[int, dict[str, Any]] = {}
+    where = [SensorReading.session_id.is_not(None)]
+    if session_ids is not None:
+        where.append(SensorReading.session_id.in_(list(session_ids)))
     rows = db.execute(
         select(
             SensorReading.session_id,
@@ -120,7 +125,7 @@ def session_stats(db: Session) -> dict[int, dict[str, Any]]:
             func.min(SensorReading.timestamp),
             func.max(SensorReading.timestamp),
         )
-        .where(SensorReading.session_id.is_not(None))
+        .where(*where)
         .group_by(SensorReading.session_id)
     )
     for sid, received, flagged, rejected, first, last in rows:
@@ -158,20 +163,19 @@ def readings_for_plant_ordered(db: Session, plant_id: int) -> list[SensorReading
     )
 
 
-def latest_reading_per_plant(db: Session) -> list[SensorReading]:
-    """The most recent reading of every plant, ordered by plant id."""
+def latest_reading_per_plant(db: Session, plant_ids: Sequence[int] | None = None) -> list[SensorReading]:
+    """The most recent reading of every plant (or of `plant_ids`), ordered by plant id."""
+    where = [] if plant_ids is None else [SensorReading.plant_id.in_(list(plant_ids))]
     latest = (
         select(SensorReading.plant_id, func.max(SensorReading.timestamp).label("ts"))
+        .where(*where)
         .group_by(SensorReading.plant_id)
         .subquery()
     )
     return list(
         db.scalars(
             select(SensorReading)
-            .join(
-                latest,
-                (SensorReading.plant_id == latest.c.plant_id) & (SensorReading.timestamp == latest.c.ts),
-            )
+            .join(latest, (SensorReading.plant_id == latest.c.plant_id) & (SensorReading.timestamp == latest.c.ts))
             .order_by(SensorReading.plant_id)
         )
     )
@@ -198,12 +202,8 @@ def get_reading(db: Session, reading_id: int) -> SensorReading | None:
 
 
 def latest_reading_for_plant(db: Session, plant_id: int) -> SensorReading | None:
-    return db.scalars(
-        select(SensorReading)
-        .where(SensorReading.plant_id == plant_id)
-        .order_by(SensorReading.timestamp.desc(), SensorReading.id.desc())
-        .limit(1)
-    ).first()
+    rows = latest_reading_per_plant(db, [plant_id])
+    return rows[0] if rows else None
 
 
 def all_readings_ordered(db: Session) -> list[SensorReading]:
@@ -274,8 +274,14 @@ def get_prediction_by_reading(db: Session, reading_id: int) -> MlPrediction | No
     return db.scalars(select(MlPrediction).where(MlPrediction.reading_id == reading_id)).first()
 
 
-def list_plants(db: Session) -> list[Plant]:
-    return list(db.scalars(select(Plant).order_by(Plant.id)))
+def list_plants(db: Session, limit: int | None = None, offset: int = 0) -> list[Plant]:
+    stmt = select(Plant).order_by(Plant.id).offset(offset)
+    return list(db.scalars(stmt if limit is None else stmt.limit(limit)))
+
+
+def plant_nodes(db: Session) -> dict[int, str]:
+    """`plant_id -> node_id` as stored (the node each plant belongs to)."""
+    return dict(db.execute(select(Plant.id, Plant.node_id)).all())
 
 
 def recommendations_for_plant(db: Session, plant_id: int) -> list[Recommendation]:
@@ -329,6 +335,7 @@ def list_recommendations(
     category: str | None = None,
     source: str | None = None,
     include_superseded: bool = False,
+    active_only: bool = False,
     limit: int = 100,
     offset: int = 0,
 ) -> tuple[list[tuple[Recommendation, Plant, SensorReading]], int]:
@@ -346,6 +353,8 @@ def list_recommendations(
             where.append(column == value)
     if not include_superseded and status != "superseded":
         where.append(Recommendation.status != "superseded")
+    if active_only:
+        where.append(Recommendation.status.in_(("new", "in_progress")))
     total = _count(db, select(Recommendation.id).where(*where))
     rows = db.execute(
         select(Recommendation, Plant, SensorReading)
@@ -402,6 +411,10 @@ def latest_model_info(db: Session) -> ModelInfo | None:
     return db.scalars(select(ModelInfo).order_by(ModelInfo.cached_at.desc(), ModelInfo.id.desc()).limit(1)).first()
 
 
+def get_model_info_by_run(db: Session, run_id: str) -> ModelInfo | None:
+    return db.scalars(select(ModelInfo).where(ModelInfo.run_id == run_id)).first()
+
+
 def upsert_model_info(db: Session, values: dict[str, Any]) -> ModelInfo:
     """Insert or refresh the model_info row for `values['run_id']` (unique)."""
     row = db.scalars(select(ModelInfo).where(ModelInfo.run_id == values["run_id"])).first()
@@ -413,3 +426,312 @@ def upsert_model_info(db: Session, values: dict[str, Any]) -> ModelInfo:
             setattr(row, key, value)
     db.flush()
     return row
+
+
+# --- Phase 3 read queries ---------------------------------------------------------------------
+@dataclass
+class ReadingFilters:
+    """Filters shared by `/api/sensors/readings` and `/api/data-logs`. Times are tz-aware datetimes."""
+
+    plant_id: int | None = None
+    cluster: str | None = None  # "Cluster 1".."Cluster 4" (experimental group)
+    node_id: str | None = None
+    status: str | None = None
+    session_id: int | None = None
+    start: datetime | None = None
+    end: datetime | None = None
+    q: str | None = None
+    order: str = "desc"
+
+
+_IST_TEXT = func.strftime("%Y-%m-%dT%H:%M:%S", SensorReading.timestamp, "+330 minutes")
+
+
+def _reading_where(f: ReadingFilters) -> list[Any]:
+    where: list[Any] = []
+    if f.plant_id is not None:
+        where.append(SensorReading.plant_id == f.plant_id)
+    if f.cluster is not None:
+        group = next((g for g in EXPERIMENTAL_GROUPS if g.cluster == f.cluster), None)
+        where.append(SensorReading.plant_id.in_(list(group.plant_ids) if group else []))
+    if f.node_id is not None:
+        where.append(SensorReading.node_id == f.node_id)
+    if f.status is not None:
+        where.append(SensorReading.status == f.status)
+    if f.session_id is not None:
+        where.append(SensorReading.session_id == f.session_id)
+    if f.start is not None:
+        where.append(SensorReading.timestamp >= f.start)
+    if f.end is not None:
+        where.append(SensorReading.timestamp <= f.end)
+    if f.q:
+        needle = f.q.strip().lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        like = f"%{needle}%"
+        where.append(
+            or_(
+                cast(SensorReading.plant_id, String).like(like, escape="\\"),
+                cast(SensorReading.session_id, String).like(like, escape="\\"),
+                cast(SensorReading.node_id, String).like(like, escape="\\"),
+                cast(SensorReading.sampling_point, String).like(like, escape="\\"),
+                _IST_TEXT.like(like, escape="\\"),
+                func.lower(literal("R-") + cast(SensorReading.id, String)).like(like, escape="\\"),
+            )
+        )
+    return where
+
+
+def _reading_order(f: ReadingFilters) -> list[Any]:
+    if f.order == "asc":
+        return [SensorReading.timestamp.asc(), SensorReading.id.asc()]
+    return [SensorReading.timestamp.desc(), SensorReading.id.desc()]
+
+
+def list_readings(db: Session, f: ReadingFilters, limit: int, offset: int) -> tuple[list[SensorReading], int]:
+    """A page of readings matching the filters, plus the total number of matches."""
+    where = _reading_where(f)
+    total = db.scalar(select(func.count()).select_from(SensorReading).where(*where)) or 0
+    rows = list(db.scalars(select(SensorReading).where(*where).order_by(*_reading_order(f)).limit(limit).offset(offset)))
+    return rows, total
+
+
+def iter_readings_with_predictions(db: Session, f: ReadingFilters) -> Iterator[tuple[SensorReading, MlPrediction | None]]:
+    """Every reading matching the filters with its prediction (or None), streamed in batches."""
+    stmt = (
+        select(SensorReading, MlPrediction)
+        .outerjoin(MlPrediction, MlPrediction.reading_id == SensorReading.id)
+        .where(*_reading_where(f))
+        .order_by(*_reading_order(f))
+    )
+    for reading, pred in db.execute(stmt).yield_per(500):
+        yield reading, pred
+
+
+def insert_reading_if_new(db: Session, values: dict[str, Any]) -> int | None:
+    """Insert one reading; returns its id, or None if `(plant_id, timestamp)` already exists (no row written).
+    Only that conflict is swallowed: every other constraint failure raises `IntegrityError`."""
+    return db.execute(
+        sqlite_insert(SensorReading)
+        .values(**values)
+        .on_conflict_do_nothing(index_elements=["plant_id", "timestamp"])
+        .returning(SensorReading.id)
+    ).scalar()
+
+
+def existing_reading_keys(db: Session, plant_ids: Sequence[int], timestamps: Sequence[datetime]) -> set[tuple[int, datetime]]:
+    """`(plant_id, tz-aware UTC timestamp)` pairs among the given ones that are already stored."""
+    found: set[tuple[int, datetime]] = set()
+    stamps = list(timestamps)
+    for start in range(0, len(stamps), _INSERT_CHUNK):
+        chunk = stamps[start : start + _INSERT_CHUNK]
+        for pid, ts in db.execute(
+            select(SensorReading.plant_id, SensorReading.timestamp).where(
+                SensorReading.plant_id.in_(list(set(plant_ids))), SensorReading.timestamp.in_(chunk)
+            )
+        ):
+            found.add((pid, ts))
+    return found
+
+
+def known_session_ids(db: Session) -> set[int]:
+    return set(db.scalars(select(AcquisitionSession.session_id)))
+
+
+def refresh_session_counts(db: Session, session_ids: Sequence[int]) -> None:
+    """Recompute received/flagged/rejected counts and the end time of the given sessions from the readings."""
+    stats = session_stats(db, session_ids)
+    for session in db.scalars(select(AcquisitionSession).where(AcquisitionSession.session_id.in_(list(session_ids)))):
+        s = stats.get(session.session_id)
+        if s is None:
+            continue
+        session.received_records, session.flagged_records, session.rejected_records = s["received"], s["flagged"], s["rejected"]
+        session.ended_at = s["last"]
+
+
+def get_plant(db: Session, plant_id: int) -> Plant | None:
+    return db.get(Plant, plant_id)
+
+
+def latest_ok_prediction_per_plant(db: Session, plant_ids: Sequence[int] | None = None) -> dict[int, MlPrediction]:
+    """Each plant's (or each of `plant_ids`'s) most recent `ok` prediction, by reading time."""
+    where = [MlPrediction.status == "ok"]
+    if plant_ids is not None:
+        where.append(MlPrediction.plant_id.in_(list(plant_ids)))
+    latest = (
+        select(MlPrediction.plant_id, func.max(MlPrediction.reading_timestamp).label("ts"))
+        .where(*where)
+        .group_by(MlPrediction.plant_id)
+        .subquery()
+    )
+    rows = db.scalars(
+        select(MlPrediction)
+        .join(latest, and_(MlPrediction.plant_id == latest.c.plant_id, MlPrediction.reading_timestamp == latest.c.ts))
+        .where(MlPrediction.status == "ok")
+    )
+    return {p.plant_id: p for p in rows}
+
+
+def latest_explained_prediction(db: Session, plant_id: int) -> MlPrediction | None:
+    """The plant's newest `ok` prediction that carries a stored local explanation."""
+    return db.scalars(
+        select(MlPrediction)
+        .where(MlPrediction.plant_id == plant_id, MlPrediction.status == "ok", MlPrediction.explanation_json.is_not(None))
+        .order_by(MlPrediction.reading_timestamp.desc())
+        .limit(1)
+    ).first()
+
+
+def explanation_rows(db: Session, limit: int = 500) -> list[tuple[int, dict[str, Any]]]:
+    """`(plant_id, explanation)` of the newest stored explanations (at most `limit`)."""
+    rows = db.execute(
+        select(MlPrediction.plant_id, MlPrediction.explanation_json)
+        .where(MlPrediction.status == "ok", MlPrediction.explanation_json.is_not(None))
+        .order_by(MlPrediction.reading_timestamp.desc())
+        .limit(limit)
+    )
+    return [(pid, expl) for pid, expl in rows if isinstance(expl, dict)]
+
+
+def readings_series(db: Session, plant_id: int, limit: int) -> list[SensorReading]:
+    """The plant's last `limit` readings, oldest first."""
+    rows = list(
+        db.scalars(
+            select(SensorReading)
+            .where(SensorReading.plant_id == plant_id)
+            .order_by(SensorReading.timestamp.desc(), SensorReading.id.desc())
+            .limit(limit)
+        )
+    )
+    rows.reverse()
+    return rows
+
+
+def list_predictions(
+    db: Session,
+    *,
+    plant_id: int | None = None,
+    status: str | None = None,
+    severity: str | None = None,
+    is_anomaly: bool | None = None,
+    start: datetime | None = None,
+    end: datetime | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> tuple[list[MlPrediction], int]:
+    where: list[Any] = []
+    for column, value in (
+        (MlPrediction.plant_id, plant_id),
+        (MlPrediction.status, status),
+        (MlPrediction.severity, severity),
+        (MlPrediction.is_anomaly, is_anomaly),
+    ):
+        if value is not None:
+            where.append(column == value)
+    if start is not None:
+        where.append(MlPrediction.reading_timestamp >= start)
+    if end is not None:
+        where.append(MlPrediction.reading_timestamp <= end)
+    total = db.scalar(select(func.count()).select_from(MlPrediction).where(*where)) or 0
+    rows = db.scalars(
+        select(MlPrediction)
+        .where(*where)
+        .order_by(MlPrediction.reading_timestamp.desc(), MlPrediction.id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return list(rows), total
+
+
+def list_anomalies(
+    db: Session, *, plant_id: int | None, limit: int, offset: int
+) -> tuple[list[tuple[AnomalyRecord, Plant, SensorReading]], int]:
+    where = [AnomalyRecord.is_anomaly.is_(True)]
+    if plant_id is not None:
+        where.append(AnomalyRecord.plant_id == plant_id)
+    total = db.scalar(select(func.count()).select_from(AnomalyRecord).where(*where)) or 0
+    rows = db.execute(
+        select(AnomalyRecord, Plant, SensorReading)
+        .join(Plant, Plant.id == AnomalyRecord.plant_id)
+        .join(SensorReading, SensorReading.id == AnomalyRecord.reading_id)
+        .where(*where)
+        .order_by(AnomalyRecord.reading_timestamp.desc(), AnomalyRecord.id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return [(a, p, r) for a, p, r in rows], total
+
+
+def count_anomalies(db: Session) -> int:
+    return db.scalar(select(func.count()).select_from(AnomalyRecord).where(AnomalyRecord.is_anomaly.is_(True))) or 0
+
+
+def prediction_status_counts(db: Session) -> dict[str, int]:
+    return dict(db.execute(select(MlPrediction.status, func.count()).group_by(MlPrediction.status)).all())
+
+
+def ok_prediction_counts(db: Session, column: Any) -> dict[Any, int]:
+    """Counts of `ok` predictions grouped by one MlPrediction column (severity, stress_type_guess, cluster_id)."""
+    return dict(db.execute(select(column, func.count()).where(MlPrediction.status == "ok").group_by(column)).all())
+
+
+def plant_status_counts(db: Session) -> dict[str, int]:
+    return dict(db.execute(select(Plant.status, func.count()).group_by(Plant.status)).all())
+
+
+def session_node_counts(db: Session) -> dict[tuple[int, str], int]:
+    rows = db.execute(
+        select(SensorReading.session_id, SensorReading.node_id, func.count())
+        .where(SensorReading.session_id.is_not(None))
+        .group_by(SensorReading.session_id, SensorReading.node_id)
+    )
+    return {(sid, node): n for sid, node, n in rows}
+
+
+def list_sessions(db: Session, limit: int = 500, offset: int = 0) -> list[AcquisitionSession]:
+    return list(db.scalars(select(AcquisitionSession).order_by(AcquisitionSession.session_id.desc()).limit(limit).offset(offset)))
+
+
+def list_devices(db: Session, limit: int = 500, offset: int = 0) -> list[Device]:
+    return list(db.scalars(select(Device).order_by(Device.type, Device.id).limit(limit).offset(offset)))
+
+
+def readings_per_node(db: Session) -> dict[str, int]:
+    return dict(db.execute(select(SensorReading.node_id, func.count()).group_by(SensorReading.node_id)).all())
+
+
+def plant_ids_per_node(db: Session) -> dict[str, list[int]]:
+    out: dict[str, list[int]] = {}
+    for pid, node in db.execute(select(Plant.id, Plant.node_id).order_by(Plant.id)):
+        out.setdefault(node, []).append(pid)
+    return out
+
+
+def get_settings_row(db: Session) -> AppSettings | None:
+    return db.get(AppSettings, 1)
+
+
+def state_token(db: Session) -> tuple:
+    """A cheap fingerprint of everything the cached aggregates depend on (readings, predictions, anomalies,
+    recommendations, plant statuses and the latest pipeline run). Changes whenever any of them changes."""
+    readings = db.execute(
+        select(func.count(), func.coalesce(func.max(SensorReading.id), 0), func.sum(func.iif(SensorReading.status == "flagged", 1, 0)))
+    ).one()
+    preds = db.execute(
+        select(
+            func.count(),
+            func.coalesce(func.max(MlPrediction.id), 0),
+            func.sum(func.iif(MlPrediction.status == "ok", 1, 0)),
+            func.max(MlPrediction.created_at),
+            func.max(MlPrediction.updated_at),
+        )
+    ).one()
+    anomalies = db.execute(select(func.count(), func.coalesce(func.max(AnomalyRecord.id), 0))).one()
+    recs = db.execute(
+        select(func.count(), func.coalesce(func.max(Recommendation.id), 0), func.max(Recommendation.updated_at))
+    ).one()
+    run = latest_run(db)
+    statuses = tuple(db.scalars(select(Plant.status).order_by(Plant.id)))
+    return (
+        tuple(readings), tuple(preds), tuple(anomalies), tuple(recs),
+        (run.id, run.status, run.finished_at, run.processed) if run else None,
+        statuses,
+    )  # fmt: skip

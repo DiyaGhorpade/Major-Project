@@ -11,6 +11,7 @@ import asyncio
 import logging
 import time
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from itertools import groupby
 
@@ -86,6 +87,14 @@ class PipelineService:
         self._ml = ml
         self._lock = asyncio.Lock()
         self._task: asyncio.Task | None = None
+        self.on_data_changed: Callable[[], None] | None = None  # e.g. clears the API response cache
+
+    def _changed(self) -> None:
+        if self.on_data_changed is not None:
+            try:
+                self.on_data_changed()
+            except Exception:
+                logger.exception("on_data_changed hook failed")
 
     # --- public API ----------------------------------------------------------------------
     async def start(self, reset: bool = False) -> tuple[int, PipelineState]:
@@ -135,6 +144,7 @@ class PipelineService:
     def _fail_run(self, run_id: int, message: str) -> None:
         try:
             self._update_run(run_id, status="failed", message=message, finished_at=utcnow())
+            self._changed()
         except Exception:
             logger.exception("could not record failure of run %d", run_id)
 
@@ -307,12 +317,15 @@ class PipelineService:
                 run.current_plant_id = stats.current_plant_id
                 run.message = f"Predicting readings: {stats.processed}/{stats.total}"
             db.commit()
+        self._changed()
         level = logging.INFO if stats.processed % 640 < len(chunk) or stats.processed == stats.total else logging.DEBUG
         logger.log(level, "run %d progress: %d/%d (failed %d), plant %d", run_id, stats.processed, stats.total, stats.failed, stats.current_plant_id)
 
     def _build_recommendations(self, run_id: int) -> int:
         with self._sf() as db:
-            return recommendation_service.build_for_run(db, run_id)
+            created = recommendation_service.build_for_run(db, run_id)
+        self._changed()
+        return created
 
     def _finish_ok(self, run_id: int, stats: _Stats, recommendations: int) -> None:
         message = f"Completed: {stats.ok} predicted"
@@ -326,6 +339,7 @@ class PipelineService:
             run_id, status="completed", finished_at=utcnow(), processed=stats.processed, failed=stats.failed,
             current_plant_id=None, message=message,
         )  # fmt: skip
+        self._changed()
 
 
 # --- status ---------------------------------------------------------------------------------

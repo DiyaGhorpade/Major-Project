@@ -174,6 +174,7 @@ class MlPrediction(Base):
     ml_recommendations_json: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON(none_as_null=True))  # None -> SQL NULL, not JSON 'null'
     history_rows_sent: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)  # in-place re-predictions bump it
     pipeline_run_id: Mapped[int | None] = mapped_column(ForeignKey("pipeline_runs.id"))
 
 

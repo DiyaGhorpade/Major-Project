@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
 from app.db import database
+from app.db import repositories as repo
 from app.db.models import AnomalyRecord, MlPrediction, ModelInfo, PipelineRun, SensorReading
 from app.main import create_app
 from app.services.pipeline_service import PipelineService
@@ -292,9 +293,13 @@ def test_on_demand_prediction_route(app_client, fake):
     created = app_client.post("/api/predictions", json={"plantId": 4, "explain": True})
     assert created.status_code == 200
     body = created.json()
-    assert body["plantId"] == 4 and body["status"] == "ok" and body["severity"] in ("healthy", "low", "moderate", "high")
-    assert body["explanation"]["available"] is True and body["historyRowsSent"] == 60
+    assert body["plant_id"] == 4 and body["status"] == "ok" and body["severity"] in ("healthy", "low", "moderate", "high")
     assert body["envState"]["label"].startswith("Environmental state group")
+    # POST returns exactly the GET list item (one prediction schema); explanation and history size live elsewhere
+    assert body == app_client.get("/api/predictions?plantId=4&limit=1").json()[0]
+    assert app_client.get("/api/ai/shap/4").status_code == 200
+    with app_client.sf() as db:
+        assert repo.predictions_by_reading(db, [body["readingId"]])[body["readingId"]].history_rows_sent == 60
     again = app_client.post("/api/predictions", json={"plantId": 4}).json()
     assert again["id"] == body["id"]  # upsert, no duplicate
     assert app_client.post("/api/predictions", json={"plantId": 99}).status_code == 404
@@ -414,16 +419,17 @@ def test_pipeline_run_id_survives_a_run_less_upsert(real_settings, db_for):
 
 def test_on_demand_explain_false_keeps_stored_explanation(app_client, fake):
     first = app_client.post("/api/predictions", json={"plantId": 6, "explain": True}).json()
-    assert first["explanation"]["available"] is True and fake.seen[-1].explain is True
+    assert fake.seen[-1].explain is True and app_client.get("/api/ai/shap/6").status_code == 200
     second = app_client.post("/api/predictions", json={"plantId": 6, "explain": False}).json()
     assert fake.seen[-1].explain is False
-    assert second["id"] == first["id"] and second["explanation"]["available"] is True
+    assert second["id"] == first["id"] and app_client.get("/api/ai/shap/6").status_code == 200
 
 
 def test_explain_mode_none_forces_explain_false_on_demand(real_settings, fake):
     with running_app(real_settings.model_copy(update={"EXPLAIN_MODE": "none"}), fake) as client:
         body = client.post("/api/predictions", json={"plantId": 6, "explain": True}).json()
-        assert fake.seen[-1].explain is False and body["explanation"] is None
+        assert fake.seen[-1].explain is False and body["status"] == "ok"
+        assert client.get("/api/ai/shap/6").status_code == 404
 
 
 def test_on_demand_uses_cached_metadata_and_no_session_across_await(app_client, fake):

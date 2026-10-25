@@ -16,11 +16,12 @@ from typing import Literal
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import Settings
-from app.core.mappings import stress_type_guess, to_ist_iso
+from app.core.mappings import env_state_label, stress_type_guess, to_ist_iso
 from app.db import repositories as repo
 from app.db.models import AnomalyRecord, MlPrediction, SensorReading
 from app.integrations.ml_client import MLClient, MLRejected
 from app.integrations.ml_types import BatchResult, MLReading, PredictRequest, PredictResponse, format_rejection
+from app.schemas.prediction import AnomalyInfo, EnvState, PredictionListItem
 from app.services import history_builder, recommendation_service
 
 logger = logging.getLogger("app.predictions")
@@ -44,6 +45,40 @@ def effective_explain_mode(settings: Settings) -> str:
     """`latest_only` or `none` (unknown values fall back to `latest_only`)."""
     mode = settings.EXPLAIN_MODE.lower()
     return mode if mode in ("latest_only", "none") else "latest_only"
+
+
+def env_state(pred: MlPrediction) -> EnvState | None:
+    """The KMeans environmental state of a prediction (never a stress level)."""
+    if pred.cluster_id is None:
+        return None
+    return EnvState(id=pred.cluster_id, distance=pred.cluster_distance, label=env_state_label(pred.cluster_id))
+
+
+def to_item(pred: MlPrediction) -> PredictionListItem:
+    """The one API shape of a stored prediction (GET list items and the POST response)."""
+    return PredictionListItem(
+        id=pred.id,
+        reading_id=pred.reading_id,
+        record_id=f"R-{pred.reading_id}",
+        plant_id=pred.plant_id,
+        timestamp=to_ist_iso(pred.reading_timestamp) or "",
+        status=pred.status,
+        error=pred.error,
+        warnings=pred.warnings or [],
+        model_version=pred.model_version,
+        run_id=pred.run_id,
+        severity=pred.severity,
+        probabilities=pred.probabilities,
+        confidence=pred.confidence,
+        condition=pred.stress_type_guess,
+        env_state=env_state(pred),
+        anomaly=AnomalyInfo(is_anomaly=pred.is_anomaly, score=pred.anomaly_score),
+    )
+
+
+def list_items(db: Session, **filters) -> tuple[list[PredictionListItem], int]:
+    rows, total = repo.list_predictions(db, **filters)
+    return [to_item(p) for p in rows], total
 
 
 def to_ml_reading(reading: SensorReading) -> MLReading:
@@ -135,7 +170,7 @@ def persist_prediction(
 
 async def history_rows_and_run(ml: MLClient, settings: Settings) -> tuple[int, str]:
     """`(history_rows, ml_run_id)` from the ML YAML cap and the cached `/metadata` (DEV-1)."""
-    max_history, _ = history_builder.read_ml_limits(settings.ML_CONFIG_PATH)
+    max_history, _ = await asyncio.to_thread(history_builder.read_ml_limits, settings.ML_CONFIG_PATH)  # cached; stat only
     metadata = await ml.cached_metadata()
     rows = history_builder.history_rows_for(
         max_history, metadata.required_history_rows_for_full_features, settings.HISTORY_ROWS_DEFAULT

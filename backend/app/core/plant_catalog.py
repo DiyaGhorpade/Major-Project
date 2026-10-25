@@ -1,8 +1,8 @@
 """Static Tulsi plant catalog for plants 1-16.
 
 The dataset carries no plant names, species, descriptions, locations or optimal ranges, so
-they live here (user decision: keep the Tulsi branding; copy adapted from the frontend mock
-copy, minus its invented numeric readings). Odd plants are Rama Tulsi (green), even plants
+they live here (user decision: keep the Tulsi branding). The copy is neutral and condition-independent: it
+describes the variety and the pot's role in the experiment, never how the plant is doing. Odd plants are Rama Tulsi (green), even plants
 Krishna Tulsi (purple). The experimental group (Cluster 1-4) comes from `mappings`; Cluster 4
 is a temperature/humidity trial, not a nutrient trial.
 """
@@ -17,53 +17,42 @@ KRISHNA = ("Krishna Tulsi (Purple)", "Ocimum tenuiflorum")
 
 LOCATIONS = {
     "Cluster 1": "Bay 1 — Control Bench",
-    "Cluster 2": "Bay 2 — Drought Trial Row",
-    "Cluster 3": "Bay 3 — Low-Light Shaded Box",
-    "Cluster 4": "Bay 4 — Heat & Humidity Trial Row",
+    "Cluster 2": "Bay 2 — Watering Trial Row",
+    "Cluster 3": "Bay 3 — Light Trial Box",
+    "Cluster 4": "Bay 4 — Climate Trial Row",
 }
 
-# Name suffix per group, as in the original frontend copy.
+# Name suffix per group: the experimental role of the pot, not a claim about its condition.
 _NAME_SUFFIX = {
-    "Cluster 1": {"Rama": "Green Leaf", "Krishna": "Purple Leaf"},
-    "Cluster 2": {"Rama": "Thirsty / Dry", "Krishna": "Thirsty / Dry"},
-    "Cluster 3": {"Rama": "Shaded / Dim", "Krishna": "Shaded / Dim"},
-    "Cluster 4": {"Rama": "Heat / Humidity Trial", "Krishna": "Heat / Humidity Trial"},
+    "Cluster 1": "Control Group",
+    "Cluster 2": "Watering Trial",
+    "Cluster 3": "Light Trial",
+    "Cluster 4": "Climate Trial",
 }
 
-# (description, simple care tip) per plant id.
-_COPY: dict[int, tuple[str, str]] = {
-    1: ("Control specimen grown under ideal room conditions. Vibrant green leaves with a rich clove-like aroma and active new shoot growth.",
-        "Keep doing what you are doing. Steady moisture and plenty of light."),
-    2: ("Anthocyanin-rich dark purple leaf variety. High eugenol essential oil concentration and a balanced vegetative canopy.",
-        "Steady watering and bright indirect light keep the purple leaves vibrant."),
-    3: ("Control group reference pot. Uniform stem node distance and strong natural resilience.",
-        "Healthy and thriving. No action needed."),
-    4: ("Control pot. Demonstrates steady daytime transpiration and responsive leaf stomata.",
-        "Optimal condition. Keep the soil lightly moist."),
-    5: ("Thirsty pot in the drought trial. Soil moisture is deliberately allowed to fall, so leaf stems may lose firmness (wilting).",
-        "Watch the soil moisture. If it stays low, water until it just drains from the bottom."),
-    6: ("Drought test pot. Lower leaves may soften and droop as moisture depletes.",
-        "Watch the soil moisture. Water thoroughly if it keeps dropping."),
-    7: ("Water stress research pot in the drought trial row.",
-        "Check the soil. Restoring water protects the root hairs from drying out."),
-    8: ("Drought test pot where curling leaf margins can appear as moisture is lost.",
-        "Moderate watering usually perks the leaves back up within a few hours."),
-    9: ("Kept in deep shade as part of the low-light trial. Stems may stretch tall and thin (etiolation) while seeking light.",
-        "Needs more light. Move closer to a grow light or a bright window."),
-    10: ("Light deficiency pot. New leaves may fade to dull green because purple anthocyanin pigment needs sunlight to develop.",
-         "Needs more light. Several hours of bright light help dark purple leaves."),
-    11: ("Light deprivation trial. Weak stem growth and a pale chlorophyll tone can result from lack of light.",
-         "Needs more light. Switch on a full-spectrum LED overhead."),
-    12: ("Light deficiency test pot. Water uptake can be slow because the leaves lack light to drive transpiration.",
-         "Provide bright light for 10-12 hours daily."),
-    13: ("Temperature and humidity trial pot. Conditions here are deliberately pushed away from the comfortable range.",
-         "Check the climate in the bay. Keep the pot away from heat sources and avoid prolonged very dry or very damp air."),
-    14: ("Heat and humidity trial pot. Leaf expansion can slow when air conditions swing widely.",
-         "Check the climate in the bay and stabilise temperature and humidity."),
-    15: ("Climate stress trial pot. Leaf edges may scorch under heat or sag in unusually damp air.",
-         "Check temperature and humidity; ventilate if the air is stuffy or too dry."),
-    16: ("Temperature and humidity trial pot. The plant is hydrated, but unstable air conditions can stress it.",
-         "Check the climate in the bay and keep conditions steadier."),
+# Neutral, condition-independent copy. Nothing here says how a plant is doing: the dataset has no such
+# information and health statements must come only from model output (hard rule 4).
+_VARIETY_COPY = {
+    "Rama": "Rama Tulsi (Ocimum sanctum) is the green-leaved variety.",
+    "Krishna": "Krishna Tulsi (Ocimum tenuiflorum) is the purple-leaved variety.",
+}
+_GROUP_COPY = {  # (what the group is in the experiment, generic care guidance)
+    "Cluster 1": (
+        "Part of the control group, kept under the standard conditions the other groups are compared with.",
+        "Water when the top of the soil feels dry, avoid waterlogging, and give bright light.",
+    ),
+    "Cluster 2": (
+        "Part of the watering trial, where the watering routine is varied on purpose.",
+        "Check the soil by hand before watering and follow the trial's watering plan; avoid waterlogging.",
+    ),
+    "Cluster 3": (
+        "Part of the light trial, where the amount of light is varied on purpose.",
+        "Follow the trial's lighting plan and keep the sensor and plant positions unchanged.",
+    ),
+    "Cluster 4": (
+        "Part of the climate trial, where temperature and humidity are varied on purpose.",
+        "Follow the trial's climate plan and keep the pot away from direct heat sources and draughts.",
+    ),
 }
 
 
@@ -119,8 +108,9 @@ def catalog_entry(plant_id: int) -> PlantCatalogEntry:
     group = group_for_plant(plant_id)
     variety, species = RAMA if plant_id % 2 == 1 else KRISHNA
     short = "Rama" if plant_id % 2 == 1 else "Krishna"
-    suffix = _NAME_SUFFIX[group.cluster][short]
-    description, tip = _COPY[plant_id]
+    suffix = _NAME_SUFFIX[group.cluster]
+    role, tip = _GROUP_COPY[group.cluster]
+    description = f"{_VARIETY_COPY[short]} {role}"
     return PlantCatalogEntry(
         id=plant_id,
         name=f"Pot {plant_id}: {short} Tulsi ({suffix})",

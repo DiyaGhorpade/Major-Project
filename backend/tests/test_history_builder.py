@@ -90,3 +90,26 @@ def test_non_positive_limits_fall_back_to_defaults(tmp_path):
     cfg.write_text("api:\n  max_history_rows: 500\n  max_batch_items: -3\n")
     assert read_ml_limits(cfg) == (500, 64)
     assert history_rows_for(0, 49, 60) == 49  # never zero history rows
+
+
+def test_yaml_is_cached_per_file_version_and_failures_are_logged(tmp_path, caplog):
+    import logging
+
+    from app.services import history_builder as hb
+
+    cfg = tmp_path / "c.yaml"
+    cfg.write_text("api:\n  max_history_rows: 200\n  max_batch_items: 10\nrecommendations:\n  daytime_hours: [8, 17]\n")
+    hb._parse_yaml.cache_clear()
+    assert read_ml_limits(cfg) == (200, 10) and hb.read_daytime_hours(cfg) == (8, 17)
+    before = hb._parse_yaml.cache_info()
+    for _ in range(5):
+        read_ml_limits(cfg), hb.read_daytime_hours(cfg)
+    assert hb._parse_yaml.cache_info().misses == before.misses  # no re-parse while the mtime is unchanged
+    cfg.write_text("api:\n  max_history_rows: 300\n  max_batch_items: 10\n")
+    assert read_ml_limits(cfg) == (300, 10)  # picked up the change
+    with caplog.at_level(logging.WARNING, logger="app.history"):
+        cfg.write_text("api: [unclosed")
+        assert read_ml_limits(cfg) == (500, 64)
+        assert hb.read_daytime_hours(cfg) == (9, 16)
+    text = caplog.text
+    assert "cannot read ML limits" in text and "cannot read daytime hours" in text

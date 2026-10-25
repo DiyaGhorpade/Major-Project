@@ -59,3 +59,19 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def display_path(path: Path, anchor: Path | None = None) -> str:
+    """A path safe to show to clients: relative to the repository root, else relative to `anchor`'s parent
+    (so `<anchor.name>/...`), never an absolute server path."""
+    resolved = Path(path).resolve()
+    try:
+        return resolved.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        pass
+    if anchor is not None:
+        try:
+            return resolved.relative_to(Path(anchor).resolve().parent).as_posix()
+        except ValueError:
+            pass
+    return resolved.name

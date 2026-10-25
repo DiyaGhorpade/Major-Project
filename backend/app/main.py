@@ -13,6 +13,7 @@ from sqlalchemy import Engine
 from sqlalchemy.orm import sessionmaker
 
 from app.api.routes import api_router
+from app.core.cache import ResponseCache
 from app.core.config import Settings, get_settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import RequestIDMiddleware, configure_logging
@@ -43,6 +44,8 @@ def create_app(
     configure_logging(settings.LOG_LEVEL)
     ml_client = ml_client or MLClient(settings.ML_SERVICE_URL, settings.ML_TIMEOUT_S)
     pipeline = PipelineService(session_factory, settings, ml_client)
+    cache = ResponseCache()
+    pipeline.on_data_changed = cache.clear
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -67,6 +70,7 @@ def create_app(
     app.state.session_factory = session_factory
     app.state.ml_client = ml_client
     app.state.pipeline = pipeline
+    app.state.cache = cache
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,

@@ -159,6 +159,7 @@ def upgrade() -> None:
     sa.Column('ml_recommendations_json', sa.JSON(), nullable=True),
     sa.Column('history_rows_sent', sa.Integer(), nullable=True),
     sa.Column('created_at', app.db.models.UTCDateTime(), nullable=False),
+    sa.Column('updated_at', app.db.models.UTCDateTime(), nullable=False),
     sa.Column('pipeline_run_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['pipeline_run_id'], ['pipeline_runs.id'], ),
     sa.ForeignKeyConstraint(['plant_id'], ['plants.id'], ),

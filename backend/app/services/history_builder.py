@@ -25,13 +25,19 @@ DEFAULT_MAX_BATCH_ITEMS = 64
 DEFAULT_REQUIRED_ROWS = 49
 
 
-def read_ml_limits(config_path: Path) -> tuple[int, int]:
-    """`(max_history_rows, max_batch_items)` from the ML YAML (a file read, not an import).
+@lru_cache(maxsize=16)
+def _parse_yaml(path: str, mtime_ns: int) -> dict[str, Any]:
+    """Parse the ML YAML once per (path, modification time); errors propagate to the (cached) callers below."""
+    return yaml.safe_load(Path(path).read_text()) or {}
 
-    Falls back to the documented defaults (500 / 64) with a warning if the file is unreadable.
-    """
+
+@lru_cache(maxsize=16)
+def _limits(path: str, mtime_ns: int | None) -> tuple[int, int]:
+    """`(max_history_rows, max_batch_items)`; the warning for a bad file is logged once per file version."""
     try:
-        api = (yaml.safe_load(config_path.read_text()) or {}).get("api") or {}
+        if mtime_ns is None:
+            raise FileNotFoundError(path)
+        api = _parse_yaml(path, mtime_ns).get("api") or {}
         max_history, max_batch = int(api["max_history_rows"]), int(api["max_batch_items"])
         if max_history < 1 or max_batch < 1:
             raise ValueError(f"limits must be positive (got {max_history}/{max_batch})")
@@ -39,24 +45,48 @@ def read_ml_limits(config_path: Path) -> tuple[int, int]:
     except Exception as exc:  # unreadable file, bad YAML, missing or non-positive values: never block a run
         logger.warning(
             "cannot read ML limits from %s (%s: %s); using defaults %d/%d",
-            config_path, type(exc).__name__, exc, DEFAULT_MAX_HISTORY_ROWS, DEFAULT_MAX_BATCH_ITEMS,
+            path, type(exc).__name__, exc, DEFAULT_MAX_HISTORY_ROWS, DEFAULT_MAX_BATCH_ITEMS,
         )  # fmt: skip
         return DEFAULT_MAX_HISTORY_ROWS, DEFAULT_MAX_BATCH_ITEMS
+
+
+def _mtime(config_path: Path) -> int | None:
+    try:
+        return config_path.stat().st_mtime_ns
+    except OSError:
+        return None
+
+
+def read_ml_limits(config_path: Path) -> tuple[int, int]:
+    """`(max_history_rows, max_batch_items)` from the ML YAML (a file read, not an import).
+
+    Cached per file version (re-read only when the mtime changes). Falls back to the documented defaults
+    (500 / 64) with a logged warning if the file is unreadable.
+    """
+    return _limits(str(config_path), _mtime(config_path))
 
 
 DEFAULT_DAYTIME_HOURS = (9, 16)
 
 
-@lru_cache(maxsize=8)
-def read_daytime_hours(config_path: Path) -> tuple[int, int]:
-    """Inclusive local daytime hours from the ML YAML (`recommendations.daytime_hours`), default 9-16."""
+@lru_cache(maxsize=16)
+def _daytime(path: str, mtime_ns: int | None) -> tuple[int, int]:
     try:
-        start, end = (int(x) for x in (yaml.safe_load(config_path.read_text()) or {})["recommendations"]["daytime_hours"])
+        if mtime_ns is None:
+            raise FileNotFoundError(path)
+        start, end = (int(x) for x in _parse_yaml(path, mtime_ns)["recommendations"]["daytime_hours"])
         if not 0 <= start <= end <= 23:
             raise ValueError(f"invalid hours {start}-{end}")
         return start, end
-    except Exception:  # missing file/key or bad values: the documented default applies
+    except Exception as exc:  # missing file/key or bad values: the documented default applies
+        logger.warning("cannot read daytime hours from %s (%s: %s); using %s", path, type(exc).__name__, exc, DEFAULT_DAYTIME_HOURS)
         return DEFAULT_DAYTIME_HOURS
+
+
+def read_daytime_hours(config_path: Path) -> tuple[int, int]:
+    """Inclusive local daytime hours from the ML YAML (`recommendations.daytime_hours`), default 9-16.
+    Cached per file version; a missing/invalid value logs a warning once and uses the default."""
+    return _daytime(str(config_path), _mtime(config_path))
 
 
 def history_rows_for(max_history_rows: int, required_rows: int | None, default_rows: int) -> int:

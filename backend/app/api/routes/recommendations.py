@@ -5,7 +5,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_app_settings, get_db
+from app.api.deps import MAX_OFFSET, get_app_settings, get_cache, get_db
+from app.core.cache import ResponseCache
 from app.core.config import Settings
 from app.core.plant_catalog import PLANT_IDS
 from app.schemas.recommendation import (
@@ -19,8 +20,6 @@ from app.schemas.recommendation import (
 from app.services import recommendation_service as service
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
-
-MAX_OFFSET = 100_000
 
 
 @router.get("", response_model=list[RecommendationOut])
@@ -52,11 +51,14 @@ def update_recommendation(
     body: RecommendationStatusUpdate,
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_app_settings),
+    cache: ResponseCache = Depends(get_cache),
 ) -> RecommendationOut:
     """Set the status (`new|in_progress|completed|dismissed`); the change survives later pipeline runs.
     409 if reopening it would leave two active recommendations for the same plant and category."""
     try:
-        return service.update_status(db, rec_id, body.status, settings.ML_CONFIG_PATH)
+        out = service.update_status(db, rec_id, body.status, settings.ML_CONFIG_PATH)
+        cache.clear()  # the overview lists active recommendations
+        return out
     except service.RecommendationNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except service.RecommendationConflict as exc:

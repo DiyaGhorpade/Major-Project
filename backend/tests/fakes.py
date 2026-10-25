@@ -61,6 +61,7 @@ class FakeML(MLClient):
         self.models_error: str | None = None
         self.ml_run_id = RUN_ID
         self.die_after_batches: int | None = None
+        self.die_after_predicts: int | None = None  # the service goes away after this many successful /predict calls
         self.batch_status: int | None = None  # force /predict/batch to answer with this HTTP status
         self.item_500_if = lambda req: False  # per-item 500 on /predict (batch fallback path)
         self.reject_if = lambda req: False
@@ -103,6 +104,9 @@ class FakeML(MLClient):
             return httpx.Response(200, json={"valid": True, "n_readings": n, "issues": [], "summary": {"rows": n}})
         if path == "/predict":
             req = PredictRequest.model_validate(body)
+            if self.die_after_predicts is not None and self.predict_calls >= self.die_after_predicts:
+                self.up = False
+                raise httpx.ConnectError("refused")
             self.predict_calls += 1
             if self.item_500_if(req):
                 return httpx.Response(500, json={"detail": "boom"})

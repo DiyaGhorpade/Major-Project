@@ -36,10 +36,12 @@ from app.core.mappings import (
     to_ist_iso,
 )
 from app.core.plant_catalog import METRICS
+from app.core.units import format_value
 from app.db import repositories as repo
 from app.db.models import MlPrediction, Plant, Recommendation, SensorReading, utcnow
 from app.schemas.recommendation import BasedOn, RecommendationOut, SensorValue
 from app.services.history_builder import DEFAULT_REQUIRED_ROWS, read_daytime_hours
+from app.services.sensor_values import flagged_out_of_range, valid_values  # noqa: F401  (flagged_out_of_range re-exported)
 
 logger = logging.getLogger("app.recommendations")
 
@@ -103,23 +105,8 @@ CATEGORY_SENSORS = {  # sensors cited in a recommendation's reason
 
 
 # --- formatting -----------------------------------------------------------------------------
-def format_value(metric: str, value: float | None, unit: str) -> str:
-    """`21.3 %`, `28.4 °C`, `1,234 lux`; `n/a` when the sensor value is missing."""
-    if value is None:
-        return "n/a"
-    return f"{value:,.0f} {unit}" if metric == "light" else f"{value:.1f} {unit}"
-
-
 def is_daytime(reading: SensorReading, daytime: tuple[int, int]) -> bool:
     return daytime[0] <= ensure_aware(reading.timestamp).astimezone(IST).hour <= daytime[1]
-
-
-def flagged_out_of_range(reading: SensorReading, attr: str) -> bool:
-    """True when the reading's `validation_error` lists `attr` under `out_of_range` (set by the seed/ingest check)."""
-    return any(
-        part.strip().startswith("out_of_range:") and re.search(rf"(?:^|[\s:,]){attr}=", part)
-        for part in (reading.validation_error or "").split(";")
-    )
 
 
 def supporting_sensor_values(
@@ -145,7 +132,7 @@ def supporting_sensor_values(
             status = "high"
         else:
             status = "good"
-        out.append({"metric": label, "value": format_value(attr, value, unit), "target": target, "status": status})
+        out.append({"metric": label, "value": format_value(value, unit), "target": target, "status": status})
     return out
 
 
@@ -193,11 +180,7 @@ class PlantState:
 
     def average(self, attr: str) -> float | None:
         """Mean over the last `AVERAGE_ROWS` readings, skipping nulls and values flagged out of range; needs >= 3."""
-        values = [
-            getattr(r, attr)
-            for r in self.recent[:AVERAGE_ROWS]
-            if getattr(r, attr) is not None and not flagged_out_of_range(r, attr)
-        ]
+        values = valid_values(self.recent[:AVERAGE_ROWS], attr)
         return sum(values) / len(values) if len(values) >= 3 else None
 
     def clause(self, attrs: tuple[str, ...]) -> str:
@@ -207,10 +190,10 @@ class PlantState:
             if attr not in attrs:
                 continue
             unit = self.units[attr]
-            text = f"{label} {format_value(attr, getattr(self.reading, attr), unit)}"
+            text = f"{label} {format_value(getattr(self.reading, attr), unit)}"
             avg = self.average(attr)
             if avg is not None and getattr(self.reading, attr) is not None:
-                text += f" (recent average {format_value(attr, avg, unit)})"
+                text += f" (recent average {format_value(avg, unit)})"
             parts.append(text)
         return ", ".join(parts)
 

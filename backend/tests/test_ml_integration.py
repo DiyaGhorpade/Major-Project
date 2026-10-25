@@ -76,7 +76,9 @@ def test_real_on_demand_route_ok_and_rejected(real_settings):
         ok = client.post("/api/predictions", json={"plantId": 7, "explain": True})
         assert ok.status_code == 200, ok.text
         body = ok.json()
-        assert body["status"] == "ok" and body["explanation"]["available"] is True and body["historyRowsSent"] == 60
+        assert body["status"] == "ok" and client.get("/api/ai/shap/7").status_code == 200
+        with client.app.state.session_factory() as db:
+            assert repo.predictions_by_reading(db, [body["readingId"]])[body["readingId"]].history_rows_sent == 60
         assert sum(body["probabilities"].values()) == pytest.approx(1)
 
         # a stored reading outside the ML's accepted range is rejected by the real service and stored as such

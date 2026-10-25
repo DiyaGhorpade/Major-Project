@@ -19,7 +19,7 @@ import pandas as pd
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
-from app.core.config import Settings
+from app.core.config import BACKEND_DIR, Settings, display_path
 from app.core.mappings import IST, node_for_plant, normalise_node_id, parse_timestamp
 from app.core.plant_catalog import PLANT_IDS, catalog_entry
 from app.db import repositories as repo
@@ -291,7 +291,8 @@ def ensure_seeded(db: Session, settings: Settings) -> SeedResult:
     repo.upsert_sessions(db, _session_rows(db, df, plant_nodes))
     repo.upsert_devices(db, _device_rows(db))
 
-    database = make_url(settings.DATABASE_URL).database or ":memory:"
+    path = make_url(settings.DATABASE_URL).database
+    database = display_path(Path(path), BACKEND_DIR) if path and path != ":memory:" else ":memory:"  # never an absolute path
     result.settings_created = repo.insert_default_settings(
         db, {**DEFAULT_SETTINGS, "collection_times": _collection_times(df), "storage_path": database}
     )

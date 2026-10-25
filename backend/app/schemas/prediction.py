@@ -1,6 +1,5 @@
-"""Prediction models. Phase 2 ships the minimal on-demand shape; Phase 3 adds list/detail views."""
-
-from typing import Any
+"""Prediction models: the request body of POST /api/predictions and the one response shape shared by
+GET and POST (`PredictionListItem`, DEV-38)."""
 
 from pydantic import BaseModel, Field
 
@@ -21,11 +20,20 @@ class EnvState(CamelModel):
     label: str  # "Environmental state group N"; not a stress level
 
 
-class PredictionOut(CamelModel):
+class AnomalyInfo(CamelModel):
+    """Isolation Forest output: unusual reading, NOT a plant-health verdict."""
+
+    is_anomaly: bool | None
+    score: float | None
+
+
+class PredictionListItem(CamelModel):
+    """One row of `GET /api/predictions` (no explanation / ML recommendations: those are in the detail views)."""
+
     id: int
     reading_id: int
-    record_id: str
-    plant_id: int
+    record_id: str = Field(alias="record_id")  # snake_case on purpose (DEV-38): the contract names these two literally
+    plant_id: int = Field(alias="plant_id")
     timestamp: str
     status: str
     error: str | None
@@ -35,11 +43,7 @@ class PredictionOut(CamelModel):
     severity: str | None
     probabilities: dict[str, float] | None
     confidence: float | None
-    env_state: EnvState | None
-    anomaly_score: float | None
-    is_anomaly: bool | None
-    condition: str | None  # heuristic stress-type guess, not a diagnosis
+    condition: str | None
     condition_source: str = "heuristic"
-    explanation: dict[str, Any] | None
-    ml_recommendations: list[dict[str, Any]]
-    history_rows_sent: int | None
+    env_state: EnvState | None
+    anomaly: AnomalyInfo
