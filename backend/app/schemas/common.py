@@ -32,6 +32,9 @@ class MlServiceHealth(CamelModel):
     ok: bool
     url: str
     detail: str
+    status: str | None = None  # the ML service's own "ok" | "unavailable"; None if unreachable
+    models_loaded: bool | None = None
+    explainability_available: bool | None = None
 
 
 class HealthResponse(CamelModel):
@@ -39,5 +42,6 @@ class HealthResponse(CamelModel):
     db: DbHealth
     ml_service: MlServiceHealth
     model_version: str | None
+    run_id: str | None = None
     dataset_name: str
     seeded: bool

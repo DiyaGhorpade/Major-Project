@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.logging import REQUEST_ID_HEADER
+from app.integrations.ml_client import MLRejected, MLUnavailable
 from app.schemas.common import ErrorDetail, ErrorEnvelope
 
 logger = logging.getLogger("app.errors")
@@ -60,6 +61,14 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return _response(request, 422, error_body("validation_error", "Request validation failed", details))
 
 
+async def ml_unavailable_handler(request: Request, exc: MLUnavailable) -> JSONResponse:
+    return _response(request, 503, error_body("ml_unavailable", exc.reason))
+
+
+async def ml_rejected_handler(request: Request, exc: MLRejected) -> JSONResponse:
+    return _response(request, 422, error_body("ml_rejected", exc.message, {"code": exc.code, "issues": exc.issues}))
+
+
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.error("Unhandled error on %s %s", request.method, request.url.path, exc_info=exc)
     request_id = getattr(request.state, "request_id", None)
@@ -73,4 +82,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(MLUnavailable, ml_unavailable_handler)
+    app.add_exception_handler(MLRejected, ml_rejected_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)

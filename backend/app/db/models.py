@@ -159,19 +159,19 @@ class MlPrediction(Base):
     reading_timestamp: Mapped[datetime] = mapped_column(UTCDateTime)
     status: Mapped[str] = mapped_column(String(12))  # ok|unavailable|rejected
     error: Mapped[str | None] = mapped_column(Text)
-    warnings: Mapped[list[str] | None] = mapped_column(JSON)
+    warnings: Mapped[list[str] | None] = mapped_column(JSON(none_as_null=True))  # None -> SQL NULL, not JSON 'null'
     model_version: Mapped[str | None] = mapped_column(String(40))
     run_id: Mapped[str | None] = mapped_column(String(60))  # ML artifact run id
     severity: Mapped[str | None] = mapped_column(String(15))  # healthy|low|moderate|high
-    probabilities: Mapped[dict[str, float] | None] = mapped_column(JSON)
+    probabilities: Mapped[dict[str, float] | None] = mapped_column(JSON(none_as_null=True))  # None -> SQL NULL, not JSON 'null'
     confidence: Mapped[float | None] = mapped_column(Float)
     cluster_id: Mapped[int | None] = mapped_column(Integer)  # KMeans env state, not severity
     cluster_distance: Mapped[float | None] = mapped_column(Float)
     anomaly_score: Mapped[float | None] = mapped_column(Float)
     is_anomaly: Mapped[bool | None] = mapped_column(Boolean)
     stress_type_guess: Mapped[str | None] = mapped_column(String(40))
-    explanation_json: Mapped[dict[str, Any] | None] = mapped_column(JSON)
-    ml_recommendations_json: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON)
+    explanation_json: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))  # None -> SQL NULL, not JSON 'null'
+    ml_recommendations_json: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON(none_as_null=True))  # None -> SQL NULL, not JSON 'null'
     history_rows_sent: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     pipeline_run_id: Mapped[int | None] = mapped_column(ForeignKey("pipeline_runs.id"))

@@ -277,8 +277,8 @@ def _collection_times(df: pd.DataFrame) -> list[str]:
 def ensure_seeded(db: Session, settings: Settings) -> SeedResult:
     """Load the bundled CSV into the DB. Safe to call repeatedly (second call inserts 0 rows)."""
     started = time.perf_counter()
-    # TODO(Phase 2): also POST the readings to the ML service's /validate for an advisory
-    # report. The local checks in `load_dataset` stay authoritative and must not depend on it.
+    # The advisory ML `/validate` report runs after startup, never here: see
+    # `dataset_validation.validate_with_ml`. The local checks in `load_dataset` stay authoritative.
     df, result = load_dataset(settings.DATASET_PATH)
     now = pd.Timestamp.now(tz="UTC").to_pydatetime()
     plant_nodes = _plant_nodes(df)

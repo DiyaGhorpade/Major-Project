@@ -3,8 +3,9 @@
 FastAPI + SQLAlchemy 2 + SQLite service (port 8000) that serves the bundled sensor dataset to the
 dashboard and, from Phase 2 on, runs it through the ML service (`money_plant_ml_pipeline`, port 8001).
 
-**Status: Phase 1** (skeleton, config, database, startup seeding, `/api/health`). Pipeline run, ML client,
-read APIs and the remaining routers are stubs that later phases fill in.
+**Status: Phase 2** (Phase 1 + ML client, history builder, prediction persistence, the Run pipeline,
+`/api/pipeline/*`, `POST /api/predictions`, real ML reachability in `/api/health`). Read APIs, recommendations and the
+remaining routers are stubs that later phases fill in (`recommendation_service` is a documented no-op for now).
 
 ## Setup and run
 
@@ -21,7 +22,23 @@ On startup the app creates the tables and seeds the bundled dataset
 Seeding is idempotent: restarting inserts nothing new. If seeding fails or times out, the error is logged and the
 app still starts. Then open <http://127.0.0.1:8000/docs> or `curl localhost:8000/api/health`.
 
-Tests: `.venv/bin/pytest -q` (temp SQLite DBs; the dataset fixtures use the real CSV and a crafted bad CSV).
+Tests: `.venv/bin/pytest -q` (temp SQLite DBs; the dataset fixtures use the real CSV and a crafted bad CSV; the ML
+service is faked, except `tests/test_ml_integration.py`, which uses the real service at `ML_SERVICE_URL` and skips if it is down).
+
+### ML service (needed for Run)
+
+```bash
+cd money_plant_ml_pipeline
+python3 -m venv .venv && .venv/bin/pip install -r requirements-tested.txt   # sklearn 1.9 / numpy 2.5 / xgboost 3.4 / shap
+PYTHONPATH=src .venv/bin/python -m uvicorn plant_ml.api.main:app --host 127.0.0.1 --port 8001 --workers 4
+```
+
+`--workers 4` matters (DEV-18): the service is CPU/GIL-bound, so one worker serves ~20 predictions/s whatever the backend
+concurrency; four workers cut a full Run from ~5 min to ~80 s. Global SHAP is a one-off setup step (no retraining):
+`cd money_plant_ml_pipeline && .venv/bin/python scripts/generate_explanations.py --input data/raw/plant_sensor_data.csv --run-id <run_id from artifacts/latest.json>`.
+
+Run: `curl -XPOST localhost:8000/api/pipeline/run` (optional body `{"reset": true}`), then poll `GET /api/pipeline/status`.
+Check DEV-1 yourself with `.venv/bin/python scripts/verify_history_equivalence.py` (ML service must be up).
 
 Reset the database: stop the app and delete `data/app.db*`.
 
@@ -41,8 +58,9 @@ After editing `models.py`: `.venv/bin/alembic revision --autogenerate -m "..."`.
 ## Layout
 
 See `docs/backend_implementation_master_prompt (1).md` section 4.1. Implemented so far: `core/` (config, logging,
-errors, mappings, plant catalog), `db/` (engine, models, repositories, migrations), `services/seed_service.py`,
-`api/deps.py`, `api/routes/health.py`, `main.py`. All other modules are placeholders with a docstring stating their purpose.
+errors, mappings, plant catalog), `db/` (engine, models, repositories, migrations), `integrations/` (ML client + types),
+`services/` (seed, history builder, prediction, pipeline, model info, dataset validation), `api/deps.py`,
+`api/routes/{health,pipeline,predictions}.py`, `main.py`. All other modules are placeholders with a docstring stating their purpose.
 
 ## Deviations
 
@@ -67,3 +85,16 @@ Phase 1 implementation decisions (not in the docs):
 - **DEV-14** Storage shape: `ml_predictions` keeps `probabilities` as JSON plus `severity`/`confidence` instead of `p_*` columns; `devices` carries `channels`, `role`, `simple_role` (no hardware JSON; unknown hardware fields are derived as null later).
 - **DEV-15** KMeans label is `Environmental state group <id>` using the raw id (no +1 shift).
 - **DEV-16** Global SHAP comes from `reports/<run_id>/evaluation_<UTC>/shap_global_importance.json`, produced once by `scripts/generate_explanations.py` (no retraining). That file holds only mean |SHAP| per feature, so `beeswarm_points` come from `shap_sample_explanations.csv` (50 test rows × top 5 features) and are labelled as a sample.
+
+Phase 2 implementation decisions:
+
+- **DEV-17** DEV-1 is verified: for 64 readings (12 plants, cold start to row 335, 55 with nulls in the reading or its 60-row history) `history_rows=60` and 500 give identical label, probabilities, cluster, anomaly score/flag and recommendation ids (max diff <= 1e-9); 10 rows does differ, so the check is sensitive. Reproduce with `scripts/verify_history_equivalence.py`. The default therefore stays 60.
+- **DEV-18** Throughput: the ML service is GIL-bound, so `ML_CONCURRENCY` only helps if the service runs several uvicorn workers. Measured (320 items): 1 worker 21.6/s at concurrency 1, 18.4/s at 4; 4 workers 18.8/s at 1, 41.5/s at 4. Start the ML service with `--workers 4` (dev.sh should).
+- **DEV-19** Run semantics: `pipeline_runs.total` is the number of readings that still need a prediction in that run (5,376 on a first/reset run, 0 on a no-op re-run, which completes at 100%). Without `reset`, `ok` predictions are skipped only if made by the current ML `run_id` (a retrained model recomputes), `rejected` ones are skipped, `unavailable` ones are retried (an `unavailable` outcome never replaces an existing `ok` prediction, whatever its model run: the old row stays until a new `ok`/`rejected` result replaces it), and a latest-reading prediction lacking an explanation is redone when explainability is available. `runId` is the integer row id. A run that finds some readings `unavailable` (but not an outage) still ends `completed` and says so in `message`.
+- **DEV-20** ML client timeouts: a batch call uses `6 x ML_TIMEOUT_S` (up to 64 predictions per request); health checks use one 2 s attempt and are cached 5 s (`/metadata` 60 s) so `/api/health` and `/api/pipeline/status` stay fast; the run's preflight health check does retry 3 times.
+- **DEV-21** The advisory ML `/validate` of the seeded data runs once in a background task after startup (single request: the endpoint has no size limit) and never blocks or fails startup. Its summary is stored in `model_info.metadata_json["dataset_validation"]`; the same JSON column holds the full `/metadata` document (run_id, model_version, trained_at, label_mapping, feature names, required rows, disclaimer, ...).
+- **DEV-22** The nullable JSON columns of `ml_predictions` use `JSON(none_as_null=True)` so "no value" is SQL NULL (queryable with `IS NULL`), not the JSON text `null`. No schema change.
+- **DEV-23** Outage handling: 3 consecutive batches that are entirely unavailable stop the run (`failed`, message names the cause); those readings are stored as `unavailable` (error text kept) and everything before them stays saved. Worker crashes (bugs, DB errors) end the run as `Internal error: <ExceptionType>` (details only in the server log); only `MLUnavailable` becomes `unavailable` and `MLRejected` becomes `rejected`. The on-demand `POST /api/predictions` never stores an outage but does store a rejection. Typed error envelopes: `ml_unavailable` (503) and `ml_rejected` (422).
+- **DEV-24** Stored rejection text keeps the ML reason and flagged rows, e.g. `invalid_readings: ... [row 5: soil_out_of_range]`. The run does not touch `plants.status`; Phase 3 derives it from the latest prediction. Unit tests point `ML_SERVICE_URL` at a closed port so a real ML service on 8001 cannot leak into them.
+- **DEV-25** Run the backend as a **single process** (one uvicorn worker): the no-double-run guard is an in-process asyncio lock plus the DB, and startup marks every `queued`/`running` run as failed ("interrupted by restart"), which would kill another process's live run. `reset=true` deletes all predictions and anomaly records *before* recomputing, so an ML outage after a reset leaves some readings with no prediction at all (the run is `failed`; a plain re-run fills them).
+- **DEV-26** Other Phase 2 details: `EXPLAIN_MODE=none` also forces `explain=false` on `POST /api/predictions` (otherwise the request's `explain`, default true, is honoured); a new `ok` result without an explanation keeps the stored one of the same model run, and an upsert with no `pipeline_run_id` keeps the existing one; the on-demand route reads `/metadata` from a 60 s cache and holds no DB session across the ML call; ML requests for a chunk are built lazily from shared per-plant lists; a non-503 5xx from `/predict/batch` falls back to per-item `/predict` (a failing item becomes `unavailable`, "ML internal error"); non-positive `max_history_rows`/`max_batch_items` in the ML YAML fall back to 500/64 with a warning; `SQLite busy_timeout` is 10 s; `current_plant_id` is the first plant of the most recently started chunk; prediction `envState.distance` stays null rather than 0 when missing.

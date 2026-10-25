@@ -33,7 +33,7 @@ def make_settings(tmp_path: Path, dataset: Path) -> Settings:
     """Fully explicit settings: ignores backend/.env and the process environment."""
     return Settings(
         _env_file=None,
-        ML_SERVICE_URL="http://127.0.0.1:8001",
+        ML_SERVICE_URL="http://127.0.0.1:9",  # closed port: unit tests never reach a real ML service
         ML_TIMEOUT_S=10,
         ML_CONCURRENCY=4,
         EXPLAIN_MODE="latest_only",
