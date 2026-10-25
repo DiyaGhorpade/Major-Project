@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Cpu,
   Wifi,
   Database,
   CheckCircle2,
-  AlertTriangle,
   History,
   Activity,
   ArrowRight,
@@ -14,13 +13,16 @@ import {
   Sprout,
   HeartPulse,
 } from 'lucide-react';
-import { apiClient } from '../api/client';
-import { Plant, SensorRecord, Device, Session } from '../types';
+import { SensorRecord } from '../types';
+import { usePlants } from '../hooks/usePlants';
+import { useReadings } from '../hooks/useReadings';
+import { useDevices, useOverview, useSessions } from '../hooks/useData';
+import { ErrorState } from '../components/shared/ErrorState';
 import { MetricCard } from '../components/shared/MetricCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { SensorTrendChart } from '../components/charts/SensorTrendChart';
 import { RecordDetailDrawer } from '../components/shared/RecordDetailDrawer';
-import { formatDateTime, formatRelativeTime } from '../lib/utils';
+import { formatRelativeTime, formatPercent, formatTemp, formatLux } from '../lib/utils';
 import { NavRoute } from '../components/layout/Sidebar';
 
 interface OverviewPageProps {
@@ -28,63 +30,57 @@ interface OverviewPageProps {
 }
 
 export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
-  const [plants, setPlants] = useState<Plant[]>([]);
-  const [records, setRecords] = useState<SensorRecord[]>([]);
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<SensorRecord | null>(null);
   const [timeRange, setTimeRange] = useState<'24h' | '48h' | '7d'>('48h');
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [p, r, d, s] = await Promise.all([
-        apiClient.getPlants(),
-        apiClient.getRecords({ limit: 100 }),
-        apiClient.getDevices(),
-        apiClient.getSessions(),
-      ]);
-      setPlants(p);
-      setRecords(r);
-      setDevices(d);
-      setSessions(s);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const plantsQuery = usePlants();
+  const readingsQuery = useReadings({ limit: 100 });
+  const devicesQuery = useDevices();
+  const sessionsQuery = useSessions();
+  const overviewQuery = useOverview();
+  const plants = plantsQuery.data ?? [];
+  const records = readingsQuery.data ?? [];
+  const devices = devicesQuery.data ?? [];
+  const sessions = sessionsQuery.data ?? [];
+  const loadError = plantsQuery.error ?? readingsQuery.error ?? devicesQuery.error ?? sessionsQuery.error ?? overviewQuery.error;
 
   const jetson = devices.find((d) => d.type === 'jetson') || devices[0];
   const espNodes = devices.filter((d) => d.type === 'esp32');
   const activeSession = sessions[0];
 
-  const totalTransmissions = records.length;
-  const acceptedCount = records.filter((r) => r.status === 'accepted').length;
-  const flaggedCount = records.filter((r) => r.status === 'flagged').length;
-  const acceptanceRate = totalTransmissions > 0 ? ((acceptedCount / totalTransmissions) * 100).toFixed(1) : '100';
+  const totals = overviewQuery.data?.totals;
+  const totalTransmissions = totals?.readings ?? records.length;
+  const flaggedCount = totals?.flaggedReadings ?? records.filter((r) => r.status === 'flagged').length;
+  const acceptanceRate =
+    totalTransmissions > 0 ? (((totalTransmissions - flaggedCount) / totalTransmissions) * 100).toFixed(1) : '0.0';
 
   const recentRecords = records.slice(0, 8);
 
+  // Per-group summary from real plant statuses (nothing is shown as "thriving" before the model has run).
+  const clusterBadge = (cluster: string) => {
+    const group = plants.filter((p) => p.cluster === cluster);
+    if (group.length === 0 || !group.some((p) => p.conditionPrediction)) return 'Not analyzed yet';
+    return `${group.filter((p) => p.status === 'healthy').length}/${group.length} rated healthy`;
+  };
+
   return (
     <div className="space-y-6">
+      {loadError && <ErrorState message={loadError.message} />}
+
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-[#102F26] to-[#173F32] rounded-card p-6 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="w-2.5 h-2.5 rounded-full bg-[#79B86A] animate-pulse" />
             <span className="text-xs font-bold uppercase tracking-wider text-[#DDE8D8]">
-              Edge Collection Pipeline Active
+              Bundled Dataset Replay
             </span>
           </div>
           <h1 className="text-xl md:text-2xl font-bold tracking-tight">
             Tulsi Phenotype Stress Telemetry Dashboard
           </h1>
           <p className="text-xs text-[#DDE8D8]/80 mt-1 max-w-2xl leading-relaxed">
-            16 monitored Tulsi pots (*Ocimum sanctum* & *tenuiflorum*) across 4 stress trial groups. Node 1 reads Pots 1–12; Node 2 reads Pots 13–16.
+            16 monitored Tulsi pots (*Ocimum sanctum* & *tenuiflorum*) across 4 stress trial groups. Node 1 reads the odd-numbered pots; Node 2 reads the even-numbered pots.
           </p>
         </div>
 
@@ -135,7 +131,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
               </div>
             </div>
             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#EDF4EB] text-[#2E8B57] border border-[#DDE8D8]">
-              4 Pots Thriving
+              {clusterBadge('Cluster 1')}
             </span>
           </div>
 
@@ -154,7 +150,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
               </div>
             </div>
             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-              4 Pots Thirsty
+              {clusterBadge('Cluster 2')}
             </span>
           </div>
 
@@ -173,11 +169,11 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
               </div>
             </div>
             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-900 border border-yellow-300">
-              4 Pots Need Light
+              {clusterBadge('Cluster 3')}
             </span>
           </div>
 
-          {/* Cluster 4: Nutrient Stress */}
+          {/* Cluster 4: Temperature/Humidity Stress */}
           <div
             onClick={() => onNavigate('plants')}
             className="p-4 rounded-xl bg-white border border-purple-200 shadow-card hover:border-purple-400 cursor-pointer transition-all flex items-center justify-between"
@@ -187,12 +183,12 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
                 <Sprout className="w-5 h-5 text-purple-600" />
               </div>
               <div>
-                <span className="text-xs font-bold text-purple-950 block">Cluster 4: Nutrient Stress</span>
-                <span className="text-[11px] text-[#6B786E]">Pots 13 to 16 (Inert Coir)</span>
+                <span className="text-xs font-bold text-purple-950 block">Cluster 4: Temperature/Humidity Stress</span>
+                <span className="text-[11px] text-[#6B786E]">Pots 13 to 16 (Climate Trial)</span>
               </div>
             </div>
             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-300">
-              4 Pots Need Food
+              {clusterBadge('Cluster 4')}
             </span>
           </div>
         </div>
@@ -201,19 +197,18 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
       {/* Operational Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          title="Jetson Ingestion Node"
-          value="Online (Active)"
-          subtitle={jetson ? `Heartbeat: ${formatRelativeTime(jetson.last_heartbeat)}` : 'Active'}
+          title="Jetson Gateway"
+          value={jetson ? jetson.status.charAt(0).toUpperCase() + jetson.status.slice(1) : 'Unknown'}
+          subtitle={jetson?.last_heartbeat ? `Heartbeat: ${formatRelativeTime(jetson.last_heartbeat)}` : 'No live heartbeat (historical dataset)'}
           icon={<Cpu className="w-4 h-4 text-[#2E8B57]" />}
-          badge={<StatusBadge status="online" size="sm" />}
-          trend={{ value: '17% CPU', direction: 'neutral', label: 'JetPack 5.1' }}
+          badge={<StatusBadge status={jetson?.status ?? 'unknown'} size="sm" />}
           onClick={() => onNavigate('devices-network')}
         />
 
         <MetricCard
           title="ESP32 Nodes Configured"
           value={`${espNodes.filter((n) => n.status === 'online').length} / ${espNodes.length} Online`}
-          subtitle="Node 1 (Pots 1–12) • Node 2 (Pots 13–16)"
+          subtitle="Node 1 (odd pots) • Node 2 (even pots)"
           icon={<Wifi className="w-4 h-4 text-[#2E8B57]" />}
           trend={{ value: '16 Pots Mapped', direction: 'up' }}
           onClick={() => onNavigate('devices-network')}
@@ -221,8 +216,8 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
 
         <MetricCard
           title="Current Collection Pass"
-          value={activeSession ? `Session #${activeSession.session_id}` : 'Session #8'}
-          subtitle={activeSession ? `16/16 pots read in ${activeSession.duration_seconds}s` : '3x/day schedule'}
+          value={activeSession ? `Session #${activeSession.session_id}` : 'No sessions'}
+          subtitle={activeSession ? `${activeSession.received_records} of ${activeSession.expected_records} readings received` : 'n/a'}
           icon={<History className="w-4 h-4 text-[#2E8B57]" />}
           badge={<StatusBadge status="completed" size="sm" />}
           onClick={() => onNavigate('sessions')}
@@ -286,7 +281,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
               Recent Sensor Activity Log
             </h3>
             <p className="text-xs text-[#6B786E]">
-              Fresh timestamped readings from Node 1 (Points 1–12) and Node 2 (Points 1–4).
+              Latest stored readings from Node 1 and Node 2.
             </p>
           </div>
           <button
@@ -341,18 +336,18 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
                       Node {r.node_id} • Point {r.sampling_point}
                     </td>
                     <td className="py-3 px-4 font-bold text-[#1C2B23]">
-                      <span className={r.soil < 20 ? 'text-[#C98227]' : 'text-[#2E8B57]'}>
-                        {r.soil.toFixed(1)}%
+                      <span className={r.soil !== null && r.soil < 20 ? 'text-[#C98227]' : 'text-[#2E8B57]'}>
+                        {formatPercent(r.soil)}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-[#1C2B23] font-medium">
-                      {r.temperature.toFixed(1)}°C
+                      {formatTemp(r.temperature)}
                     </td>
                     <td className="py-3 px-4 text-[#1C2B23] font-medium">
-                      {r.humidity.toFixed(1)}%
+                      {formatPercent(r.humidity)}
                     </td>
                     <td className="py-3 px-4 text-[#1C2B23] font-medium">
-                      {Math.round(r.light).toLocaleString()} lx
+                      {formatLux(r.light)}
                     </td>
                     <td className="py-3 px-4">
                       <StatusBadge status={r.status || 'accepted'} size="sm" />

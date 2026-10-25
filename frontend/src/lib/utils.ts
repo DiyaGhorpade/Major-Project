@@ -1,6 +1,8 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+export const IST_TIME_ZONE = 'Asia/Kolkata';
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -17,6 +19,7 @@ export function formatDateTime(isoString?: string | null): string {
       minute: '2-digit',
       second: '2-digit',
       hour12: false,
+      timeZone: IST_TIME_ZONE,
     });
   } catch {
     return isoString;
@@ -43,14 +46,28 @@ export function formatRelativeTime(isoString?: string | null): string {
   }
 }
 
-export function formatPercent(value: number, decimals: number = 1): string {
-  return `${value.toFixed(decimals)}%`;
+export function formatPercent(value: number | null | undefined, decimals: number = 1): string {
+  return value === null || value === undefined ? 'n/a' : `${value.toFixed(decimals)}%`;
 }
 
-export function formatTemp(value: number, decimals: number = 1): string {
-  return `${value.toFixed(decimals)}°C`;
+export function formatTemp(value: number | null | undefined, decimals: number = 1): string {
+  return value === null || value === undefined ? 'n/a' : `${value.toFixed(decimals)}°C`;
 }
 
-export function formatLux(value: number): string {
-  return `${Math.round(value).toLocaleString()} lx`;
+export function formatLux(value: number | null | undefined): string {
+  return value === null || value === undefined ? 'n/a' : `${Math.round(value).toLocaleString()} lx`;
+}
+
+export function formatCount(value: number): string {
+  return value.toLocaleString('en-US');
+}
+
+/** Current wall-clock time in IST, "HH:MM". */
+export function formatIstClock(date: Date = new Date()): string {
+  return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: IST_TIME_ZONE });
+}
+
+/** Render a nullable value, or "n/a" when the backend has nothing (dataset rows carry no hardware metrics). */
+export function orNA(value: string | number | null | undefined, suffix: string = ''): string {
+  return value === null || value === undefined || value === '' ? 'n/a' : `${value}${suffix}`;
 }

@@ -1,23 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   PieChart,
   BarChart3,
   Sliders,
-  Filter,
   AlertCircle,
-  HelpCircle,
-  Layers,
-  Sparkles,
 } from 'lucide-react';
-import { apiClient } from '../api/client';
-import {
-  Plant,
-  LocalShapExplanation,
-  GlobalShapData,
-} from '../types';
+import { usePlants } from '../hooks/usePlants';
+import { useGlobalShap, useLocalShap } from '../hooks/useData';
 import { ShapWaterfallChart } from '../components/charts/ShapWaterfallChart';
 import { ShapBeeswarmChart } from '../components/charts/ShapBeeswarmChart';
-import { EmptyState } from '../components/shared/EmptyState';
+import { EmptyState, RunEmptyState } from '../components/shared/EmptyState';
 
 interface ShapAnalysisPageProps {
   initialPlantId?: number | string;
@@ -29,31 +21,13 @@ export const ShapAnalysisPage: React.FC<ShapAnalysisPageProps> = ({
   onNavigate,
 }) => {
   const [activeTab, setActiveTab] = useState<'local' | 'global'>('local');
-  const [plants, setPlants] = useState<Plant[]>([]);
   const [selectedPlantId, setSelectedPlantId] = useState<string>(String(initialPlantId));
-  const [localShap, setLocalShap] = useState<LocalShapExplanation | null>(null);
-  const [globalShap, setGlobalShap] = useState<GlobalShapData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    loadData();
-  }, [selectedPlantId]);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [p, lShap, gShap] = await Promise.all([
-        apiClient.getPlants(),
-        apiClient.getLocalShap(selectedPlantId),
-        apiClient.getGlobalShap(),
-      ]);
-      setPlants(p);
-      setLocalShap(lShap);
-      setGlobalShap(gShap);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const plants = usePlants().data ?? [];
+  const localQuery = useLocalShap(selectedPlantId);
+  const globalQuery = useGlobalShap();
+  const localShap = localQuery.data;
+  const globalShap = globalQuery.data?.data ?? null;
+  const globalHint = globalQuery.data?.unavailable?.hint ?? null;
 
   const selectedPlant = plants.find((p) => p.id === Number(selectedPlantId)) || plants[4] || plants[0];
 
@@ -133,7 +107,7 @@ export const ShapAnalysisPage: React.FC<ShapAnalysisPageProps> = ({
 
               {selectedPlant && (
                 <span className="text-xs text-[#6B786E]">
-                  Species: <span className="italic">{selectedPlant.species}</span> ({selectedPlant.samplingPoint})
+                  Species: <span className="italic">{selectedPlant.species}</span> (Node {selectedPlant.nodeId})
                 </span>
               )}
             </div>
@@ -147,10 +121,7 @@ export const ShapAnalysisPage: React.FC<ShapAnalysisPageProps> = ({
           {localShap ? (
             <ShapWaterfallChart explanation={localShap} />
           ) : (
-            <EmptyState
-              title="SHAP Decomposition Unavailable"
-              description="No local SHAP explanation generated for the selected specimen. Ensure the Jetson inference pipeline is running."
-            />
+            <RunEmptyState title="No explanation yet" />
           )}
         </div>
       ) : (
@@ -161,7 +132,11 @@ export const ShapAnalysisPage: React.FC<ShapAnalysisPageProps> = ({
           ) : (
             <EmptyState
               title="Global SHAP Data Unavailable"
-              description="Global evaluation dataset not found on edge storage."
+              description={
+                globalHint
+                  ? `The global SHAP report has not been generated yet. Run: ${globalHint}`
+                  : 'Global SHAP report not available.'
+              }
             />
           )}
         </div>

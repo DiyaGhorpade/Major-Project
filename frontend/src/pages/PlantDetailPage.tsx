@@ -1,21 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   ArrowLeft,
   Sparkles,
   PieChart,
-  AlertTriangle,
-  History,
-  Droplets,
-  Thermometer,
-  Wind,
-  Sun,
-  ShieldCheck,
-  Cpu,
-  BookOpen,
-  HelpCircle,
 } from 'lucide-react';
-import { apiClient } from '../api/client';
-import { Plant, SensorRecord, Recommendation } from '../types';
+import { SensorRecord, UserRecommendationStatus } from '../types';
+import { usePlant } from '../hooks/usePlants';
+import { useReadings } from '../hooks/useReadings';
+import { useRecommendations } from '../hooks/useRecommendations';
+import { ErrorState } from '../components/shared/ErrorState';
+import { AnomalyTip, EnvStateTip } from '../components/shared/Disclaimers';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { SensorReadingCard } from '../components/shared/SensorReadingCard';
 import { SensorTrendChart } from '../components/charts/SensorTrendChart';
@@ -30,39 +24,26 @@ interface PlantDetailPageProps {
 }
 
 export const PlantDetailPage: React.FC<PlantDetailPageProps> = ({ plantId, onNavigate }) => {
-  const [plant, setPlant] = useState<Plant | null>(null);
-  const [plantRecords, setPlantRecords] = useState<SensorRecord[]>([]);
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const numId = typeof plantId === 'string' ? parseInt(plantId.replace('plant-', ''), 10) : plantId;
+  const plantQuery = usePlant(numId);
+  const readingsQuery = useReadings({ plantId: numId, limit: 30 });
+  const recsQuery = useRecommendations({ plantId: numId });
+  const plant = plantQuery.data ?? null;
+  const plantRecords = readingsQuery.data ?? [];
+  const recommendations = recsQuery.data ?? [];
   const [selectedRecord, setSelectedRecord] = useState<SensorRecord | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadPlantData();
-  }, [plantId]);
-
-  const loadPlantData = async () => {
-    setLoading(true);
-    try {
-      const numId = typeof plantId === 'string' ? parseInt(plantId.replace('plant-', ''), 10) : plantId;
-      const [p, recs, allRecs] = await Promise.all([
-        apiClient.getPlantById(numId),
-        apiClient.getRecords({ plantId: numId, limit: 30 }),
-        apiClient.getRecommendations(),
-      ]);
-      setPlant(p);
-      setPlantRecords(recs);
-      setRecommendations(allRecs.filter((r) => r.plant_id === numId));
-    } finally {
-      setLoading(false);
-    }
+  const handleUpdateRecStatus = (id: string, status: UserRecommendationStatus) => {
+    void recsQuery.setStatus(id, status);
   };
 
-  const handleUpdateRecStatus = async (id: string, status: any) => {
-    const updated = await apiClient.updateRecommendationStatus(id, status);
-    if (updated) {
-      setRecommendations((prev) => prev.map((r) => (r.id === id ? updated : r)));
-    }
-  };
+  if (plantQuery.loading) {
+    return <div className="p-8 text-center text-xs text-stone-500">Loading plant...</div>;
+  }
+
+  if (plantQuery.error) {
+    return <ErrorState message={plantQuery.error.message} onRetry={() => void plantQuery.refetch()} />;
+  }
 
   if (!plant) {
     return (
@@ -136,7 +117,7 @@ export const PlantDetailPage: React.FC<PlantDetailPageProps> = ({ plantId, onNav
             </div>
             <div className="border-l border-stone-300 pl-4">
               <span className="text-stone-400 block text-[10px] uppercase font-semibold">Sensor Point</span>
-              <span className="font-mono font-bold text-[#1C2B23]">Point {plant.samplingPoint}</span>
+              <span className="font-mono font-bold text-[#1C2B23]">Point {plant.samplingPoint ?? 'n/a'}</span>
             </div>
             <div className="border-l border-stone-300 pl-4">
               <span className="text-stone-400 block text-[10px] uppercase font-semibold">Last Checked</span>
@@ -235,19 +216,19 @@ export const PlantDetailPage: React.FC<PlantDetailPageProps> = ({ plantId, onNav
           <div className="p-4 rounded-xl bg-[#EDF4EB]/50 border border-[#DDE8D8] space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <span className="text-[11px] text-[#6B786E] block mb-1">AI Diagnosis Result:</span>
-                <span className="text-lg font-bold text-[#102F26]">{pred.condition}</span>
+                <span className="text-[11px] text-[#6B786E] block mb-1">Heuristic stress-type guess:</span>
+                <span className="text-lg font-bold text-[#102F26]">{pred.condition ?? 'Not determined'}</span>
               </div>
               <div>
                 <span className="text-[11px] text-[#6B786E] block mb-1">AI Certainty:</span>
                 <div className="flex items-center gap-2">
                   <span className="text-lg font-mono font-bold text-[#2E8B57]">
-                    {(pred.confidence * 100).toFixed(0)}%
+                    {pred.confidence === null ? 'n/a' : `${(pred.confidence * 100).toFixed(0)}%`}
                   </span>
                   <div className="w-24 bg-stone-200 h-2 rounded-full overflow-hidden">
                     <div
                       className="bg-[#2E8B57] h-full rounded-full"
-                      style={{ width: `${pred.confidence * 100}%` }}
+                      style={{ width: `${(pred.confidence ?? 0) * 100}%` }}
                     />
                   </div>
                 </div>
@@ -255,9 +236,22 @@ export const PlantDetailPage: React.FC<PlantDetailPageProps> = ({ plantId, onNav
               <div>
                 <span className="text-[11px] text-[#6B786E] block mb-1">Inference Engine:</span>
                 <span className="font-mono text-xs text-stone-700">
-                  {pred.modelVersion} on Jetson Orin Nano
+                  Model {pred.modelVersion ?? 'n/a'}
                 </span>
               </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 text-[11px] text-[#6B786E]">
+              {pred.envState && (
+                <span>
+                  {pred.envState.label} <EnvStateTip />
+                </span>
+              )}
+              {pred.anomaly.isAnomaly !== null && (
+                <span>
+                  Reading check: {pred.anomaly.isAnomaly ? 'unusual reading' : 'normal'} <AnomalyTip />
+                </span>
+              )}
             </div>
 
             {/* Simple Layman Explanation of the AI Decision */}

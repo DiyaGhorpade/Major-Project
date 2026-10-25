@@ -12,11 +12,11 @@ import {
   History,
   Settings,
   Leaf,
-  Wifi,
   Cpu,
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useHealth } from '../../hooks/useHealth';
 
 export type NavRoute =
   | 'overview'
@@ -35,18 +35,18 @@ export type NavRoute =
 interface SidebarProps {
   currentRoute: NavRoute;
   onNavigate: (route: NavRoute) => void;
-  isJetsonOnline: boolean;
-  isDemo: boolean;
   onCloseMobile?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   currentRoute,
   onNavigate,
-  isJetsonOnline,
-  isDemo,
   onCloseMobile,
 }) => {
+  const { health, error: healthError, mlConnected } = useHealth();
+  const aiState = healthError ? 'backend' : health === null ? 'checking' : mlConnected ? 'connected' : 'unreachable';
+  const aiOnline = aiState === 'connected';
+
   const navSections = [
     {
       group: 'Workspace',
@@ -151,41 +151,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ))}
       </div>
 
-      {/* Jetson Connection Indicator Footer */}
-      <div className="p-4 border-t border-[#173F32] bg-[#0c241d] text-xs">
+      {/* AI model connection indicator (from /api/health) */}
+      <div className="p-4 border-t border-[#173F32] bg-[#0c241d] text-xs" data-testid="sidebar-model-status">
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-2">
             <span className="flex h-2 w-2 relative">
               <span
                 className={cn(
-                  'animate-ping absolute inline-flex h-full w-full rounded-full opacity-75',
-                  isJetsonOnline ? 'bg-emerald-400' : 'bg-red-400'
+                  'absolute inline-flex h-full w-full rounded-full opacity-75',
+                  aiOnline ? 'animate-ping bg-emerald-400' : 'bg-red-400'
                 )}
               />
               <span
                 className={cn(
                   'relative inline-flex rounded-full h-2 w-2',
-                  isJetsonOnline ? 'bg-[#2E8B57]' : 'bg-red-500'
+                  aiOnline ? 'bg-[#2E8B57]' : aiState === 'checking' ? 'bg-stone-400' : 'bg-red-500'
                 )}
               />
             </span>
             <span className="font-semibold text-white text-[11px]">
-              Jetson Receiver
+              {aiState === 'connected'
+                ? 'AI model connected'
+                : aiState === 'unreachable'
+                  ? 'AI model unreachable'
+                  : aiState === 'backend'
+                    ? 'Backend unreachable'
+                    : 'Checking AI model...'}
             </span>
           </div>
-          <span className="text-[10px] text-stone-400 font-mono">
-            {isDemo ? 'Demo Mode' : 'Live Ingest'}
-          </span>
         </div>
 
         <div className="text-[10px] text-stone-400 space-y-0.5 font-mono">
           <div className="flex justify-between">
-            <span>Host:</span>
-            <span className="text-stone-300">192.168.1.120:5000</span>
+            <span>Model:</span>
+            <span className="text-stone-300">{health?.modelVersion ? `v${health.modelVersion}` : 'n/a'}</span>
           </div>
           <div className="flex justify-between">
-            <span>Heartbeat:</span>
-            <span className="text-[#79B86A]">Active (2s ago)</span>
+            <span>Dataset:</span>
+            <span className="text-stone-300">{health?.datasetName ?? 'n/a'}</span>
           </div>
         </div>
       </div>

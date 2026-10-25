@@ -17,7 +17,10 @@ interface ShapWaterfallChartProps {
 }
 
 export const ShapWaterfallChart: React.FC<ShapWaterfallChartProps> = ({ explanation }) => {
-  let cumulative = explanation.base_value;
+  // The ML service gives no base value, so contributions start at 0 (relative to the model baseline).
+  let cumulative = explanation.base_value ?? 0;
+  const probability = explanation.predicted_probability;
+  const probabilityPct = probability === null ? 'n/a' : `${(probability * 100).toFixed(0)}%`;
 
   const waterfallData = explanation.features.map((f) => {
     const startVal = cumulative;
@@ -26,7 +29,7 @@ export const ShapWaterfallChart: React.FC<ShapWaterfallChartProps> = ({ explanat
 
     return {
       feature: f.displayName,
-      observed: `${f.observed_value} ${f.unit}`,
+      observed: f.observed_value === null ? 'n/a' : `${f.observed_value} ${f.unit}`,
       shap: f.shap_value,
       isPositive: f.shap_value >= 0,
       startVal,
@@ -54,7 +57,7 @@ export const ShapWaterfallChart: React.FC<ShapWaterfallChartProps> = ({ explanat
               </span>
             </div>
             <h3 className="text-base font-bold text-[#102F26] mb-1">
-              AI Decision: {explanation.target_class} ({(explanation.model_output * 100).toFixed(0)}% Certainty)
+              AI Decision: {explanation.target_class} ({probabilityPct} Certainty)
             </h3>
             <p className="text-xs text-[#1C2B23] leading-relaxed">
               {explanation.laymanSummary}
@@ -73,7 +76,7 @@ export const ShapWaterfallChart: React.FC<ShapWaterfallChartProps> = ({ explanat
             <div className="text-xl font-bold text-[#1C2B23] flex items-center gap-2">
               <span>{explanation.target_class}</span>
               <span className="text-xs font-normal px-2.5 py-0.5 rounded-full bg-[#EDF4EB] text-[#2E8B57] border border-[#DDE8D8]">
-                Edge Model {explanation.model_version}
+                Model {explanation.model_version ?? 'n/a'}
               </span>
             </div>
           </div>
@@ -82,13 +85,13 @@ export const ShapWaterfallChart: React.FC<ShapWaterfallChartProps> = ({ explanat
             <div>
               <span className="text-xs text-[#6B786E] block">Baseline Start E[f(x)]</span>
               <span className="font-mono text-sm font-semibold text-stone-600">
-                {(explanation.base_value * 100).toFixed(0)}%
+                {explanation.base_value === null ? 'n/a' : `${(explanation.base_value * 100).toFixed(0)}%`}
               </span>
             </div>
             <div>
               <span className="text-xs text-[#6B786E] block">Final AI Output f(x)</span>
               <span className="font-mono text-2xl font-bold text-[#1C2B23]">
-                {(explanation.model_output * 100).toFixed(0)}%
+                {probabilityPct}
               </span>
             </div>
           </div>
@@ -99,13 +102,15 @@ export const ShapWaterfallChart: React.FC<ShapWaterfallChartProps> = ({ explanat
           <div className="w-full bg-[#EDF4EB] h-3 rounded-full overflow-hidden flex">
             <div
               className="bg-[#2E8B57] h-full transition-all duration-500 rounded-l-full"
-              style={{ width: `${Math.min(100, explanation.model_output * 100)}%` }}
+              style={{ width: `${Math.min(100, (probability ?? 0) * 100)}%` }}
             />
           </div>
           <div className="flex justify-between text-[11px] text-[#6B786E]">
             <span>0% (No Likelihood)</span>
             <span className="font-semibold text-[#102F26]">
-              Net AI Shift: +{((explanation.model_output - explanation.base_value) * 100).toFixed(0)}%
+              {explanation.base_value !== null && explanation.model_output !== null
+                ? `Net AI Shift: +${((explanation.model_output - explanation.base_value) * 100).toFixed(0)}%`
+                : 'Contributions are relative to the model baseline (not provided)'}
             </span>
             <span>100% (Absolute Certainty)</span>
           </div>

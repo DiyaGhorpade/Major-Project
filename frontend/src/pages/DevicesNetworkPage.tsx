@@ -1,40 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Server,
   Cpu,
   Wifi,
-  HardDrive,
-  Activity,
-  ShieldCheck,
-  CheckCircle2,
   RefreshCw,
-  Radio,
-  Clock,
-  AlertTriangle,
 } from 'lucide-react';
-import { apiClient } from '../api/client';
-import { Device } from '../types';
+import { useDevices } from '../hooks/useData';
 import { StatusBadge } from '../components/shared/StatusBadge';
-import { MetricCard } from '../components/shared/MetricCard';
-import { formatDateTime, formatRelativeTime } from '../lib/utils';
+import { formatRelativeTime, orNA } from '../lib/utils';
 
 export const DevicesNetworkPage: React.FC = () => {
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadDevices();
-  }, []);
-
-  const loadDevices = async () => {
-    setLoading(true);
-    try {
-      const d = await apiClient.getDevices();
-      setDevices(d);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const devicesQuery = useDevices();
+  const devices = devicesQuery.data ?? [];
+  const loading = devicesQuery.loading;
 
   const jetson = devices.find((d) => d.type === 'jetson') || devices[0];
   const espNodes = devices.filter((d) => d.type === 'esp32');
@@ -56,16 +33,16 @@ export const DevicesNetworkPage: React.FC = () => {
             Devices & Local Area Telemetry Network
           </h1>
           <p className="text-xs text-[#6B786E] mt-1">
-            Real-time status of the NVIDIA Jetson Orin Nano edge ingest receiver and sequential ESP32 sensor multiplexers.
+            Gateway and ESP32 sensor nodes derived from the bundled dataset. The dataset carries no live heartbeat or hardware metrics, so those show n/a.
           </p>
         </div>
 
         <button
-          onClick={loadDevices}
+          onClick={() => void devicesQuery.refetch()}
           className="px-3.5 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold flex items-center gap-2 transition-colors self-start md:self-auto"
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          <span>Ping Network</span>
+          <span>Refresh</span>
         </button>
       </div>
 
@@ -86,14 +63,14 @@ export const DevicesNetworkPage: React.FC = () => {
                 </div>
                 <h2 className="text-xl font-bold tracking-tight">{jetson.name}</h2>
                 <div className="text-xs text-[#DDE8D8]/80 font-mono mt-0.5">
-                  IP: {jetson.ip_address} • Port 5000 (receiver.py) • MAC: {jetson.mac_address}
+                  IP: {orNA(jetson.ip_address)} • MAC: {orNA(jetson.mac_address)}
                 </div>
               </div>
             </div>
 
             <div className="text-right text-xs text-[#DDE8D8]/80 font-mono">
-              <div>Uptime: {jetson.hardware_details.uptime}</div>
-              <div>Firmware: {jetson.hardware_details.firmware_version}</div>
+              <div>Uptime: {orNA(jetson.hardware_details.uptime)}</div>
+              <div>Firmware: {orNA(jetson.hardware_details.firmware_version)}</div>
             </div>
           </div>
 
@@ -102,12 +79,12 @@ export const DevicesNetworkPage: React.FC = () => {
             <div className="bg-[#102F26]/70 p-3.5 rounded-xl border border-[#2E6754]">
               <span className="text-[#DDE8D8]/70 block mb-1">CPU Load</span>
               <div className="text-xl font-bold font-mono text-white">
-                {jetson.hardware_details.cpu_usage}%
+                {orNA(jetson.hardware_details.cpu_usage, '%')}
               </div>
               <div className="w-full bg-[#173F32] h-1.5 rounded-full mt-2 overflow-hidden">
                 <div
                   className="bg-[#79B86A] h-full rounded-full"
-                  style={{ width: `${jetson.hardware_details.cpu_usage}%` }}
+                  style={{ width: `${jetson.hardware_details.cpu_usage ?? 0}%` }}
                 />
               </div>
             </div>
@@ -115,7 +92,7 @@ export const DevicesNetworkPage: React.FC = () => {
             <div className="bg-[#102F26]/70 p-3.5 rounded-xl border border-[#2E6754]">
               <span className="text-[#DDE8D8]/70 block mb-1">System Memory</span>
               <div className="text-xl font-bold font-mono text-white">
-                {jetson.hardware_details.ram_used_gb} / {jetson.hardware_details.ram_total_gb} GB
+                {jetson.hardware_details.ram_used_gb === null || jetson.hardware_details.ram_total_gb === null ? 'n/a' : `${jetson.hardware_details.ram_used_gb} / ${jetson.hardware_details.ram_total_gb} GB`}
               </div>
               <div className="w-full bg-[#173F32] h-1.5 rounded-full mt-2 overflow-hidden">
                 <div className="bg-[#79B86A] h-full rounded-full" style={{ width: '40%' }} />
@@ -125,7 +102,7 @@ export const DevicesNetworkPage: React.FC = () => {
             <div className="bg-[#102F26]/70 p-3.5 rounded-xl border border-[#2E6754]">
               <span className="text-[#DDE8D8]/70 block mb-1">NVMe Storage</span>
               <div className="text-xl font-bold font-mono text-white">
-                {jetson.hardware_details.disk_used_gb} / {jetson.hardware_details.disk_total_gb} GB
+                {jetson.hardware_details.disk_used_gb === null || jetson.hardware_details.disk_total_gb === null ? 'n/a' : `${jetson.hardware_details.disk_used_gb} / ${jetson.hardware_details.disk_total_gb} GB`}
               </div>
               <div className="w-full bg-[#173F32] h-1.5 rounded-full mt-2 overflow-hidden">
                 <div className="bg-[#79B86A] h-full rounded-full" style={{ width: '20%' }} />
@@ -135,9 +112,9 @@ export const DevicesNetworkPage: React.FC = () => {
             <div className="bg-[#102F26]/70 p-3.5 rounded-xl border border-[#2E6754]">
               <span className="text-[#DDE8D8]/70 block mb-1">Die Temperature</span>
               <div className="text-xl font-bold font-mono text-white">
-                {jetson.hardware_details.temperature_c}°C
+                {orNA(jetson.hardware_details.temperature_c, '°C')}
               </div>
-              <span className="text-[10px] text-[#79B86A] mt-1 block">Nominal Passive Cooling</span>
+              
             </div>
           </div>
         </div>
@@ -187,22 +164,22 @@ export const DevicesNetworkPage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-3 text-xs mb-4">
                   <div>
                     <span className="text-stone-400 block text-[10px] uppercase font-semibold">IP Address</span>
-                    <span className="font-mono text-[#1C2B23] font-medium">{node.ip_address}</span>
+                    <span className="font-mono text-[#1C2B23] font-medium">{orNA(node.ip_address)}</span>
                   </div>
                   <div>
                     <span className="text-stone-400 block text-[10px] uppercase font-semibold">MAC Address</span>
-                    <span className="font-mono text-stone-600">{node.mac_address}</span>
+                    <span className="font-mono text-stone-600">{orNA(node.mac_address)}</span>
                   </div>
                   <div>
                     <span className="text-stone-400 block text-[10px] uppercase font-semibold">Wi-Fi RSSI Signal</span>
                     <span className="font-semibold text-[#2E8B57]">
-                      {node.hardware_details.rssi_dbm} dBm (Good)
+                      {orNA(node.hardware_details.rssi_dbm, ' dBm')}
                     </span>
                   </div>
                   <div>
                     <span className="text-stone-400 block text-[10px] uppercase font-semibold">Sampling Channels</span>
                     <span className="font-bold text-[#1C2B23]">
-                      {node.hardware_details.channels} Channels
+                      {orNA(node.hardware_details.channels, ' Channels')}
                     </span>
                   </div>
                 </div>
@@ -210,7 +187,7 @@ export const DevicesNetworkPage: React.FC = () => {
 
               <div className="pt-3 border-t border-[#DCE4D9] flex items-center justify-between text-[11px] text-[#6B786E] font-mono">
                 <span>Last Tx: {formatRelativeTime(node.last_transmission)}</span>
-                <span>Uptime: {node.hardware_details.uptime}</span>
+                <span>Uptime: {orNA(node.hardware_details.uptime)}</span>
               </div>
             </div>
           ))}

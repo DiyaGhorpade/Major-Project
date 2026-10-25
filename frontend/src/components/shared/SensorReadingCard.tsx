@@ -1,7 +1,6 @@
 import React from 'react';
 import { Droplets, Thermometer, Wind, Sun, Beaker, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { PlantOptimalRange } from '../../types';
 
 export type SensorType = 'soil' | 'temperature' | 'humidity' | 'light' | 'ph';
 

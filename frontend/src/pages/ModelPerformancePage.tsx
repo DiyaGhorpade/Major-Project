@@ -1,46 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Target,
-  Database,
-  Calendar,
-  Layers,
-  Cpu,
   CheckCircle2,
-  AlertCircle,
-  HelpCircle,
 } from 'lucide-react';
-import { apiClient } from '../api/client';
-import { ModelMetrics } from '../types';
+import { useModelMetrics } from '../hooks/useData';
+import { ErrorState } from '../components/shared/ErrorState';
+import { DisclaimerNote } from '../components/shared/Disclaimers';
 import { MetricCard } from '../components/shared/MetricCard';
-import { StatusBadge } from '../components/shared/StatusBadge';
 import { ConfusionMatrixChart } from '../components/charts/ConfusionMatrixChart';
 import { EmptyState } from '../components/shared/EmptyState';
 import { formatDateTime } from '../lib/utils';
 
 export const ModelPerformancePage: React.FC = () => {
-  const [metrics, setMetrics] = useState<ModelMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
+  const metricsQuery = useModelMetrics();
+  const metrics = metricsQuery.data;
 
-  useEffect(() => {
-    loadMetrics();
-  }, []);
-
-  const loadMetrics = async () => {
-    setLoading(true);
-    try {
-      const m = await apiClient.getModelMetrics();
-      setMetrics(m);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (metricsQuery.error) {
+    return <ErrorState message={metricsQuery.error.message} onRetry={() => void metricsQuery.refetch()} />;
+  }
 
   if (!metrics) {
     return (
       <EmptyState
         icon={<Target className="w-8 h-8 text-stone-400" />}
-        title="Evaluation Benchmark Metrics Unavailable"
-        description="No test split evaluation artifacts found for the active model version. Run the test benchmark evaluation script on the Jetson to populate accuracy and confusion matrix metrics."
+        title={metricsQuery.loading ? "Loading evaluation metrics..." : "Evaluation Benchmark Metrics Unavailable"}
+        description={metricsQuery.loading ? "" : "No evaluation artifacts found for the active model version."}
       />
     );
   }
@@ -62,7 +46,7 @@ export const ModelPerformancePage: React.FC = () => {
             {metrics.model_name}
           </h1>
           <p className="text-xs text-[#6B786E] mt-1 max-w-2xl">
-            Trained on multi-cluster microclimate readings. Evaluated on holdout test dataset ({metrics.split}) consisting of {metrics.total_samples.toLocaleString()} samples.
+            Evaluated on a chronological hold-out set ({metrics.split}) consisting of {metrics.total_samples.toLocaleString()} samples.
           </p>
         </div>
 
@@ -84,13 +68,13 @@ export const ModelPerformancePage: React.FC = () => {
         <MetricCard
           title="Macro Precision"
           value={`${(metrics.overall.precision * 100).toFixed(1)}%`}
-          subtitle="Weighted across 5 stress classes"
+          subtitle={`Macro average over ${metrics.confusion_matrix.labels.length} classes`}
           icon={<CheckCircle2 className="w-4 h-4 text-[#2E8B57]" />}
         />
         <MetricCard
           title="Macro Recall"
           value={`${(metrics.overall.recall * 100).toFixed(1)}%`}
-          subtitle="Sensitivity to early water/heat stress"
+          subtitle={`Macro average over ${metrics.confusion_matrix.labels.length} classes`}
           icon={<CheckCircle2 className="w-4 h-4 text-[#2E8B57]" />}
         />
         <MetricCard
@@ -98,9 +82,10 @@ export const ModelPerformancePage: React.FC = () => {
           value={`${(metrics.overall.f1_score * 100).toFixed(1)}%`}
           subtitle="Balanced precision-recall score"
           icon={<CheckCircle2 className="w-4 h-4 text-[#2E8B57]" />}
-          badge={<StatusBadge status="optimal" size="sm" />}
         />
       </div>
+
+      <DisclaimerNote disclaimer="modelPerformance" />
 
       {/* Confusion Matrix Chart */}
       <ConfusionMatrixChart metrics={metrics} />
@@ -117,7 +102,7 @@ export const ModelPerformancePage: React.FC = () => {
             </p>
           </div>
           <span className="text-xs font-mono text-stone-500">
-            5 Diagnostic Classes
+            {metrics.confusion_matrix.labels.length} Classes
           </span>
         </div>
 
@@ -153,7 +138,7 @@ export const ModelPerformancePage: React.FC = () => {
                   </td>
                   <td className="py-3 px-4 text-right">
                     <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#EDF4EB] text-[#2E8B57] border border-[#DDE8D8]">
-                      High Confidence
+                      {c.laymanStatus}
                     </span>
                   </td>
                 </tr>

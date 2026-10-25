@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   BrainCircuit,
   Cpu,
@@ -6,62 +6,35 @@ import {
   Target,
   Sparkles,
   ArrowRight,
-  ShieldAlert,
-  Database,
-  Layers,
-  CheckCircle2,
-  AlertTriangle,
 } from 'lucide-react';
-import { apiClient } from '../api/client';
-import { Plant, ModelMetrics } from '../types';
 import { MetricCard } from '../components/shared/MetricCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
-import { EmptyState } from '../components/shared/EmptyState';
+import { EmptyState, RunEmptyState } from '../components/shared/EmptyState';
+import { ErrorState } from '../components/shared/ErrorState';
+import { AnomalyTip } from '../components/shared/Disclaimers';
 import { NavRoute } from '../components/layout/Sidebar';
+import { useHealth } from '../hooks/useHealth';
+import { useInsights, useModelMetrics } from '../hooks/useData';
 
 interface AiInsightsPageProps {
   onNavigate: (route: NavRoute, plantId?: string) => void;
 }
 
 export const AiInsightsPage: React.FC<AiInsightsPageProps> = ({ onNavigate }) => {
-  const [plants, setPlants] = useState<Plant[]>([]);
-  const [isModelConnected, setIsModelConnected] = useState<boolean>(apiClient.isModelConnected());
-  const [metrics, setMetrics] = useState<ModelMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { health, mlConnected } = useHealth();
+  const insightsQuery = useInsights();
+  const metricsQuery = useModelMetrics();
+  const insights = insightsQuery.data;
+  const metrics = metricsQuery.data;
+  const isModelConnected = mlConnected;
 
-  useEffect(() => {
-    loadData();
-  }, [isModelConnected]);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const p = await apiClient.getPlants();
-      setPlants(p);
-      if (isModelConnected) {
-        const m = await apiClient.getModelMetrics();
-        setMetrics(m);
-      } else {
-        setMetrics(null);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleToggleModel = (connected: boolean) => {
-    apiClient.setModelConnected(connected);
-    setIsModelConnected(connected);
-  };
-
-  // Prediction distribution
-  const predictions = plants.map((p) => p.conditionPrediction).filter(Boolean);
-  const conditionCounts: Record<string, number> = {};
-  predictions.forEach((pred) => {
-    if (pred) {
-      conditionCounts[pred.condition] = (conditionCounts[pred.condition] || 0) + 1;
-    }
-  });
+  // Latest heuristic stress-type guess per plant (a guess, not a diagnosis).
+  const conditionCounts: Record<string, number> = insights?.latestConditionGuessCounts ?? {};
+  const latestSeverity = insights?.latestSeverityCounts ?? {};
+  const attentionFlags = (latestSeverity.moderate ?? 0) + (latestSeverity.high ?? 0);
+  const diagnosed = insights?.explanationCoverage.totalPlants
+    ? Object.entries(latestSeverity).reduce((n, [k, v]) => (k === 'unmeasured' ? n : n + v), 0)
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -74,72 +47,67 @@ export const AiInsightsPage: React.FC<AiInsightsPageProps> = ({ onNavigate }) =>
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wider text-[#426B4F]">
-                NVIDIA Jetson Edge Inference
+                ML Inference Service
               </span>
-              <StatusBadge status={isModelConnected ? 'online' : 'offline'} size="sm" />
+              <StatusBadge status={isModelConnected ? 'online' : 'offline'} label={isModelConnected ? 'AI model connected' : 'AI model unreachable'} size="sm" />
             </div>
             <h1 className="text-lg font-bold text-[#1C2B23]">
-              Plant Stress & Microclimate ML Diagnostics
+              Plant Stress & Microclimate ML Insights
             </h1>
           </div>
         </div>
 
-        {/* Toggle to simulate model connected / disconnected states as specified */}
-        <div className="flex items-center gap-3 text-xs">
-          <span className="text-[#6B786E]">Simulate Hardware Service:</span>
-          <button
-            onClick={() => handleToggleModel(!isModelConnected)}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all border ${
-              isModelConnected
-                ? 'bg-[#EDF4EB] text-[#2E8B57] border-[#DDE8D8] hover:bg-[#DDE8D8]'
-                : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-            }`}
-          >
-            {isModelConnected ? 'Model Service: Online' : 'Model Service: Offline'}
-          </button>
-        </div>
       </div>
 
-      {!isModelConnected ? (
-        /* Polished "Model Not Connected" Empty State as required by Page 5 */
+      {insightsQuery.error && (
+        <ErrorState message={insightsQuery.error.message} onRetry={() => void insightsQuery.refetch()} />
+      )}
+
+      {!isModelConnected && !insights?.hasPredictions ? (
         <EmptyState
           icon={<Cpu className="w-8 h-8 text-stone-400" />}
-          title="Edge ML Model Not Connected"
-          description="The Jetson Orin Nano inference service is currently not running or unreachable at the configured model endpoint. Sensor data collection continues unimpeded. Connect or start the local classifier daemon to view stress predictions and explainability maps."
-          actionText="Connect Jetson ML Service"
-          onAction={() => handleToggleModel(true)}
+          title="AI model unreachable"
+          description={
+            health
+              ? `The ML service is not reachable at ${health.mlService.url}. Sensor data is still available; predictions need the ML service.`
+              : 'Checking the ML service...'
+          }
         />
-      ) : (
+      ) : insights && !insights.hasPredictions ? (
+        <RunEmptyState />
+      ) : !insights ? null : (
         <>
-          {/* Edge Model Overview Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCard
               title="Classifier Model Version"
-              value="v1.2.0-jetson"
-              subtitle="Edge XGBoost Pipeline"
+              value={insights.model.modelVersion ? `v${insights.model.modelVersion}` : 'n/a'}
+              subtitle={insights.model.runId ?? 'XGBoost classifier'}
               icon={<Cpu className="w-4 h-4 text-[#2E8B57]" />}
-              badge={<StatusBadge status="optimal" size="sm" />}
+              badge={<StatusBadge status={isModelConnected ? 'online' : 'offline'} size="sm" />}
             />
             <MetricCard
-              title="Inference Latency"
-              value="1.8 ms"
-              subtitle="Jetson Orin GPU TensorRT"
-              icon={<Sparkles className="w-4 h-4 text-[#2E8B57]" />}
-              trend={{ value: 'Sub-millisecond', direction: 'up' }}
+              title="Anomalous Readings"
+              value={insights.anomalies.count.toLocaleString()}
+              subtitle={insights.anomalies.interpretation}
+              icon={
+                <span className="inline-flex items-center gap-1">
+                  <Sparkles className="w-4 h-4 text-[#2E8B57]" />
+                  <AnomalyTip />
+                </span>
+              }
             />
             <MetricCard
-              title="Test Benchmark Accuracy"
-              value="94.2%"
-              subtitle="N = 1,420 holdout evaluations"
+              title="Hold-out Accuracy"
+              value={metrics ? `${(metrics.overall.accuracy * 100).toFixed(1)}%` : 'n/a'}
+              subtitle={metrics ? `N = ${metrics.total_samples.toLocaleString()} (synthetic labels)` : 'Evaluation unavailable'}
               icon={<Target className="w-4 h-4 text-[#2E8B57]" />}
               onClick={() => onNavigate('model-performance')}
             />
             <MetricCard
-              title="Active Diagnoses"
-              value={`${predictions.length} / 16 Plants`}
-              subtitle="3 Attention Flags Identified"
+              title="Analyzed Plants"
+              value={`${diagnosed} / ${insights.explanationCoverage.totalPlants} Plants`}
+              subtitle={`${attentionFlags} plants rated moderate or high`}
               icon={<BrainCircuit className="w-4 h-4 text-[#2E8B57]" />}
-              badge={<StatusBadge status="healthy" size="sm" />}
             />
           </div>
 
@@ -147,62 +115,29 @@ export const AiInsightsPage: React.FC<AiInsightsPageProps> = ({ onNavigate }) =>
           <div className="bg-white rounded-card border border-[#DCE4D9] p-5 shadow-card">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-sm font-bold text-[#1C2B23]">
-                  Specimen Condition Distribution
-                </h3>
-                <p className="text-xs text-[#6B786E]">
-                  Inferred phenotype state across 16 monitored indoor flora.
-                </p>
+                <h3 className="text-sm font-bold text-[#1C2B23]">Heuristic Stress-Type Guess (latest reading per plant)</h3>
+                <p className="text-xs text-[#6B786E]">A heuristic guess from the model's recommendation categories, not a diagnosis.</p>
               </div>
               <span className="text-xs font-mono text-stone-500">
-                100% Ingest Coverage
+                {insights.predictions.ok?.toLocaleString() ?? 0} predictions
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-2">
-              <div className="p-3.5 rounded-xl bg-[#EDF4EB] border border-[#DDE8D8]">
-                <div className="flex items-center justify-between text-xs mb-1 text-[#2E8B57] font-semibold">
-                  <span>Healthy Control (Cluster 1)</span>
-                  <span>{conditionCounts['Healthy'] || 4} Plants</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 my-2">
+              {Object.entries(conditionCounts).map(([label, count]) => (
+                <div key={label} className="p-3.5 rounded-xl bg-[#EDF4EB] border border-[#DDE8D8]">
+                  <div className="flex items-center justify-between text-xs mb-1 text-[#173F32] font-semibold">
+                    <span>{label}</span>
+                    <span>{count} Plants</span>
+                  </div>
+                  <div className="w-full bg-[#DDE8D8] h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-[#2E8B57] h-full"
+                      style={{ width: `${(count / Math.max(1, insights.explanationCoverage.totalPlants)) * 100}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full bg-[#DDE8D8] h-2 rounded-full overflow-hidden">
-                  <div className="bg-[#2E8B57] h-full" style={{ width: '25%' }} />
-                </div>
-                <span className="text-[10px] text-stone-500 mt-1 block">Baseline optimal growth</span>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200">
-                <div className="flex items-center justify-between text-xs mb-1 text-amber-800 font-semibold">
-                  <span>Water Stress (Cluster 2)</span>
-                  <span>{conditionCounts['Water Stress'] || 4} Plants</span>
-                </div>
-                <div className="w-full bg-amber-200 h-2 rounded-full overflow-hidden">
-                  <div className="bg-amber-600 h-full" style={{ width: '25%' }} />
-                </div>
-                <span className="text-[10px] text-amber-700 mt-1 block">Soil moisture &lt; 20% deficit</span>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-yellow-50 border border-yellow-200">
-                <div className="flex items-center justify-between text-xs mb-1 text-yellow-800 font-semibold">
-                  <span>Light Stress (Cluster 3)</span>
-                  <span>{conditionCounts['Light Stress'] || 4} Plants</span>
-                </div>
-                <div className="w-full bg-yellow-200 h-2 rounded-full overflow-hidden">
-                  <div className="bg-yellow-600 h-full" style={{ width: '25%' }} />
-                </div>
-                <span className="text-[10px] text-yellow-700 mt-1 block">Low PAR &lt; 500 lux shade</span>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-purple-50 border border-purple-200">
-                <div className="flex items-center justify-between text-xs mb-1 text-purple-800 font-semibold">
-                  <span>Nutrient Stress (Cluster 4)</span>
-                  <span>{conditionCounts['Nutrient Stress'] || 4} Plants</span>
-                </div>
-                <div className="w-full bg-purple-200 h-2 rounded-full overflow-hidden">
-                  <div className="bg-purple-600 h-full" style={{ width: '25%' }} />
-                </div>
-                <span className="text-[10px] text-purple-700 mt-1 block">Nitrogen/Macronutrient depletion</span>
-              </div>
+              ))}
             </div>
           </div>
 

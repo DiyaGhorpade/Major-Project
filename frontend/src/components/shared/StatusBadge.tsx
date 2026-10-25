@@ -11,6 +11,7 @@ import {
   Droplets,
   Sun,
   Sprout,
+  Thermometer,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -18,7 +19,6 @@ export type BadgeVariant =
   | 'online'
   | 'offline'
   | 'unknown'
-  | 'demo'
   | 'healthy'
   | 'attention'
   | 'critical'
@@ -35,7 +35,16 @@ export type BadgeVariant =
   | 'low'
   | 'water stress'
   | 'light stress'
-  | 'nutrient stress';
+  | 'nutrient stress'
+  | 'temperature/humidity stress'
+  | 'mixed stress'
+  | 'unclassified stress'
+  | 'failed'
+  | 'partial'
+  | 'waiting'
+  | 'superseded'
+  | 'queued'
+  | 'running';
 
 interface StatusBadgeProps {
   status: BadgeVariant | string;
@@ -67,10 +76,50 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       bg = 'bg-red-50 text-red-700 border-red-200';
       icon = <WifiOff className="w-3.5 h-3.5" />;
       break;
-    case 'demo':
-      text = text || 'Demo Mode';
+    case 'unknown':
+      text = text || 'Unknown';
+      bg = 'bg-stone-100 text-stone-600 border-stone-200';
+      icon = <HelpCircle className="w-3.5 h-3.5" />;
+      break;
+    case 'unmeasured':
+      text = text || 'Not analyzed yet';
+      bg = 'bg-stone-100 text-stone-600 border-stone-200';
+      icon = <Clock className="w-3.5 h-3.5" />;
+      break;
+    case 'failed':
+      text = text || 'Failed';
+      bg = 'bg-red-50 text-red-700 border-red-200';
+      icon = <XCircle className="w-3.5 h-3.5" />;
+      break;
+    case 'partial':
+      text = text || 'Partial';
       bg = 'bg-amber-50 text-amber-800 border-amber-200';
-      icon = <Activity className="w-3.5 h-3.5" />;
+      icon = <AlertTriangle className="w-3.5 h-3.5" />;
+      break;
+    case 'scheduled':
+      text = text || 'Scheduled';
+      bg = 'bg-blue-50 text-blue-700 border-blue-200';
+      icon = <Clock className="w-3.5 h-3.5" />;
+      break;
+    case 'waiting':
+      text = text || 'Waiting';
+      bg = 'bg-stone-100 text-stone-600 border-stone-200';
+      icon = <Clock className="w-3.5 h-3.5" />;
+      break;
+    case 'superseded':
+      text = text || 'Superseded';
+      bg = 'bg-stone-100 text-stone-500 border-stone-200';
+      icon = <Clock className="w-3.5 h-3.5" />;
+      break;
+    case 'queued':
+      text = text || 'Queued';
+      bg = 'bg-blue-50 text-blue-700 border-blue-200';
+      icon = <Clock className="w-3.5 h-3.5" />;
+      break;
+    case 'running':
+      text = text || 'Running';
+      bg = 'bg-blue-50 text-blue-700 border-blue-200';
+      icon = <Activity className="w-3.5 h-3.5 animate-pulse" />;
       break;
     case 'healthy':
     case 'optimal':
@@ -92,6 +141,21 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       text = text || 'Nutrient Stress';
       bg = 'bg-purple-50 text-purple-900 border-purple-300';
       icon = <Sprout className="w-3.5 h-3.5 text-purple-600" />;
+      break;
+    case 'temperature/humidity stress':
+      text = text || 'Temperature/Humidity Stress';
+      bg = 'bg-sky-50 text-sky-900 border-sky-300';
+      icon = <Thermometer className="w-3.5 h-3.5 text-sky-600" />;
+      break;
+    case 'mixed stress':
+      text = text || 'Mixed Stress';
+      bg = 'bg-orange-50 text-orange-900 border-orange-300';
+      icon = <AlertTriangle className="w-3.5 h-3.5 text-orange-600" />;
+      break;
+    case 'unclassified stress':
+      text = text || 'Unclassified Stress';
+      bg = 'bg-stone-100 text-stone-700 border-stone-200';
+      icon = <HelpCircle className="w-3.5 h-3.5" />;
       break;
     case 'attention':
     case 'warning':

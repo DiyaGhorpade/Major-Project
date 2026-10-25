@@ -1,15 +1,9 @@
-import React, { useState } from 'react';
-import {
-  Menu,
-  Search,
-  Bell,
-  RefreshCw,
-  Cpu,
-  CheckCircle2,
-  AlertTriangle,
-  X,
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Menu, Search, Bell, RefreshCw, AlertTriangle, Play, RotateCcw, Loader2, X } from 'lucide-react';
 import { NavRoute } from './Sidebar';
+import { usePipeline } from '../../hooks/usePipeline';
+import { formatCount, formatIstClock, formatRelativeTime } from '../../lib/utils';
+import type { Alert } from '../../types';
 
 interface TopBarProps {
   currentRoute: NavRoute;
@@ -17,8 +11,9 @@ interface TopBarProps {
   onOpenMobile: () => void;
   onRefresh: () => void;
   isRefreshing?: boolean;
-  notificationCount?: number;
-  onNavigate: (route: NavRoute) => void;
+  /** Recent alerts from /api/monitoring/overview (empty = no badge). */
+  alerts?: Alert[];
+  onNavigate: (route: NavRoute, plantId?: number | string) => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -27,11 +22,25 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenMobile,
   onRefresh,
   isRefreshing = false,
-  notificationCount = 2,
+  alerts = [],
   onNavigate,
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [clock, setClock] = useState(() => formatIstClock());
+  const { run, isActive, hasCompletedRun, processed, total, percent, state } = usePipeline();
+
+  useEffect(() => {
+    const id = setInterval(() => setClock(formatIstClock()), 15000);
+    return () => clearInterval(id);
+  }, []);
+
+  const runLabel = hasCompletedRun ? 'Re-run' : 'Run';
+  const RunIcon = hasCompletedRun ? RotateCcw : Play;
+  const progressText =
+    state === 'queued' && total === 0
+      ? 'Starting analysis...'
+      : `Analyzing ${formatCount(processed)} / ${formatCount(total)} readings...`;
 
   // Page titles mapping
   const routeTitles: Record<NavRoute, { title: string; category: string }> = {
@@ -78,6 +87,36 @@ export const TopBar: React.FC<TopBarProps> = ({
 
       {/* Right Controls */}
       <div className="flex items-center gap-3">
+        {/* Run pipeline + progress */}
+        <div className="flex items-center gap-3">
+          {isActive && (
+            <div className="hidden sm:block w-48" data-testid="run-progress">
+              <div className="text-[11px] text-[#426B4F] font-medium leading-tight truncate" aria-live="polite">
+                {progressText}
+              </div>
+              <div
+                className="mt-1 h-1.5 rounded-full bg-[#DCE4D9] overflow-hidden"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(percent)}
+              >
+                <div className="h-full bg-[#2E8B57] transition-all duration-500" style={{ width: `${Math.min(100, percent)}%` }} />
+              </div>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => void run()}
+            disabled={isActive}
+            title={isActive ? 'Analysis in progress' : 'Analyze the bundled plant dataset with the ML model'}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#2E8B57] hover:bg-[#236e44] disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold shadow-sm transition-colors"
+          >
+            {isActive ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <RunIcon className="w-4 h-4" aria-hidden="true" />}
+            <span>{runLabel}</span>
+          </button>
+        </div>
+
         {/* Contextual Search */}
         <div className="relative hidden lg:block w-64">
           <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -105,10 +144,10 @@ export const TopBar: React.FC<TopBarProps> = ({
           <button
             onClick={() => setShowNotifications(!showNotifications)}
             className="p-2 rounded-lg text-stone-600 hover:text-stone-900 hover:bg-[#EDF4EB] transition-colors relative border border-transparent hover:border-[#DDE8D8]"
-            title="System Notifications"
+            title="Recent alerts"
           >
             <Bell className="w-4 h-4" />
-            {notificationCount > 0 && (
+            {alerts.length > 0 && (
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#C98227]" />
             )}
           </button>
@@ -117,7 +156,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           {showNotifications && (
             <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-dropdown border border-[#DCE4D9] py-3 z-50 text-xs animate-fadeIn">
               <div className="px-4 pb-2 border-b border-[#DCE4D9] flex items-center justify-between">
-                <span className="font-bold text-[#1C2B23]">Active Telemetry Alerts</span>
+                <span className="font-bold text-[#1C2B23]">Recent Alerts</span>
                 <button
                   onClick={() => setShowNotifications(false)}
                   className="text-stone-400 hover:text-stone-600"
@@ -127,37 +166,30 @@ export const TopBar: React.FC<TopBarProps> = ({
               </div>
 
               <div className="divide-y divide-[#DCE4D9]/60 max-h-64 overflow-y-auto">
-                <div
-                  onClick={() => {
-                    onNavigate('recommendations');
-                    setShowNotifications(false);
-                  }}
-                  className="p-3 hover:bg-[#EDF4EB]/50 cursor-pointer transition-colors"
-                >
-                  <div className="flex items-center gap-1.5 text-amber-700 font-semibold mb-1">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Tulsi #5 (Cluster 2): Water Stress Deficit</span>
+                {alerts.length === 0 && (
+                  <div className="p-4 text-center text-[11px] text-[#6B786E]">No alerts. Press Run to analyze the dataset.</div>
+                )}
+                {alerts.slice(0, 8).map((alert, idx) => (
+                  <div
+                    key={`${alert.kind}-${alert.recommendationId ?? alert.recordId ?? idx}`}
+                    onClick={() => {
+                      if (alert.kind === 'recommendation') onNavigate('recommendations');
+                      else onNavigate('plant-detail', alert.plantId);
+                      setShowNotifications(false);
+                    }}
+                    className="p-3 hover:bg-[#EDF4EB]/50 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5 text-amber-700 font-semibold mb-1">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span className="truncate">
+                        {alert.plantName}
+                        {alert.kind === 'anomaly' ? ' - unusual reading' : ''}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#6B786E] leading-normal line-clamp-2">{alert.message}</p>
+                    <p className="text-[10px] text-stone-400 mt-0.5">{formatRelativeTime(alert.timestamp)}</p>
                   </div>
-                  <p className="text-[11px] text-[#6B786E] leading-normal">
-                    Soil moisture registered 16.4% in drought trial. Regulated hydration recommendation created.
-                  </p>
-                </div>
-
-                <div
-                  onClick={() => {
-                    onNavigate('recommendations');
-                    setShowNotifications(false);
-                  }}
-                  className="p-3 hover:bg-[#EDF4EB]/50 cursor-pointer transition-colors"
-                >
-                  <div className="flex items-center gap-1.5 text-yellow-700 font-semibold mb-1">
-                    <AlertTriangle className="w-3.5 h-3.5 text-yellow-600" />
-                    <span>Tulsi #9 (Cluster 3): Low PAR Light Stress</span>
-                  </div>
-                  <p className="text-[11px] text-[#6B786E] leading-normal">
-                    Illumination measured at 450 lux. Supplemental LED photoperiod action suggested.
-                  </p>
-                </div>
+                ))}
               </div>
 
               <div className="px-4 pt-2 border-t border-[#DCE4D9] text-center">
@@ -178,7 +210,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         {/* System Time badge */}
         <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-[#DCE4D9] text-xs text-[#6B786E] font-mono">
           <span className="w-2 h-2 rounded-full bg-[#2E8B57]" />
-          <span>UTC 12:00</span>
+          <span>IST {clock}</span>
         </div>
       </div>
     </header>

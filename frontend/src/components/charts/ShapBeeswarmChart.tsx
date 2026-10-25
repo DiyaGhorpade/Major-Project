@@ -20,6 +20,10 @@ export const ShapBeeswarmChart: React.FC<ShapBeeswarmChartProps> = ({ data }) =>
   // Sort features by mean absolute SHAP descending
   const sortedFeatures = [...data.features].sort((a, b) => b.mean_abs_shap - a.mean_abs_shap);
 
+  // Data-driven SHAP axis (log-odds units), not a hard-coded range.
+  const axisMax = Math.max(0.1, ...data.beeswarm_points.map((p) => Math.abs(p.shap_value)));
+  const axisLabel = axisMax.toFixed(2);
+
   const barData = sortedFeatures.map((f) => ({
     name: f.displayName,
     importance: f.mean_abs_shap,
@@ -37,7 +41,7 @@ export const ShapBeeswarmChart: React.FC<ShapBeeswarmChartProps> = ({ data }) =>
               Global Feature Importance — Mean |SHAP Value|
             </h3>
             <p className="text-xs text-[#6B786E]">
-              Evaluated across {data.sample_count.toLocaleString()} validation samples on model {data.model_version}.
+              Evaluated across {data.sample_count.toLocaleString()} validation samples on model {data.model_version ?? 'n/a'}.
             </p>
           </div>
           <span className="text-xs font-semibold px-2.5 py-1 rounded bg-[#EDF4EB] text-[#2E8B57] border border-[#DDE8D8]">
@@ -143,19 +147,21 @@ export const ShapBeeswarmChart: React.FC<ShapBeeswarmChartProps> = ({ data }) =>
                   </span>
                 </div>
 
-                {/* Strip chart container representing -0.6 to +0.6 SHAP axis */}
+                {/* Strip chart container representing the -max to +max SHAP axis */}
                 <div className="relative h-10 bg-stone-50 rounded-lg border border-stone-200 overflow-hidden flex items-center">
                   {/* Zero centerline */}
                   <div className="absolute left-1/2 top-0 bottom-0 w-px bg-stone-400 z-10" />
 
                   {/* Scatter points */}
                   {points.map((pt) => {
-                    // Map SHAP (-0.6 to +0.6) to percentage (0% to 100%)
-                    const xPercent = Math.max(5, Math.min(95, 50 + (pt.shap_value / 0.6) * 45));
+                    // Map SHAP (-max to +max) to percentage (0% to 100%)
+                    const xPercent = Math.max(5, Math.min(95, 50 + (pt.shap_value / axisMax) * 45));
                     
                     // Color based on feature_value_norm (0=blue, 0.5=purple, 1=red)
                     const color =
-                      pt.feature_value_norm < 0.35
+                      pt.feature_value_norm === null
+                        ? '#a8a29e'
+                        : pt.feature_value_norm < 0.35
                         ? '#3b82f6'
                         : pt.feature_value_norm > 0.65
                         ? '#ef4444'
@@ -169,16 +175,16 @@ export const ShapBeeswarmChart: React.FC<ShapBeeswarmChartProps> = ({ data }) =>
                           left: `${xPercent}%`,
                           backgroundColor: color,
                         }}
-                        title={`${feat.displayName} SHAP: ${pt.shap_value > 0 ? '+' : ''}${pt.shap_value.toFixed(2)} (Value Norm: ${pt.feature_value_norm.toFixed(2)})`}
+                        title={`${feat.displayName} SHAP: ${pt.shap_value > 0 ? '+' : ''}${pt.shap_value.toFixed(2)} (Value Norm: ${pt.feature_value_norm === null ? 'n/a' : pt.feature_value_norm.toFixed(2)})`}
                       />
                     );
                   })}
                 </div>
 
                 <div className="flex justify-between text-[10px] text-stone-400 mt-1">
-                  <span>-0.6 (Decreases target class)</span>
+                  <span>-{axisLabel} (Decreases target class)</span>
                   <span className="font-semibold text-stone-500">0.0 (No impact)</span>
-                  <span>+0.6 (Increases target class)</span>
+                  <span>+{axisLabel} (Increases target class)</span>
                 </div>
               </div>
             );

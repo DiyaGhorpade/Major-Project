@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { X, Check, Copy, ShieldCheck, AlertTriangle, Clock, Radio, Cpu, Layers } from 'lucide-react';
+import { X, Check, Copy, AlertTriangle, Clock, Cpu } from 'lucide-react';
 import { SensorRecord } from '../../types';
 import { StatusBadge } from './StatusBadge';
-import { formatDateTime } from '../../lib/utils';
+import { formatPercent, formatTemp, formatLux } from '../../lib/utils';
 
 interface RecordDetailDrawerProps {
   record: SensorRecord | null;
@@ -92,22 +92,22 @@ export const RecordDetailDrawer: React.FC<RecordDetailDrawerProps> = ({ record, 
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3.5 rounded-xl border border-[#DCE4D9] bg-white">
                 <span className="text-xs text-[#6B786E] block">Soil Moisture</span>
-                <span className="text-2xl font-bold text-[#1C2B23]">{record.soil.toFixed(1)}%</span>
+                <span className="text-2xl font-bold text-[#1C2B23]">{formatPercent(record.soil)}</span>
                 <span className="text-[10px] text-stone-500 block mt-0.5">Capacitive ADC probe</span>
               </div>
               <div className="p-3.5 rounded-xl border border-[#DCE4D9] bg-white">
                 <span className="text-xs text-[#6B786E] block">Air Temperature</span>
-                <span className="text-2xl font-bold text-[#1C2B23]">{record.temperature.toFixed(1)}°C</span>
+                <span className="text-2xl font-bold text-[#1C2B23]">{formatTemp(record.temperature)}</span>
                 <span className="text-[10px] text-stone-500 block mt-0.5">Ambient sensor</span>
               </div>
               <div className="p-3.5 rounded-xl border border-[#DCE4D9] bg-white">
                 <span className="text-xs text-[#6B786E] block">Relative Humidity</span>
-                <span className="text-2xl font-bold text-[#1C2B23]">{record.humidity.toFixed(1)}%</span>
+                <span className="text-2xl font-bold text-[#1C2B23]">{formatPercent(record.humidity)}</span>
                 <span className="text-[10px] text-stone-500 block mt-0.5">Air hygrometer</span>
               </div>
               <div className="p-3.5 rounded-xl border border-[#DCE4D9] bg-white">
                 <span className="text-xs text-[#6B786E] block">Light Intensity</span>
-                <span className="text-2xl font-bold text-[#1C2B23]">{Math.round(record.light).toLocaleString()} lx</span>
+                <span className="text-2xl font-bold text-[#1C2B23]">{formatLux(record.light)}</span>
                 <span className="text-[10px] text-stone-500 block mt-0.5">Photodiode sensor</span>
               </div>
             </div>

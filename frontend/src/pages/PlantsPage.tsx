@@ -3,20 +3,15 @@ import {
   LayoutGrid,
   List,
   Search,
-  Filter,
   Droplets,
   Thermometer,
   Wind,
   Sun,
   ChevronRight,
-  Sparkles,
-  Sprout,
-  CheckCircle2,
 } from 'lucide-react';
-import { apiClient } from '../api/client';
-import { Plant, ClusterId } from '../types';
+import { usePlants } from '../hooks/usePlants';
 import { StatusBadge } from '../components/shared/StatusBadge';
-import { formatRelativeTime } from '../lib/utils';
+import { formatRelativeTime, formatPercent, formatTemp, formatLux } from '../lib/utils';
 import { NavRoute } from '../components/layout/Sidebar';
 
 interface PlantsPageProps {
@@ -24,26 +19,13 @@ interface PlantsPageProps {
 }
 
 export const PlantsPage: React.FC<PlantsPageProps> = ({ onNavigate }) => {
-  const [plants, setPlants] = useState<Plant[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCluster, setSelectedCluster] = useState<string>('all');
   const [selectedNode, setSelectedNode] = useState<string>('all');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadPlants();
-  }, []);
-
-  const loadPlants = async () => {
-    setLoading(true);
-    try {
-      const p = await apiClient.getPlants();
-      setPlants(p);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const plantsQuery = usePlants();
+  const plants = plantsQuery.data ?? [];
+  const loading = plantsQuery.loading;
 
   const filteredPlants = plants.filter((plant) => {
     if (selectedCluster !== 'all' && plant.cluster !== selectedCluster) return false;
@@ -87,7 +69,7 @@ export const PlantsPage: React.FC<PlantsPageProps> = ({ onNavigate }) => {
             <option value="Cluster 1">Cluster 1: Healthy Control (Pots 1–4)</option>
             <option value="Cluster 2">Cluster 2: Water Stress (Pots 5–8)</option>
             <option value="Cluster 3">Cluster 3: Light Stress (Pots 9–12)</option>
-            <option value="Cluster 4">Cluster 4: Nutrient Stress (Pots 13–16)</option>
+            <option value="Cluster 4">Cluster 4: Temperature/Humidity Stress (Pots 13–16)</option>
           </select>
 
           {/* Node filter */}
@@ -178,25 +160,25 @@ export const PlantsPage: React.FC<PlantsPageProps> = ({ onNavigate }) => {
                         <div className="flex items-center gap-1 text-[11px] text-stone-600 mb-0.5">
                           <Droplets className="w-3 h-3 text-[#2E8B57]" /> Soil
                         </div>
-                        <span className="font-bold text-[#1C2B23]">{reading.soil.toFixed(1)}%</span>
+                        <span className="font-bold text-[#1C2B23]">{formatPercent(reading.soil)}</span>
                       </div>
                       <div className="p-2 rounded-lg bg-stone-50 border border-stone-200/60">
                         <div className="flex items-center gap-1 text-[11px] text-stone-600 mb-0.5">
                           <Thermometer className="w-3 h-3 text-amber-600" /> Temp
                         </div>
-                        <span className="font-bold text-[#1C2B23]">{reading.temperature.toFixed(1)}°C</span>
+                        <span className="font-bold text-[#1C2B23]">{formatTemp(reading.temperature)}</span>
                       </div>
                       <div className="p-2 rounded-lg bg-stone-50 border border-stone-200/60">
                         <div className="flex items-center gap-1 text-[11px] text-stone-600 mb-0.5">
                           <Wind className="w-3 h-3 text-sky-600" /> Humidity
                         </div>
-                        <span className="font-bold text-[#1C2B23]">{reading.humidity.toFixed(1)}%</span>
+                        <span className="font-bold text-[#1C2B23]">{formatPercent(reading.humidity)}</span>
                       </div>
                       <div className="p-2 rounded-lg bg-stone-50 border border-stone-200/60">
                         <div className="flex items-center gap-1 text-[11px] text-stone-600 mb-0.5">
                           <Sun className="w-3 h-3 text-yellow-600" /> Light
                         </div>
-                        <span className="font-bold text-[#1C2B23]">{Math.round(reading.light).toLocaleString()} lx</span>
+                        <span className="font-bold text-[#1C2B23]">{formatLux(reading.light)}</span>
                       </div>
                     </div>
                   ) : null}
@@ -254,16 +236,16 @@ export const PlantsPage: React.FC<PlantsPageProps> = ({ onNavigate }) => {
                         Node {plant.nodeId} • Point {plant.samplingPoint}
                       </td>
                       <td className="py-3 px-4 font-bold text-[#2E8B57]">
-                        {r ? `${r.soil.toFixed(1)}%` : 'N/A'}
+                        {r ? formatPercent(r.soil) : 'N/A'}
                       </td>
                       <td className="py-3 px-4 font-medium text-[#1C2B23]">
-                        {r ? `${r.temperature.toFixed(1)}°C` : 'N/A'}
+                        {r ? formatTemp(r.temperature) : 'N/A'}
                       </td>
                       <td className="py-3 px-4 font-medium text-[#1C2B23]">
-                        {r ? `${r.humidity.toFixed(1)}%` : 'N/A'}
+                        {r ? formatPercent(r.humidity) : 'N/A'}
                       </td>
                       <td className="py-3 px-4 font-medium text-[#1C2B23]">
-                        {r ? `${Math.round(r.light).toLocaleString()} lx` : 'N/A'}
+                        {r ? formatLux(r.light) : 'N/A'}
                       </td>
                       <td className="py-3 px-4">
                         <StatusBadge status={plant.stressType} size="sm" />

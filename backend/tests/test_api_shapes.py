@@ -151,7 +151,7 @@ def assert_shape(payload: dict, interface: str, where: str = "", model: Any = No
 TARGETS = {
     "Plant": 14, "PlantPrediction": 3, "PlantOptimalRange": 4, "SensorRecord": 9, "Session": 10, "Device": 9, "HardwareDetails": 1,
     "LocalShapExplanation": 9, "ShapFeatureContribution": 8, "GlobalShapData": 4, "GlobalShapFeature": 6, "BeeswarmPoint": 5,
-    "ModelMetrics": 9, "Recommendation": 16, "SystemSettings": 10,
+    "ModelMetrics": 9, "Recommendation": 16, "SystemSettings": 8,
 }  # fmt: skip
 
 
@@ -168,12 +168,12 @@ def test_parser_handles_nesting():
     assert set(INTERFACES["Recommendation"]["supporting_sensor_values"]["children"]) == {"metric", "value", "target", "status"}
     assert set(INTERFACES["ModelMetrics"]["per_class"]["children"]) >= {"class_name", "precision", "recall", "f1_score", "support", "laymanStatus"}
     assert set(INTERFACES["ModelMetrics"]["confusion_matrix"]["children"]) == {"labels", "matrix"}
-    assert INTERFACES["SensorRecord"]["record_id"]["optional"] is True and INTERFACES["SensorRecord"]["plant_id"]["optional"] is False
+    assert INTERFACES["BeeswarmPoint"]["predicted_class"]["optional"] is True and INTERFACES["SensorRecord"]["plant_id"]["optional"] is False
     assert "expected" not in INTERFACES["Session"]  # nested keys do not leak to the top level
 
 
 def test_check_fails_on_missing_keys_instead_of_passing():
-    with pytest.raises(AssertionError, match="lacks TS key 'session_id'"):
+    with pytest.raises(AssertionError, match="lacks TS key 'record_id'"):
         assert_shape({"timestamp": "x"}, "SensorRecord", minimum=0)
     top = {k: 0 for k in INTERFACES["Session"] if k != "node_progress"}
     with pytest.raises(AssertionError, match=r"\.1: JSON lacks TS key 'status'"):  # nested, inside the index signature

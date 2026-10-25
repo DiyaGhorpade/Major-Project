@@ -1,7 +1,8 @@
+import { DISCLAIMERS } from './Disclaimers';
 import React from 'react';
 import {
   Recommendation,
-  RecommendationStatus,
+  UserRecommendationStatus,
 } from '../../types';
 import { StatusBadge } from './StatusBadge';
 import { formatDateTime } from '../../lib/utils';
@@ -11,15 +12,12 @@ import {
   Sprout,
   Wrench,
   CheckCircle,
-  Clock,
   Sparkles,
-  ArrowRight,
-  Info,
 } from 'lucide-react';
 
 interface RecommendationCardProps {
   recommendation: Recommendation;
-  onUpdateStatus: (id: string, status: RecommendationStatus) => void;
+  onUpdateStatus: (id: string, status: UserRecommendationStatus) => void;
   onViewPlant?: (plantId: number) => void;
 }
 
@@ -62,6 +60,14 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
           bg: 'bg-amber-50/50',
           badge: 'bg-amber-100 text-amber-800',
         };
+      case 'monitoring':
+        return {
+          icon: <Sparkles className="w-5 h-5 text-emerald-600" />,
+          label: 'Monitoring',
+          border: 'border-[#DCE4D9]',
+          bg: 'bg-white',
+          badge: 'bg-emerald-100 text-emerald-800',
+        };
       default:
         return {
           icon: <Sparkles className="w-5 h-5 text-emerald-600" />,
@@ -99,13 +105,18 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
             <span className="text-[11px] text-[#6B786E]">Status:</span>
             <select
               value={recommendation.status}
-              onChange={(e) => onUpdateStatus(recommendation.id, e.target.value as RecommendationStatus)}
+              onChange={(e) => onUpdateStatus(recommendation.id, e.target.value as UserRecommendationStatus)}
               className="text-xs font-semibold bg-[#EDF4EB] text-[#173F32] border border-[#DDE8D8] rounded-md px-2 py-1 outline-none cursor-pointer focus:ring-1 focus:ring-[#2E8B57]"
             >
               <option value="new">New</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
               <option value="dismissed">Dismissed</option>
+              {recommendation.status === 'superseded' && (
+                <option value="superseded" disabled>
+                  Superseded
+                </option>
+              )}
             </select>
           </div>
         </div>
@@ -174,7 +185,9 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
 
       {/* Footer */}
       <div className="pt-3 border-t border-[#DCE4D9] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#6B786E]">
-        <span className="italic">{recommendation.guidance_source}</span>
+        <span className="italic">
+          {recommendation.guidance_source} · {DISCLAIMERS.recommendation}
+        </span>
 
         <div className="flex items-center gap-1.5">
           {recommendation.status !== 'completed' && (

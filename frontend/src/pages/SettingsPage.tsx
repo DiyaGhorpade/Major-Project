@@ -1,44 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Settings,
   Server,
-  Cpu,
   Clock,
-  Database,
   Sliders,
   Check,
-  AlertCircle,
-  HelpCircle,
 } from 'lucide-react';
-import { apiClient } from '../api/client';
+import { useSettings } from '../hooks/useSettings';
+import { ErrorState } from '../components/shared/ErrorState';
 import { SystemSettings } from '../types';
 
 export const SettingsPage: React.FC = () => {
-  const [settings, setSettings] = useState<SystemSettings | null>(null);
+  const settingsQuery = useSettings();
+  const [draft, setDraft] = useState<SystemSettings | null>(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
-    setLoading(true);
-    try {
-      const s = await apiClient.getSettings();
-      setSettings(s);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const settings = draft ?? settingsQuery.data;
+  const setSettings = setDraft;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!settings) return;
-    await apiClient.updateSettings(settings);
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 2500);
+    const saved = await settingsQuery.save(settings);
+    if (saved) {
+      setDraft(null);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 2500);
+    }
   };
+
+  if (settingsQuery.error && !settings) {
+    return <ErrorState message={settingsQuery.error.message} onRetry={() => void settingsQuery.refetch()} />;
+  }
 
   if (!settings) return null;
 
@@ -71,31 +62,17 @@ export const SettingsPage: React.FC = () => {
         )}
       </div>
 
+      {settingsQuery.saveError && <ErrorState title="Could not save settings" message={settingsQuery.saveError.message} />}
+
       <form onSubmit={handleSave} className="space-y-6">
         {/* Backend Endpoint Settings */}
         <div className="bg-white rounded-card border border-[#DCE4D9] p-5 shadow-card space-y-4">
           <h3 className="text-sm font-bold text-[#1C2B23] flex items-center gap-2">
             <Server className="w-4 h-4 text-[#2E8B57]" />
-            <span>Ingestion Receiver API Endpoint</span>
+            <span>Ingestion Polling</span>
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div>
-              <label className="block font-semibold text-[#1C2B23] mb-1">
-                Jetson Base Receiver URL:
-              </label>
-              <input
-                type="text"
-                value={settings.api_base_url}
-                onChange={(e) => setSettings({ ...settings, api_base_url: e.target.value })}
-                className="w-full bg-[#F6F7F0] border border-[#DCE4D9] rounded-lg px-3 py-2 font-mono text-xs outline-none focus:border-[#2E8B57] focus:bg-white text-[#1C2B23]"
-                placeholder="http://localhost:5000"
-              />
-              <span className="text-[10px] text-[#6B786E] block mt-1">
-                Flask receiver daemon listening on port 5000 on Jetson Orin Nano.
-              </span>
-            </div>
-
             <div>
               <label className="block font-semibold text-[#1C2B23] mb-1">
                 Live Polling Frequency (seconds):

@@ -14,7 +14,7 @@ import { SensorReadingCard } from '../components/shared/SensorReadingCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { LiveSparkline } from '../components/charts/LiveSparkline';
 import { RecordDetailDrawer } from '../components/shared/RecordDetailDrawer';
-import { formatDateTime, formatRelativeTime } from '../lib/utils';
+import { formatRelativeTime, formatPercent, formatTemp, formatLux } from '../lib/utils';
 import { NavRoute } from '../components/layout/Sidebar';
 
 interface LiveMonitoringPageProps {
@@ -65,16 +65,9 @@ export const LiveMonitoringPage: React.FC<LiveMonitoringPageProps> = ({ onNaviga
     setLastHeartbeat(new Date());
   };
 
+  // The bundled dataset is historical, so "polling" re-reads the latest stored readings from the API.
   const handlePollStep = () => {
-    const newRecord = apiClient.simulateLiveReadingPush();
-    setLiveRecords((prev) => [newRecord, ...prev.slice(0, 50)]);
-    setLastHeartbeat(new Date());
-    setFlashRecordId(newRecord.record_id || String(newRecord.plant_id));
-    setTimeout(() => setFlashRecordId(null), 1200);
-
-    setPlants((prev) =>
-      prev.map((plant) => (plant.id === newRecord.plant_id ? { ...plant, latestReading: newRecord } : plant))
-    );
+    void loadInitial().catch(() => undefined);
   };
 
   const activePlant = plants.find((p) => p.id === Number(selectedPlantId)) || plants[4] || plants[0];
@@ -97,10 +90,10 @@ export const LiveMonitoringPage: React.FC<LiveMonitoringPageProps> = ({ onNaviga
     .slice(0, 15)
     .reverse();
 
-  const soilSparkline = plantHistory.map((r) => r.soil);
-  const tempSparkline = plantHistory.map((r) => r.temperature);
-  const humSparkline = plantHistory.map((r) => r.humidity);
-  const lightSparkline = plantHistory.map((r) => r.light);
+  const soilSparkline = plantHistory.map((r) => r.soil).filter((v): v is number => v !== null);
+  const tempSparkline = plantHistory.map((r) => r.temperature).filter((v): v is number => v !== null);
+  const humSparkline = plantHistory.map((r) => r.humidity).filter((v): v is number => v !== null);
+  const lightSparkline = plantHistory.map((r) => r.light).filter((v): v is number => v !== null);
 
   return (
     <div className="space-y-6">
@@ -201,7 +194,7 @@ export const LiveMonitoringPage: React.FC<LiveMonitoringPageProps> = ({ onNaviga
             <option value="Cluster 1">Cluster 1: Healthy Control (Pots 1–4)</option>
             <option value="Cluster 2">Cluster 2: Water Stress (Pots 5–8)</option>
             <option value="Cluster 3">Cluster 3: Light Stress (Pots 9–12)</option>
-            <option value="Cluster 4">Cluster 4: Nutrient Stress (Pots 13–16)</option>
+            <option value="Cluster 4">Cluster 4: Temperature/Humidity Stress (Pots 13–16)</option>
           </select>
         </div>
 
@@ -247,7 +240,7 @@ export const LiveMonitoringPage: React.FC<LiveMonitoringPageProps> = ({ onNaviga
               />
               <div className="bg-white p-2.5 rounded-xl border border-[#DCE4D9] text-[10px] text-[#6B786E] flex items-center justify-between shadow-sm">
                 <span className="font-semibold">Recent Trend</span>
-                <LiveSparkline data={soilSparkline.length > 0 ? soilSparkline : [40, 42, 45, 43, 41]} color="#2E8B57" height={22} width={110} />
+                <LiveSparkline data={soilSparkline} color="#2E8B57" height={22} width={110} />
               </div>
             </div>
 
@@ -260,7 +253,7 @@ export const LiveMonitoringPage: React.FC<LiveMonitoringPageProps> = ({ onNaviga
               />
               <div className="bg-white p-2.5 rounded-xl border border-[#DCE4D9] text-[10px] text-[#6B786E] flex items-center justify-between shadow-sm">
                 <span className="font-semibold">Recent Trend</span>
-                <LiveSparkline data={tempSparkline.length > 0 ? tempSparkline : [22, 22.4, 22.8, 22.5]} color="#C98227" height={22} width={110} />
+                <LiveSparkline data={tempSparkline} color="#C98227" height={22} width={110} />
               </div>
             </div>
 
@@ -273,7 +266,7 @@ export const LiveMonitoringPage: React.FC<LiveMonitoringPageProps> = ({ onNaviga
               />
               <div className="bg-white p-2.5 rounded-xl border border-[#DCE4D9] text-[10px] text-[#6B786E] flex items-center justify-between shadow-sm">
                 <span className="font-semibold">Recent Trend</span>
-                <LiveSparkline data={humSparkline.length > 0 ? humSparkline : [60, 62, 59, 61]} color="#3977B8" height={22} width={110} />
+                <LiveSparkline data={humSparkline} color="#3977B8" height={22} width={110} />
               </div>
             </div>
 
@@ -286,7 +279,7 @@ export const LiveMonitoringPage: React.FC<LiveMonitoringPageProps> = ({ onNaviga
               />
               <div className="bg-white p-2.5 rounded-xl border border-[#DCE4D9] text-[10px] text-[#6B786E] flex items-center justify-between shadow-sm">
                 <span className="font-semibold">Recent Trend</span>
-                <LiveSparkline data={lightSparkline.length > 0 ? lightSparkline : [1800, 1850, 1920, 1890]} color="#D4A338" height={22} width={110} />
+                <LiveSparkline data={lightSparkline} color="#D4A338" height={22} width={110} />
               </div>
             </div>
           </div>
@@ -354,16 +347,16 @@ export const LiveMonitoringPage: React.FC<LiveMonitoringPageProps> = ({ onNaviga
                       Pot #{r.plant_id}
                     </td>
                     <td className="py-2.5 px-4 font-bold text-[#2E8B57]">
-                      {r.soil.toFixed(1)}%
+                      {formatPercent(r.soil)}
                     </td>
                     <td className="py-2.5 px-4 text-[#1C2B23]">
-                      {r.temperature.toFixed(1)}°C
+                      {formatTemp(r.temperature)}
                     </td>
                     <td className="py-2.5 px-4 text-[#1C2B23]">
-                      {r.humidity.toFixed(1)}%
+                      {formatPercent(r.humidity)}
                     </td>
                     <td className="py-2.5 px-4 text-[#1C2B23]">
-                      {Math.round(r.light).toLocaleString()} lx
+                      {formatLux(r.light)}
                     </td>
                   </tr>
                 );

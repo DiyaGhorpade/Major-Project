@@ -1,22 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  Sparkles,
-  Filter,
   Search,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-  BookOpen,
   Info,
 } from 'lucide-react';
-import { apiClient } from '../api/client';
-import {
-  Recommendation,
-  RecommendationPriority,
-  RecommendationStatus,
-} from '../types';
+import { useRecommendations } from '../hooks/useRecommendations';
+import { ErrorState } from '../components/shared/ErrorState';
+import { DisclaimerNote } from '../components/shared/Disclaimers';
 import { RecommendationCard } from '../components/shared/RecommendationCard';
-import { EmptyState } from '../components/shared/EmptyState';
+import { EmptyState, RunEmptyState } from '../components/shared/EmptyState';
+import type { UserRecommendationStatus } from '../types';
 import { NavRoute } from '../components/layout/Sidebar';
 
 interface RecommendationsPageProps {
@@ -24,32 +16,14 @@ interface RecommendationsPageProps {
 }
 
 export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ onNavigate }) => {
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedPriority, setSelectedPriority] = useState<string>('all');
   const [selectedCluster, setSelectedCluster] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadRecommendations();
-  }, []);
-
-  const loadRecommendations = async () => {
-    setLoading(true);
-    try {
-      const recs = await apiClient.getRecommendations();
-      setRecommendations(recs);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdateStatus = async (id: string, status: RecommendationStatus) => {
-    const updated = await apiClient.updateRecommendationStatus(id, status);
-    if (updated) {
-      setRecommendations((prev) => prev.map((r) => (r.id === id ? updated : r)));
-    }
+  const recsQuery = useRecommendations({ limit: 500 });
+  const recommendations = recsQuery.data ?? [];
+  const handleUpdateStatus = (id: string, status: UserRecommendationStatus) => {
+    void recsQuery.setStatus(id, status);
   };
 
   const filteredRecs = recommendations.filter((r) => {
@@ -81,14 +55,14 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ onNavi
               Agronomic Decision Support
             </span>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#EDF4EB] text-[#2E8B57] font-semibold border border-[#DDE8D8]">
-              Heuristic Rule Engine v2.1
+              ML-driven, advisory
             </span>
           </div>
           <h1 className="text-lg font-bold text-[#1C2B23]">
             Evidence-Based Plant Care Recommendations
           </h1>
           <p className="text-xs text-[#6B786E] mt-1 max-w-2xl leading-relaxed">
-            Directives derived from calibrated sensor trends, persistent threshold exceedances, and species agronomic tolerances. Every action is traceable to physical readings.
+            Advisory actions built from the ML model's output and recent sensor values. Every card cites the readings it is based on.
           </p>
         </div>
 
@@ -109,11 +83,18 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ onNavi
         </div>
       </div>
 
+      {recsQuery.error && <ErrorState message={recsQuery.error.message} onRetry={() => void recsQuery.refetch()} />}
+      {recsQuery.mutationError && (
+        <ErrorState title="Could not update recommendation" message={recsQuery.mutationError.message} onRetry={recsQuery.clearMutationError} />
+      )}
+
+      <DisclaimerNote disclaimer="recommendation" />
+
       {/* Advisory Guidance Notice per Prompt Rule */}
       <div className="p-4 rounded-xl bg-[#EDF4EB] border border-[#DDE8D8] text-xs text-[#173F32] flex items-start gap-3">
         <Info className="w-4 h-4 text-[#2E8B57] shrink-0 mt-0.5" />
         <div className="leading-relaxed">
-          <strong>Reviewable Action Framework:</strong> Recommendations are derived from agronomic sensor thresholds and validated guidelines. SHAP values are explanatory and not used alone to trigger automated care. A single anomalous or low moisture reading requires physical verification before irrigation dispatch.
+          <strong>Reviewable Action Framework:</strong> Recommendations are derived from agronomic sensor thresholds and validated guidelines. SHAP values are explanatory and not used alone to trigger automated care. A single anomalous or low moisture reading requires physical verification before irrigation dispatch. Advisory heuristic.
         </div>
       </div>
 
@@ -167,7 +148,7 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ onNavi
             <option value="Cluster 1">Cluster 1 (Healthy Control)</option>
             <option value="Cluster 2">Cluster 2 (Water Stress)</option>
             <option value="Cluster 3">Cluster 3 (Light Stress)</option>
-            <option value="Cluster 4">Cluster 4 (Nutrient Stress)</option>
+            <option value="Cluster 4">Cluster 4 (Temperature/Humidity Stress)</option>
           </select>
         </div>
 
@@ -188,6 +169,8 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ onNavi
             />
           ))}
         </div>
+      ) : recommendations.length === 0 && !recsQuery.loading && !recsQuery.error ? (
+        <RunEmptyState title="No recommendations yet" />
       ) : (
         <EmptyState
           title="No Recommendations Match Active Filter"

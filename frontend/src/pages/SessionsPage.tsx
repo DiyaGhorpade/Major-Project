@@ -2,15 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   History,
   Clock,
-  CheckCircle2,
-  AlertTriangle,
-  Play,
-  Calendar,
   ChevronRight,
   ShieldCheck,
   Cpu,
 } from 'lucide-react';
-import { apiClient } from '../api/client';
+import { useSessions } from '../hooks/useData';
 import { Session } from '../types';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { formatDateTime } from '../lib/utils';
@@ -21,24 +17,12 @@ interface SessionsPageProps {
 }
 
 export const SessionsPage: React.FC<SessionsPageProps> = ({ onNavigate }) => {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadSessions();
-  }, []);
-
-  const loadSessions = async () => {
-    setLoading(true);
-    try {
-      const s = await apiClient.getSessions();
-      setSessions(s);
-      if (s.length > 0) setSelectedSession(s[0]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const sessionsQuery = useSessions();
+  const sessions = sessionsQuery.data ?? [];
+  const loading = sessionsQuery.loading;
+  const [pickedId, setPickedId] = useState<number | null>(null);
+  const selectedSession = sessions.find((s) => s.session_id === pickedId) ?? sessions[0] ?? null;
+  const setSelectedSession = (s: Session | null) => setPickedId(s ? s.session_id : null);
 
   return (
     <div className="space-y-6">
