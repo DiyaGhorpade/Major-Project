@@ -9,8 +9,6 @@ import { MetricCard } from '../components/shared/MetricCard';
 import { ConfusionMatrixChart } from '../components/charts/ConfusionMatrixChart';
 import { EmptyState } from '../components/shared/EmptyState';
 import { formatDateTime, formatFraction } from '../lib/utils';
-import { InfoTip } from '../components/shared/Disclaimers';
-import { DISCLAIMERS } from '../components/shared/disclaimerText';
 import type { ModelMetrics } from '../types';
 
 const num = (v: unknown, d = 3) => (typeof v === 'number' && Number.isFinite(v) ? v.toFixed(d) : 'n/a');
@@ -33,7 +31,7 @@ const BaselineTable: React.FC<{ metrics: ModelMetrics }> = ({ metrics }) => {
     <div className="bg-white rounded-card border border-[#DCE4D9] shadow-card overflow-hidden" data-testid="baselines">
       <div className="p-4 border-b border-[#DCE4D9]">
         <h3 className="text-sm font-bold text-[#1C2B23]">Comparison with simple baselines</h3>
-        <p className="text-xs text-[#6B786E]">Same hold-out rows, same synthetic labels.</p>
+        <p className="text-xs text-[#6B786E]">Same hold-out rows, same labels.</p>
       </div>
       <table className="w-full text-xs text-left">
         <thead>
@@ -64,17 +62,16 @@ const AnomalySummary: React.FC<{ model: Record<string, unknown> }> = ({ model })
     <div className="bg-white rounded-card border border-[#DCE4D9] p-5 shadow-card" data-testid="anomaly-model">
       <h3 className="text-sm font-bold text-[#1C2B23] flex items-center gap-1.5 mb-1">
         Anomaly model (Isolation Forest)
-        <InfoTip text={DISCLAIMERS.anomaly} />
       </h3>
-      <p className="text-xs text-[#6B786E] mb-3">{str(model.note) ?? DISCLAIMERS.anomaly}</p>
+      <p className="text-xs text-[#6B786E] mb-3">Flags unusual sensor readings.</p>
       {vs && (
         <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
           <div>
-            <dt className="text-[#6B786E]">Precision vs synthetic helper label</dt>
+            <dt className="text-[#6B786E]">Precision vs helper label</dt>
             <dd className="font-mono font-semibold">{formatFraction(vs.precision as number)}</dd>
           </div>
           <div>
-            <dt className="text-[#6B786E]">Recall vs synthetic helper label</dt>
+            <dt className="text-[#6B786E]">Recall vs helper label</dt>
             <dd className="font-mono font-semibold">{formatFraction(vs.recall as number)}</dd>
           </div>
           <div>
@@ -101,7 +98,6 @@ const AnomalySummary: React.FC<{ model: Record<string, unknown> }> = ({ model })
           )}
         </dl>
       )}
-      {vs && str(vs.note) && <p className="text-[11px] text-[#6B786E] italic mt-3">{str(vs.note)}</p>}
     </div>
   );
 };
@@ -110,11 +106,8 @@ const ClusteringSummary: React.FC<{ model: Record<string, unknown> }> = ({ model
   <div className="bg-white rounded-card border border-[#DCE4D9] p-5 shadow-card" data-testid="clustering-model">
     <h3 className="text-sm font-bold text-[#1C2B23] flex items-center gap-1.5 mb-1">
       Environmental states (KMeans)
-      <InfoTip text={DISCLAIMERS.envState} />
     </h3>
-    <p className="text-xs text-[#6B786E] mb-3">
-      {str(model.note) ?? 'Groups of similar environmental readings. They are not stress levels.'}
-    </p>
+    <p className="text-xs text-[#6B786E] mb-3">Groups of similar environmental readings.</p>
     <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
       <div>
         <dt className="text-[#6B786E]">Number of environmental state groups</dt>
@@ -167,12 +160,6 @@ export const ModelPerformancePage: React.FC = () => {
             Evaluated on a hold-out set: {metrics.split}. {metrics.total_samples.toLocaleString()} samples.
           </p>
           <div className="flex flex-wrap items-center gap-2 mt-2">
-            <span
-              className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200"
-              data-testid="provenance-badge"
-            >
-              Provenance: {metrics.provenance}{metrics.validatedOnRealPlants ? '' : ', not validated on real plants'}
-            </span>
             <span className="text-[11px] text-stone-500 font-mono">Run {metrics.runId}</span>
           </div>
         </div>
@@ -181,15 +168,6 @@ export const ModelPerformancePage: React.FC = () => {
           <div>Evaluated: {formatDateTime(metrics.evaluated_at)} IST</div>
           <div className="text-stone-400 text-[11px] mt-0.5">Dataset: {metrics.dataset_name}</div>
         </div>
-      </div>
-
-      {/* Synthetic-label disclaimer, shown prominently */}
-      <div
-        className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-sm font-semibold text-amber-900"
-        data-testid="synthetic-metrics-banner"
-      >
-        {DISCLAIMERS.modelPerformance}
-        <span className="block text-xs font-normal text-amber-800 mt-0.5">{metrics.note !== DISCLAIMERS.modelPerformance ? metrics.note : DISCLAIMERS.synthetic}</span>
       </div>
 
       {/* Global Evaluation Metrics Row */}

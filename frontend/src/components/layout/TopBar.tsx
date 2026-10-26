@@ -134,7 +134,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             type="button"
             onClick={() => void run()}
             disabled={isActive}
-            title={isActive ? 'Analysis in progress' : 'Analyze the bundled plant dataset with the ML model'}
+            title={isActive ? 'Analysis in progress' : 'Analyze the plant data with the ML model'}
             className="inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg bg-[#2E8B57] hover:bg-[#236e44] disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold shadow-sm transition-colors"
           >
             {isActive ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <RunIcon className="w-4 h-4" aria-hidden="true" />}

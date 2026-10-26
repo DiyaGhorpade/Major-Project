@@ -31,19 +31,18 @@ describe('AiInsightsPage', () => {
     expect(within(status).getByText('Available')).toBeInTheDocument();
     expect(within(status).getByText(/#1 completed: 5,376 of 5,376 readings predicted/)).toBeInTheDocument();
 
-    // Anomalies: count and rate from the payload (102, 1.9%), with the anomaly disclaimer tooltip.
+    // Anomalies: count and rate from the payload (102, 1.9%).
     expect(await screen.findByText('102')).toBeInTheDocument();
     expect(screen.getByText(/1\.9% \(anomaly records \/ ok predictions\)/)).toBeInTheDocument();
-    expect(screen.getAllByRole('note', { name: /Unusual reading, check the sensor/ }).length).toBeGreaterThan(0);
+    expect(screen.queryAllByRole('note')).toHaveLength(0);
 
     // Explanation coverage and hold-out accuracy come from real data.
     expect(screen.getByText('16 / 16 Plants')).toBeInTheDocument();
     expect(screen.getByText('64.6%')).toBeInTheDocument();
 
-    // Labels: heuristic stress-type guess, environmental state groups (never "health").
-    expect(screen.getByText(/Heuristic stress-type guess/)).toBeInTheDocument();
+    // Labels: stress-type guess, environmental state groups (never "health").
+    expect(screen.getByText(/Stress-type guess/)).toBeInTheDocument();
     expect(screen.getByText('Environmental state group 1')).toBeInTheDocument();
-    expect(screen.getAllByRole('note', { name: 'Environmental state group. Not a stress level.' }).length).toBeGreaterThan(0);
 
     // Top global features come from the SHAP report.
     expect(screen.getAllByText('Soil moisture, 12-reading average').length).toBeGreaterThan(0);
@@ -72,7 +71,7 @@ describe('AiInsightsPage', () => {
       'GET /api/models/performance': { body: metricsFixture() },
     });
     renderPage();
-    expect(await screen.findByTestId('run-empty-state')).toHaveTextContent('Press Run to analyze the bundled plant dataset.');
+    expect(await screen.findByTestId('run-empty-state')).toHaveTextContent('Press Run to analyze the plant data.');
     expect(screen.getByText('No analysis run yet')).toBeInTheDocument();
   });
 

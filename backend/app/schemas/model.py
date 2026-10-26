@@ -51,4 +51,4 @@ class ModelMetricsOut(BaseModel):
     baselines: dict[str, BaselineMetrics]
     anomalyModel: dict[str, Any] | None
     clusteringModel: dict[str, Any] | None
-    note: str = "Metrics measured on synthetic labels."
+    note: str = ""

@@ -1,12 +1,8 @@
 import React from 'react';
 import { Cpu, Wifi, RefreshCw } from 'lucide-react';
 import { useDevices } from '../hooks/useData';
-import { StatusBadge } from '../components/shared/StatusBadge';
 import { ErrorState } from '../components/shared/ErrorState';
-import { Device } from '../types';
 import { formatDateTime, formatCount, orNA } from '../lib/utils';
-
-const UNKNOWN_EXPLANATION = 'Status unknown: no live heartbeat (historical dataset).';
 
 /** Percentage 0-100 for a "used / total" pair, or null when either side is missing. */
 function usedPct(used: number | null, total: number | null): number | null {
@@ -20,11 +16,6 @@ const Bar: React.FC<{ pct: number | null }> = ({ pct }) =>
       <div className="bg-[#79B86A] h-full rounded-full" style={{ width: `${pct}%` }} />
     </div>
   );
-
-const StatusNote: React.FC<{ device: Device; dark?: boolean }> = ({ device, dark }) =>
-  device.status === 'unknown' ? (
-    <p className={`text-[11px] ${dark ? 'text-[#DDE8D8]/70' : 'text-stone-500'}`}>{UNKNOWN_EXPLANATION}</p>
-  ) : null;
 
 export const DevicesNetworkPage: React.FC = () => {
   const devicesQuery = useDevices();
@@ -50,7 +41,7 @@ export const DevicesNetworkPage: React.FC = () => {
           </div>
           <h1 className="text-lg font-bold text-[#1C2B23]">Devices &amp; Sensor Nodes</h1>
           <p className="text-xs text-[#6B786E] mt-1">
-            Devices derived from the bundled dataset. It carries no live heartbeat or hardware metrics, so those fields show n/a.
+            Devices seen in the stored readings. Fields the data does not carry show n/a.
           </p>
         </div>
 
@@ -82,19 +73,16 @@ export const DevicesNetworkPage: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="text-xs uppercase font-bold tracking-wider text-[#79B86A]">Gateway</span>
-                    <StatusBadge status={gw.status} size="sm" />
                   </div>
                   <h2 className="text-xl font-bold tracking-tight">{gw.name}</h2>
                   <div className="text-xs text-[#DDE8D8]/80 font-mono mt-0.5">
                     IP: {orNA(gw.ip_address)} • MAC: {orNA(gw.mac_address)}
                   </div>
-                  <StatusNote device={gw} dark />
                 </div>
               </div>
 
               <div className="text-right text-xs text-[#DDE8D8]/80 font-mono space-y-0.5">
                 <div>Last data: {formatDateTime(gw.last_transmission)} IST</div>
-                <div>Heartbeat: {gw.last_heartbeat ? formatDateTime(gw.last_heartbeat) : 'n/a'}</div>
                 <div>Uptime: {orNA(hw.uptime)}</div>
                 <div>Firmware: {orNA(hw.firmware_version)}</div>
               </div>
@@ -129,7 +117,7 @@ export const DevicesNetworkPage: React.FC = () => {
                 <div className="text-xl font-bold font-mono text-white">{orNA(hw.temperature_c, '°C')}</div>
               </div>
             </div>
-            {noMetrics && <p className="mt-3 text-[11px] text-[#DDE8D8]/70">The bundled dataset carries no hardware metrics for this device.</p>}
+            {noMetrics && <p className="mt-3 text-[11px] text-[#DDE8D8]/70">No hardware metrics are available for this device.</p>}
           </div>
         );
       })}
@@ -158,17 +146,13 @@ export const DevicesNetworkPage: React.FC = () => {
                       <div>
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-[#426B4F]">{node.id.toUpperCase()}</span>
-                          <StatusBadge status={node.status} size="sm" />
                         </div>
                         <h3 className="text-sm font-bold text-[#1C2B23]">{node.name}</h3>
                       </div>
                     </div>
                   </div>
 
-                  <p className="text-xs text-[#6B786E] mb-1 bg-stone-50 p-2.5 rounded-lg border border-stone-200">{node.simpleRole}</p>
-                  <div className="mb-4">
-                    <StatusNote device={node} />
-                  </div>
+                  <p className="text-xs text-[#6B786E] mb-4 bg-stone-50 p-2.5 rounded-lg border border-stone-200">{node.simpleRole}</p>
 
                   <div className="grid grid-cols-2 gap-3 text-xs mb-4">
                     <div>

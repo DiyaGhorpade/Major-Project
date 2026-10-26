@@ -1,6 +1,6 @@
 import { IST_TIME_ZONE } from '../../lib/utils';
 
-/** Time ranges for trend charts. Ranges are relative to the dataset's latest timestamp (the data is historical). */
+/** Time ranges for trend charts. Ranges are relative to the dataset's latest timestamp. */
 export type TimeRange = '24h' | '7d' | 'all';
 
 export const TIME_RANGE_LABELS: Record<TimeRange, string> = {

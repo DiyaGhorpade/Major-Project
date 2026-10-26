@@ -74,10 +74,10 @@ export const DataLogsPage: React.FC = () => {
             </span>
           </div>
           <h1 className="text-lg font-bold text-[#1C2B23]">
-            Historical Sensor Telemetry Database
+            Sensor Telemetry Database
           </h1>
           <p className="text-xs text-[#6B786E] mt-1">
-            Stored sensor records from the bundled dataset. Click any row for the full record, model output and dataset labels.
+            Stored sensor records. Click any row for the full record, model output and dataset labels.
           </p>
         </div>
 

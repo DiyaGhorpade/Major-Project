@@ -28,7 +28,7 @@ from app.services import model_service
 logger = logging.getLogger("app.ai")
 
 SEVERITIES = ("healthy", "low", "moderate", "high")
-ANOMALY_TEXT = "Unusual reading, check the sensor. Not a plant-health verdict."
+ANOMALY_TEXT = "Unusual reading detected"
 UNITS_NOTE = "Units: log-odds contribution; base value not provided by the model service."
 SHAP_SAMPLE_ROWS = 500  # scripts/generate_explanations.py explains min(500, test rows) rows (config explain.background_rows)
 _DIRECTION = {

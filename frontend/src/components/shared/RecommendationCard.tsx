@@ -1,4 +1,3 @@
-import { DISCLAIMERS } from './disclaimerText';
 import React from 'react';
 import { cn } from '../../lib/utils';
 import {
@@ -177,12 +176,14 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
           <p className="text-[#1C2B23] leading-relaxed">
             <strong>Why: </strong>{recommendation.reason}
           </p>
-          <div className="p-2.5 rounded-lg bg-stone-50 border border-stone-200/80 text-stone-700 text-[11px] leading-relaxed">
-            <span className="font-semibold text-stone-900 flex items-center gap-1 mb-0.5">
-              <FlaskConical className="w-3.5 h-3.5" aria-hidden="true" /> Scientific context:
-            </span>
-            {recommendation.scientificContext}
-          </div>
+          {recommendation.scientificContext && (
+            <div className="p-2.5 rounded-lg bg-stone-50 border border-stone-200/80 text-stone-700 text-[11px] leading-relaxed">
+              <span className="font-semibold text-stone-900 flex items-center gap-1 mb-0.5">
+                <FlaskConical className="w-3.5 h-3.5" aria-hidden="true" /> Scientific context:
+              </span>
+              {recommendation.scientificContext}
+            </div>
+          )}
         </div>
 
         {/* Supporting Measured Sensor Values */}
@@ -227,9 +228,6 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
             </span>
           )}
           <span className="block italic">{recommendation.guidance_source}</span>
-          <span className="block italic font-semibold" data-testid="rec-disclaimer">
-            {DISCLAIMERS.recommendation}
-          </span>
         </div>
 
         <div className="flex items-center gap-1.5">

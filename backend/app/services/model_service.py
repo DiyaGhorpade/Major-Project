@@ -106,9 +106,9 @@ def read_optional_json(path: Path) -> dict[str, Any] | None:
 
 
 def layman_status(f1: float) -> str:
-    """Honest wording from F1 bands (synthetic test set; not a statement about real plants)."""
+    """Plain wording from F1 bands."""
     if f1 >= 0.75:
-        return "Recognised fairly reliably on the synthetic test set"
+        return "Recognised fairly reliably on the test set"
     if f1 >= 0.5:
         return "Partly reliable: expect some mistakes"
     return "Often confused with other classes"
@@ -137,11 +137,13 @@ def build_metrics(run_id: str, meta: dict[str, Any], anomaly: dict[str, Any] | N
         base = meta.get("baseline_metrics") or m.get("baseline_metrics") or {}
         anomaly_block = None
         if anomaly:
+            vs = anomaly.get("metrics_vs_helper_label")
             anomaly_block = {
-                "metricsVsHelperLabel": anomaly.get("metrics_vs_helper_label"),
+                # The artifact's free-text notes are not served; only the numbers are.
+                "metricsVsHelperLabel": {k: v for k, v in vs.items() if k != "note"} if isinstance(vs, dict) else vs,
                 "threshold": anomaly.get("threshold"),
                 "scoreConvention": anomaly.get("score_convention"),
-                "note": anomaly.get("note"),
+                "note": None,
             }
         clustering_block = None
         if clustering:
@@ -149,7 +151,7 @@ def build_metrics(run_id: str, meta: dict[str, Any], anomaly: dict[str, Any] | N
             clustering_block = {
                 "selectedK": k,
                 "silhouette": ((clustering.get("silhouette_by_k") or {}).get(str(k)) or {}).get("silhouette"),
-                "note": clustering.get("note"),
+                "note": None,
             }
         return ModelMetricsOut(
             model_name=meta["model_name"],

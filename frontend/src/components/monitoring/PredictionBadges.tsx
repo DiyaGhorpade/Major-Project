@@ -1,7 +1,6 @@
 import React from 'react';
 import type { PlantHealthStatus, PlantPrediction, Severity } from '../../types';
 import { StatusBadge } from '../shared/StatusBadge';
-import { AnomalyTip, EnvStateTip, InfoTip } from '../shared/Disclaimers';
 import { DISCLAIMERS } from '../shared/disclaimerText';
 import { cn } from '../../lib/utils';
 import { formatConfidence } from './format';
@@ -40,14 +39,12 @@ export const AnomalyFlag: React.FC<{ isAnomaly: boolean | null | undefined }> = 
     ) : (
       <span className="text-stone-600">Normal reading</span>
     )}
-    <AnomalyTip />
   </span>
 );
 
 export const EnvStateLabel: React.FC<{ envState: PlantPrediction['envState'] | undefined }> = ({ envState }) => (
   <span className="inline-flex items-center gap-1">
     <span className={envState ? 'text-stone-700' : 'text-stone-500'}>{envState ? envState.label : 'Environmental state: n/a'}</span>
-    <EnvStateTip />
   </span>
 );
 
@@ -56,7 +53,7 @@ interface PredictionSummaryProps {
   className?: string;
 }
 
-/** Compact model-output block for plant cards: severity (ML), stress type (heuristic), env state, anomaly. */
+/** Compact model-output block for plant cards: severity (ML), stress type, env state, anomaly. */
 export const PredictionSummary: React.FC<PredictionSummaryProps> = ({ prediction, className }) => {
   if (!prediction) {
     return (
@@ -76,7 +73,7 @@ export const PredictionSummary: React.FC<PredictionSummaryProps> = ({ prediction
       </div>
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1 text-stone-500">
-          Stress type guess <InfoTip text={DISCLAIMERS.conditionGuess} />
+          Stress type guess
         </span>
         <span className="font-semibold text-[#1C2B23]">{prediction.condition ?? 'n/a'}</span>
       </div>

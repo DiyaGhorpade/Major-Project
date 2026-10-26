@@ -15,7 +15,7 @@ describe('RunEmptyState', () => {
   it('prompts to press Run and starts the pipeline', () => {
     const run = vi.fn().mockResolvedValue(undefined);
     renderEmpty({ run });
-    expect(screen.getByTestId('run-empty-state')).toHaveTextContent('Press Run to analyze the bundled plant dataset.');
+    expect(screen.getByTestId('run-empty-state')).toHaveTextContent('Press Run to analyze the plant data.');
     fireEvent.click(screen.getByRole('button', { name: 'Run' }));
     expect(run).toHaveBeenCalledTimes(1);
   });

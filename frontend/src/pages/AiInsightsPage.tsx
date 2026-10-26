@@ -4,8 +4,6 @@ import { MetricCard } from '../components/shared/MetricCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { EmptyState, RunEmptyState } from '../components/shared/EmptyState';
 import { ErrorState } from '../components/shared/ErrorState';
-import { AnomalyTip, EnvStateTip, InfoTip } from '../components/shared/Disclaimers';
-import { DISCLAIMERS } from '../components/shared/disclaimerText';
 import { CountBars } from '../components/ai/CountBars';
 import { orderedCounts } from '../components/ai/counts';
 import { NavRoute } from '../components/layout/Sidebar';
@@ -163,12 +161,7 @@ export const AiInsightsPage: React.FC<AiInsightsPageProps> = ({ onNavigate }) =>
             title="Anomalous Readings"
             value={insights.anomalies.count.toLocaleString()}
             subtitle={`${(insights.anomalies.rate * 100).toFixed(1)}% (${insights.anomalies.rateBasis})`}
-            icon={
-              <span className="inline-flex items-center gap-1">
-                <Sparkles className="w-4 h-4 text-[#2E8B57]" />
-                <AnomalyTip />
-              </span>
-            }
+            icon={<Sparkles className="w-4 h-4 text-[#2E8B57]" />}
           />
           <MetricCard
             title="Explanation Coverage"
@@ -180,7 +173,7 @@ export const AiInsightsPage: React.FC<AiInsightsPageProps> = ({ onNavigate }) =>
           <MetricCard
             title="Hold-out Accuracy"
             value={metrics ? `${(metrics.overall.accuracy * 100).toFixed(1)}%` : 'n/a'}
-            subtitle={metrics ? `N = ${metrics.total_samples.toLocaleString()} (synthetic labels)` : 'Evaluation unavailable'}
+            subtitle={metrics ? `N = ${metrics.total_samples.toLocaleString()} (hold-out)` : 'Evaluation unavailable'}
             icon={<Target className="w-4 h-4 text-[#2E8B57]" />}
             onClick={() => onNavigate('model-performance')}
           />
@@ -202,8 +195,7 @@ export const AiInsightsPage: React.FC<AiInsightsPageProps> = ({ onNavigate }) =>
         <div className="bg-white rounded-card border border-[#DCE4D9] p-5 shadow-card">
           <div className="flex items-center justify-between mb-4 gap-3">
             <div>
-              <h3 className="text-sm font-bold text-[#1C2B23]">Heuristic stress-type guess (latest reading per plant)</h3>
-              <p className="text-xs text-[#6B786E]">{DISCLAIMERS.conditionGuess}</p>
+              <h3 className="text-sm font-bold text-[#1C2B23]">Stress-type guess (latest reading per plant)</h3>
             </div>
             <span className="text-xs font-mono text-stone-500">{sum(insights.latestConditionGuessCounts)} plants</span>
           </div>
@@ -213,7 +205,7 @@ export const AiInsightsPage: React.FC<AiInsightsPageProps> = ({ onNavigate }) =>
             items={orderedCounts(insights.latestConditionGuessCounts, CONDITION_ORDER).map(([label, count]) => ({ key: label, label, count }))}
           />
           <details className="mt-4 text-xs text-[#6B786E]">
-            <summary className="cursor-pointer font-semibold text-[#173F32]">Across all predictions (heuristic guess)</summary>
+            <summary className="cursor-pointer font-semibold text-[#173F32]">Across all predictions</summary>
             <div className="mt-3">
               <CountBars
                 total={sum(insights.conditionGuessCounts)}
@@ -230,7 +222,6 @@ export const AiInsightsPage: React.FC<AiInsightsPageProps> = ({ onNavigate }) =>
               <h3 className="text-sm font-bold text-[#1C2B23] flex items-center gap-1.5">
                 <Layers className="w-4 h-4 text-[#2E8B57]" aria-hidden="true" />
                 Environmental states
-                <EnvStateTip />
               </h3>
               <p className="text-xs text-[#6B786E]">
                 Groups of similar environmental readings found by clustering. The group numbers are arbitrary and do not mean healthy or unhealthy.
@@ -247,7 +238,6 @@ export const AiInsightsPage: React.FC<AiInsightsPageProps> = ({ onNavigate }) =>
                 key: String(e.id),
                 label: e.label,
                 count: e.count,
-                extra: <InfoTip text={e.note} />,
               }))}
             />
           )}
@@ -289,8 +279,6 @@ export const AiInsightsPage: React.FC<AiInsightsPageProps> = ({ onNavigate }) =>
           </ul>
         </div>
 
-        <p className="text-[11px] text-[#6B786E] italic leading-snug">{insights.disclaimer}</p>
-
         {/* Navigation cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <button
@@ -320,7 +308,7 @@ export const AiInsightsPage: React.FC<AiInsightsPageProps> = ({ onNavigate }) =>
             </span>
             <span className="text-sm font-bold text-[#1C2B23] group-hover:text-[#2E8B57] transition-colors mb-1 block">Model Performance & Matrix</span>
             <span className="text-xs text-[#6B786E] leading-relaxed mb-4 block">
-              Review the hold-out confusion matrix, precision/recall and per-class metrics (measured on synthetic labels).
+              Review the hold-out confusion matrix, precision/recall and per-class metrics.
             </span>
             <span className="text-xs font-semibold text-[#2E8B57] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
               View Performance Metrics <ArrowRight className="w-3.5 h-3.5" />
@@ -337,7 +325,7 @@ export const AiInsightsPage: React.FC<AiInsightsPageProps> = ({ onNavigate }) =>
             </span>
             <span className="text-sm font-bold text-[#1C2B23] group-hover:text-[#2E8B57] transition-colors mb-1 block">Plant Care Recommendations</span>
             <span className="text-xs text-[#6B786E] leading-relaxed mb-4 block">
-              Advisory actions built from the model's output and recent sensor values.
+              Actions built from the model's output and recent sensor values.
             </span>
             <span className="text-xs font-semibold text-[#2E8B57] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
               Review Care Actions <ArrowRight className="w-3.5 h-3.5" />

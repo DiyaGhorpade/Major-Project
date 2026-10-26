@@ -9,13 +9,13 @@ afterEach(() => vi.unstubAllGlobals());
 const route = (devices: unknown) => ({ 'GET /api/devices': { body: devices, headers: { 'X-Total-Count': '3' } } });
 
 describe('DevicesNetworkPage', () => {
-  it('renders null hardware fields as n/a, explains unknown status and shows real counts', async () => {
+  it('renders null hardware fields as n/a, shows no status or heartbeat and shows real counts', async () => {
     mockFetch(route(devicesFixture()));
     const { container } = render(<DevicesNetworkPage />);
 
     const node1 = await screen.findByTestId('device-esp32-node-1');
     expect(within(node1).getAllByText('n/a').length).toBeGreaterThanOrEqual(3); // ip, mac, rssi, uptime
-    expect(within(node1).getByText('Status unknown: no live heartbeat (historical dataset).')).toBeInTheDocument();
+    expect(within(node1).queryByText(/Status unknown|heartbeat/i)).not.toBeInTheDocument();
     expect(within(node1).getByText('2,688')).toBeInTheDocument();
     expect(within(node1).getByText('12')).toBeInTheDocument(); // channels from data
     expect(screen.getByTestId('plant-ids-esp32-node-1')).toHaveTextContent('1, 3, 5, 7, 9, 11, 13, 15');
@@ -24,7 +24,10 @@ describe('DevicesNetworkPage', () => {
 
     const gw = screen.getByTestId('device-jetson-01');
     expect(within(gw).getByText('Jetson Gateway')).toBeInTheDocument(); // the device's own name from the API
-    expect(within(gw).getByText('The bundled dataset carries no hardware metrics for this device.')).toBeInTheDocument();
+    expect(within(gw).getByText('No hardware metrics are available for this device.')).toBeInTheDocument();
+
+    expect(within(gw).queryByText(/Heartbeat/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('status-badge')).not.toBeInTheDocument();
 
     // No fake wording or fake usage bars.
     expect(screen.queryByText(/3 Configured Nodes/)).not.toBeInTheDocument();

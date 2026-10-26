@@ -122,7 +122,7 @@ def test_ml_recommendation_is_mapped_with_real_numbers(seeded):
     assert "Last 3 soil readings are below 25%." in rec.reason
     assert "Soil moisture 21.3 %" in rec.reason and "P(low)=0.70" in rec.reason
     assert rec.confidence == pytest.approx(0.7)
-    assert rec.guidance_source == "ML heuristic rules · model 1.0.0 (run fake_run_1)"
+    assert rec.guidance_source == "ML rules · model 1.0.0 (run fake_run_1)"
     assert rec.based_on["modelVersion"] == "1.0.0" and rec.based_on["runId"] == "fake_run_1"
     assert rec.based_on["timestamp"].endswith("+05:30") and rec.scientific_context
     assert rec.prediction_id is not None and rec.user_modified is False

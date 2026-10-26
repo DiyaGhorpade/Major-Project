@@ -3,7 +3,6 @@ import {
   PieChart,
   BarChart3,
   Sliders,
-  AlertCircle,
 } from 'lucide-react';
 import { usePlants } from '../hooks/usePlants';
 import { useGlobalShap, useLocalShap } from '../hooks/useData';
@@ -78,14 +77,6 @@ export const ShapAnalysisPage: React.FC<ShapAnalysisPageProps> = ({ initialPlant
             <span>Global Feature Impact (Cohort)</span>
           </button>
         </div>
-      </div>
-
-      {/* Mandatory Top Disclaimer Banner */}
-      <div className="p-3.5 rounded-xl bg-[#F6F7F0] border border-[#DCE4D9] text-xs text-[#1C2B23] flex items-center gap-2.5">
-        <AlertCircle className="w-4 h-4 text-[#2E8B57] shrink-0" />
-        <span className="leading-normal">
-          <strong>Interpretability Standard:</strong> SHAP explains how features influence the model's prediction. It does not establish causality or independently identify the biological root cause.
-        </span>
       </div>
 
       {activeTab === 'local' ? (

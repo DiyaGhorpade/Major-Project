@@ -5,7 +5,7 @@ export interface CountItem {
   key: string;
   label: string;
   count: number;
-  /** Optional trailing element, e.g. an InfoTip. */
+  /** Optional trailing element, e.g. a small badge. */
   extra?: React.ReactNode;
   /** Overrides the bar colour for this item. */
   barClassName?: string;

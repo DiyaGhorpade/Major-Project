@@ -85,7 +85,7 @@
    "timestamp": "2026-10-18T22:01:30+05:30",
    "modelVersion": "1.0.0",
    "recordId": "R-5365",
-   "simpleExplanation": "Model rates stress 'high' (P=0.62) from the latest reading at 2026-10-18T22:01:30+05:30; the stress type ('Water Stress') is a heuristic guess, not a diagnosis.",
+   "simpleExplanation": "Model rates stress 'high' (P=0.62) from the latest reading at 2026-10-18T22:01:30+05:30; the suggested stress type is 'Water Stress'.",
    "envState": {
     "id": 1,
     "distance": 5.659156409605634,
@@ -983,7 +983,7 @@
    ],
    "reason": "Last 3 soil readings are below the configured monitoring level (25.0%). Soil moisture 7.2 % (recent average 7.8 %); model P(high)=0.62.",
    "scientificContext": "Tulsi (Ocimum) generally prefers evenly moist, well-drained soil; prolonged dryness and waterlogging both stress the roots. A soil-moisture sensor gives a relative reading that depends on the soil, pot and probe placement, so confirm by checking the soil by hand.",
-   "guidance_source": "ML heuristic rules · model 1.0.0 (run v1.0.0_20261021T145244Z)",
+   "guidance_source": "ML rules · model 1.0.0 (run v1.0.0_20261021T145244Z)",
    "created_at": "2026-10-25T17:05:48.071217+05:30",
    "updated_at": "2026-10-25T17:12:38.344592+05:30",
    "resolved_at": null,

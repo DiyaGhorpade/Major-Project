@@ -7,13 +7,14 @@ import { metricsFixture } from '../test/fixtureHelpers';
 afterEach(() => vi.unstubAllGlobals());
 
 describe('ModelPerformancePage', () => {
-  it('renders real metrics with the synthetic-label disclaimer', async () => {
+  it('renders real metrics without provenance or synthetic-label banners', async () => {
     mockFetch({ 'GET /api/models/performance': { body: metricsFixture() } });
     render(<ModelPerformancePage />);
 
     expect(await screen.findByText('xgboost_stress_classifier')).toBeInTheDocument();
-    expect(screen.getByTestId('synthetic-metrics-banner')).toHaveTextContent('Metrics measured on synthetic labels.');
-    expect(screen.getByTestId('provenance-badge')).toHaveTextContent('Provenance: synthetic, not validated on real plants');
+    expect(screen.queryByTestId('synthetic-metrics-banner')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('provenance-badge')).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/synthetic|not validated/i);
     expect(screen.getAllByText(/chronological hold-out, last 25%/).length).toBeGreaterThan(0);
     expect(screen.getByText(/Evaluated: .*IST/)).toBeInTheDocument();
 
@@ -27,7 +28,7 @@ describe('ModelPerformancePage', () => {
     expect(card('Weighted F1')).toHaveTextContent('64.4%');
 
     // Per-class table with layman status.
-    expect(screen.getByText('Recognised fairly reliably on the synthetic test set')).toBeInTheDocument();
+    expect(screen.getByText('Recognised fairly reliably on the test set')).toBeInTheDocument();
     expect(screen.getByText('563')).toBeInTheDocument();
 
     // Confusion matrix cells are the stored counts.
@@ -70,6 +71,7 @@ describe('ModelPerformancePage', () => {
     const clustering = screen.getByTestId('clustering-model');
     expect(clustering).toHaveTextContent('Number of environmental state groups');
     expect(clustering).toHaveTextContent('0.263');
-    expect(clustering).toHaveTextContent('do NOT mean healthy / unhealthy');
+    expect(clustering).not.toHaveTextContent(/healthy|synthetic/i);
+    expect(anomaly).not.toHaveTextContent(/synthetic|NOT a plant-health/i);
   });
 });

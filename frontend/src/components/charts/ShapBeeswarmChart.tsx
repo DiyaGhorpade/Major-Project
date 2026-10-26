@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import { AlertCircle } from 'lucide-react';
 import { GlobalShapData } from '../../types';
 
 interface ShapBeeswarmChartProps {
@@ -213,15 +212,6 @@ export const ShapBeeswarmChart: React.FC<ShapBeeswarmChartProps> = ({ data }) =>
                 </div>
               ))}
           </div>
-        </div>
-
-        <div className="mt-6 p-4 rounded-xl bg-[#EDF4EB] border border-[#DDE8D8] text-xs text-[#173F32] flex items-start gap-3">
-          <AlertCircle className="w-4 h-4 text-[#2E8B57] shrink-0 mt-0.5" />
-          <p className="leading-relaxed">
-            <strong className="font-semibold">Explanatory note: </strong>
-            {data.note ??
-              'SHAP explains how features influence the model’s prediction. It does not establish causality or independently identify the biological root cause.'}
-          </p>
         </div>
       </div>
     </div>

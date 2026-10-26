@@ -24,7 +24,7 @@ export const ConfusionMatrixChart: React.FC<ConfusionMatrixChartProps> = ({ metr
             Hold-out Confusion Matrix ({labels.length} classes)
           </h3>
           <p className="text-xs text-[#6B786E]">
-            Rows are the synthetic ground-truth label; columns are the model's prediction.
+            Rows are the reference label; columns are the model's prediction.
           </p>
         </div>
         <div className="text-xs font-mono text-stone-500">

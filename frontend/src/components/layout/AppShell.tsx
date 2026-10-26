@@ -2,7 +2,6 @@ import React, { useCallback, useContext, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { Sidebar, NavRoute } from './Sidebar';
 import { TopBar } from './TopBar';
-import { SyntheticBanner } from '../shared/SyntheticBanner';
 import { ErrorBanner } from '../shared/ErrorBanner';
 import { DataVersionContext } from '../../hooks/dataVersion';
 import { PipelineContext, usePipeline, usePipelineMachine } from '../../hooks/usePipeline';
@@ -125,8 +124,6 @@ const ShellLayout: React.FC<AppShellProps> = ({ currentRoute, activePlantId, onN
           plants={plants?.data ?? []}
           onNavigate={onNavigate}
         />
-
-        <SyntheticBanner />
 
         {banner && (
           <ErrorBanner title={banner.title} error={banner.message} onRetry={banner.retry} retryLabel={banner.retryLabel} />

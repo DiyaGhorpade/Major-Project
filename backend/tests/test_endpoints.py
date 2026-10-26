@@ -3,6 +3,7 @@
 import csv
 import io
 import json
+import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -171,7 +172,7 @@ def test_anomalies_list(ran_client):
     assert total(r) > 3 and len(rows) == 3
     a = rows[0]
     assert set(a) == {"id", "plant_id", "plant_name", "record_id", "timestamp", "score", "threshold", "interpretation", "readings", "datasetLabelIsSyntheticAnomaly"}
-    assert a["interpretation"] == "Unusual reading, check the sensor. Not a plant-health verdict."
+    assert a["interpretation"] == "Unusual reading detected"
     assert set(a["readings"]) == {"soil", "temperature", "humidity", "light"}
     assert [x["timestamp"] for x in rows] == sorted((x["timestamp"] for x in rows), reverse=True)
     assert ran_client.get(f"/api/ai/anomalies?plantId={a['plant_id']}").json()
@@ -210,11 +211,12 @@ def test_overview_details(ran_client):
     assert o["latestSession"]["session_id"] == 4
     assert o["devicesSummary"] == {"total": 3, "online": 0, "offline": 0, "unknown": 3, "lastTransmission": "2026-10-18T22:05:15+05:30"}
     assert o["totals"]["flaggedReadings"] > 0 and o["totals"]["anomalies"] > 0
-    assert "synthetic" in o["disclaimer"]
+    assert o["disclaimer"] == ""
     alerts = o["recentAlerts"]
     assert alerts == sorted(alerts, key=lambda a: a["timestamp"], reverse=True)
     anomaly_alerts = [a for a in alerts if a["kind"] == "anomaly"]
-    assert anomaly_alerts and all("Not a plant-health verdict" in a["message"] and a["recommendationId"] is None for a in anomaly_alerts)
+    assert not re.search(r"synthetic|verdict|diagnos", json.dumps(o["recentAlerts"] + o["topRecommendations"]), re.I)
+    assert anomaly_alerts and all(a["message"].startswith("Unusual reading detected") and a["recommendationId"] is None for a in anomaly_alerts)
     assert all(a["plantId"] in range(1, 17) and a["timestamp"].endswith("+05:30") for a in alerts)
     for g in o["clusterSummaries"]:
         assert g["topCondition"] is None or isinstance(g["topCondition"], str)
@@ -226,7 +228,7 @@ def test_insights_after_run(ran_client):
     assert i["hasPredictions"] and i["predictions"]["ok"] == 5376
     assert sum(i["severityCounts"].values()) == 5376 and sum(i["latestSeverityCounts"].values()) == 16
     assert sum(e["count"] for e in i["envStateCounts"]) == 5376
-    assert all(e["label"] == f"Environmental state group {e['id']}" and "Not a stress level" in e["note"] for e in i["envStateCounts"])
+    assert all(e["label"] == f"Environmental state group {e['id']}" and e["note"] == "" for e in i["envStateCounts"])
     assert i["anomalies"]["count"] > 0 and 0 < i["anomalies"]["rate"] < 1
     assert i["explanationCoverage"] == {"plantsWithLocalShap": 16, "totalPlants": 16, "plantIds": list(range(1, 17))}
     assert i["topFeatures"]["localFrequency"][0]["count"] == 16  # the fake explains `soil` for each plant
@@ -357,13 +359,14 @@ def test_model_performance_matches_classifier_meta(fresh_client):
         assert p["laymanStatus"]
     assert m["per_class"][0]["laymanStatus"] != m["per_class"][1]["laymanStatus"]  # F1 .73 vs .32
     assert m["confusion_matrix"] == {"labels": classes, "matrix": mm["confusion_matrix"]["matrix"]}
-    assert m["provenance"] == "synthetic" and m["validatedOnRealPlants"] is False and m["note"] == "Metrics measured on synthetic labels."
+    assert m["provenance"] == "synthetic" and m["validatedOnRealPlants"] is False and m["note"] == ""
     assert m["balancedAccuracy"] == mm["balanced_accuracy"] and m["weightedF1"] == mm["weighted_f1"]
     assert m["baselines"]["majority_class"] == {"accuracy": META["baseline_metrics"]["majority_class"]["accuracy"], "macro_f1": META["baseline_metrics"]["majority_class"]["macro_f1"]}
     assert set(m["baselines"]) == {"majority_class", "logistic_regression"}
     assert m["anomalyModel"]["metricsVsHelperLabel"]["precision"] == pytest.approx(0.2857142857142857)
     assert m["anomalyModel"]["threshold"]["decision_rule"] == "anomaly_score > 0"
     assert m["clusteringModel"]["selectedK"] == 3 and m["clusteringModel"]["silhouette"] == pytest.approx(0.26267610513984396)
+    assert m["anomalyModel"]["note"] is None and "note" not in m["anomalyModel"]["metricsVsHelperLabel"] and m["clusteringModel"]["note"] is None
 
 
 def test_model_performance_is_cached_in_model_info_and_refreshes_on_new_run(tmp_path):
@@ -483,7 +486,7 @@ def test_plant_fields_after_run(ran_client):
     c = p["conditionPrediction"]
     assert c["conditionSource"] == "heuristic" and c["envState"]["label"].startswith("Environmental state group")
     assert c["severity"] in c["simpleExplanation"] and f"{c['probabilities'][c['severity']]:.2f}" in c["simpleExplanation"]
-    assert "heuristic guess" in c["simpleExplanation"] or c["severity"] == "healthy"
+    assert "heuristic" not in c["simpleExplanation"] and "diagnosis" not in c["simpleExplanation"]
     assert p["status"] == {"healthy": "healthy", "low": "attention", "moderate": "attention", "high": "critical"}[c["severity"]]
     labels = p["latestReading"]["datasetLabels"]
     assert set(labels) == {"stressLevel", "stressType", "isSyntheticAnomaly"}

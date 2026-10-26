@@ -28,11 +28,11 @@ describe('ShapWaterfallChart', () => {
     expect(screen.getByTestId('shap-baseline-note')).toHaveTextContent(
       'Contributions relative to model baseline (not provided by model service). The waterfall starts at 0.',
     );
-    // Layman summary and the explanation note are shown verbatim.
+    // Layman summary is shown verbatim; the causality/interpretability note is not shown.
     expect(screen.getByText(/the model rated stress 'high'/)).toBeInTheDocument();
     expect(screen.getByText(/For the reading at 18 Oct 2026, 22:01 IST/)).toBeInTheDocument();
     expect(screen.queryByText(/\d{4}-\d{2}-\d{2}T\d{2}:/)).not.toBeInTheDocument();
-    expect(screen.getByText(/Units: log-odds contribution/)).toBeInTheDocument();
+    expect(screen.queryByText(/biological causation|Interpretability/)).not.toBeInTheDocument();
   });
 
   it('handles any number of features (3 here), not just 4 or 5', () => {
@@ -72,7 +72,7 @@ describe('ShapAnalysisPage', () => {
       'GET /api/ai/shap/global': { body: globalShapFixture() },
     });
     render(<ShapAnalysisPage initialPlantId={5} onNavigate={vi.fn()} />);
-    expect(await screen.findByTestId('run-empty-state')).toHaveTextContent('Press Run to analyze the bundled plant dataset.');
+    expect(await screen.findByTestId('run-empty-state')).toHaveTextContent('Press Run to analyze the plant data.');
   });
 
   it('global view: top-15 list, per-class view, labelled sample beeswarm', async () => {

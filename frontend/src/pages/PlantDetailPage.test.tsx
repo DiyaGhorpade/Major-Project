@@ -17,10 +17,10 @@ describe('PlantDetailPage', () => {
     const ml = screen.getByTestId('ml-panel');
     expect(within(ml).getAllByText('High stress').length).toBeGreaterThan(0);
     expect(within(ml).getAllByText('62%').length).toBeGreaterThan(0);
-    expect(within(ml).getByText(/Stress type guess \(heuristic\)/)).toBeInTheDocument();
+    expect(within(ml).getByText(/Stress type guess/)).toBeInTheDocument();
     expect(within(ml).getByText('Water Stress')).toBeInTheDocument();
     expect(within(screen.getByTestId('anomaly-panel')).getByText('Normal reading')).toBeInTheDocument();
-    expect(within(screen.getByTestId('anomaly-panel')).getAllByRole('note').length).toBeGreaterThan(0);
+    expect(within(screen.getByTestId('anomaly-panel')).queryAllByRole('note')).toHaveLength(0);
     expect(within(screen.getByTestId('envstate-panel')).getByText('Environmental state group 1')).toBeInTheDocument();
 
     // Prediction history table: newest first, capped to 12 rows until expanded.
@@ -31,13 +31,13 @@ describe('PlantDetailPage', () => {
 
     // Dataset labels are a separate, explicitly labelled block (not inside the ML panel).
     const labels = screen.getByTestId('dataset-labels');
-    expect(labels).toHaveTextContent('Dataset labels (synthetic ground truth, not model output)');
+    expect(labels).toHaveTextContent('Dataset labels');
     expect(labels).toHaveTextContent('high');
     expect(labels).toHaveTextContent('water');
     expect(ml).not.toContainElement(labels);
 
     expect(screen.getByText('Check watering')).toBeInTheDocument();
-    expect(screen.getByText(/Advisory heuristic\./, { selector: 'p' })).toBeInTheDocument();
+    expect(screen.queryByText(/Advisory heuristic/)).not.toBeInTheDocument();
   });
 
   it('shows a neutral Night state, not "Shaded / Dim", for a night-time light reading', async () => {

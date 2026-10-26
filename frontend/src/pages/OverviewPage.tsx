@@ -22,7 +22,6 @@ import { RunEmptyState } from '../components/shared/EmptyState';
 import { MetricCard } from '../components/shared/MetricCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { RecommendationCard } from '../components/shared/RecommendationCard';
-import { AnomalyTip } from '../components/shared/Disclaimers';
 import { DISCLAIMERS } from '../components/shared/disclaimerText';
 import { SensorTrendChart } from '../components/charts/SensorTrendChart';
 import { RecordDetailDrawer } from '../components/shared/RecordDetailDrawer';
@@ -78,7 +77,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
   const acceptedPct = readingsTotal > 0 ? (((readingsTotal - flaggedCount) / readingsTotal) * 100).toFixed(1) : null;
 
   const devices = overview?.devicesSummary;
-  const deviceStatus = !devices ? 'unknown' : devices.online > 0 ? 'online' : devices.offline > 0 ? 'offline' : 'unknown';
   const session = overview?.latestSession ?? null;
   const statusCounts = overview?.plantStatusCounts ?? {};
 
@@ -102,7 +100,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="w-2.5 h-2.5 rounded-full bg-[#79B86A]" />
-            <span className="text-xs font-bold uppercase tracking-wider text-[#DDE8D8]">Bundled dataset</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#DDE8D8]">Plant monitoring</span>
           </div>
           <h1 className="text-xl md:text-2xl font-bold tracking-tight">Tulsi Phenotype Stress Telemetry Dashboard</h1>
           <p className="text-xs text-[#DDE8D8]/80 mt-1 max-w-2xl leading-relaxed">
@@ -178,7 +176,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
                   </div>
                   {hasPredictions && (
                     <div className="text-[11px] text-stone-600">
-                      Most common stress-type guess (heuristic): <strong>{orNA(c.topCondition)}</strong>
+                      Most common stress-type guess: <strong>{orNA(c.topCondition)}</strong>
                     </div>
                   )}
                 </div>
@@ -194,15 +192,8 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
           <MetricCard
             title="Devices"
             value={devices ? `${devices.total} devices` : 'n/a'}
-            subtitle={
-              devices && devices.online === 0
-                ? 'No live heartbeat (historical dataset)'
-                : devices
-                  ? `${devices.online} online • ${devices.offline} offline • ${devices.unknown} unknown`
-                  : undefined
-            }
+            subtitle={devices?.lastTransmission ? `Last data: ${formatDateTime(devices.lastTransmission)} IST` : 'ESP32 sensor nodes + Jetson gateway'}
             icon={<Cpu className="w-4 h-4 text-[#2E8B57]" />}
-            badge={<StatusBadge status={deviceStatus} size="sm" />}
             onClick={() => onNavigate('devices-network')}
           />
 
@@ -252,7 +243,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
               ))}
             </div>
             <span className="text-stone-600">
-              {formatCount(totals?.anomalies ?? 0)} unusual readings of {formatCount(totals?.predictions.ok ?? 0)} analyzed <AnomalyTip />
+              {formatCount(totals?.anomalies ?? 0)} unusual readings of {formatCount(totals?.predictions.ok ?? 0)} analyzed
             </span>
             <span className="text-stone-500">Model {orNA(overview.modelVersion)}</span>
           </div>
@@ -266,7 +257,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
           <div>
             <h2 className="text-base font-bold text-[#1C2B23]">Canopy &amp; Soil Environmental Oscillations</h2>
             <p className="text-xs text-[#6B786E]">
-              One pot&apos;s moisture, temperature, humidity and light. Ranges are relative to the dataset&apos;s latest reading (the data is historical).
+              One pot&apos;s moisture, temperature, humidity and light. Ranges are relative to the latest reading.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -337,7 +328,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
                         {a.kind === 'anomaly' ? 'Unusual reading' : 'Recommendation'}
                       </span>
                       <span className="leading-snug">
-                        {a.message} {a.kind === 'anomaly' && <AnomalyTip />}
+                        {a.message}
                       </span>
                     </div>
                   </li>
@@ -350,7 +341,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-[#1C2B23]">Top Recommended Actions</h3>
-                <p className="text-xs text-[#6B786E]">{DISCLAIMERS.recommendation}</p>
+                <p className="text-xs text-[#6B786E]">Care actions from the model's output and recent sensor values.</p>
               </div>
               <button onClick={() => onNavigate('recommendations')} className="text-xs font-bold text-[#2E8B57] hover:underline flex items-center gap-1">
                 <span>All actions</span>

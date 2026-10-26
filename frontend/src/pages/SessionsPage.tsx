@@ -50,9 +50,9 @@ export const SessionsPage: React.FC<SessionsPageProps> = ({ onNavigate }) => {
               </span>
             )}
           </div>
-          <h1 className="text-lg font-bold text-[#1C2B23]">Historical Collection Runs &amp; Run Audits</h1>
+          <h1 className="text-lg font-bold text-[#1C2B23]">Collection Runs &amp; Run Audits</h1>
           <p className="text-xs text-[#6B786E] mt-1">
-            Each session groups a block of the bundled dataset&apos;s readings. Node progress compares received readings with what the schedule expected.
+            Each session groups a block of stored readings. Node progress compares received readings with what the schedule expected.
           </p>
         </div>
 

@@ -153,7 +153,7 @@
    "plantId": 16,
    "plantName": "Pot 16: Krishna Tulsi (Climate Trial)",
    "timestamp": "2026-10-17T08:05:15+05:30",
-   "message": "Unusual reading, check the sensor. Not a plant-health verdict. (anomaly score 0.04, threshold 0)",
+   "message": "Unusual reading detected (anomaly score 0.04, threshold 0)",
    "severity": null,
    "recordId": "R-5072",
    "recommendationId": null
@@ -197,8 +197,8 @@
     }
    ],
    "reason": "Predicted class is 'moderate' without a persistent out-of-range sensor condition under the configured ranges. Model P(moderate)=0.96. Priority raised to high: the model has rated the last 3 consecutive readings 'moderate' or higher.",
-   "scientificContext": "The model gives a statistical estimate learned from a synthetic dataset and has not been validated on real plants. When it is unsure, or no single sensor explains a stress rating, inspecting the plant and sensors in person is the most reliable check.",
-   "guidance_source": "ML heuristic rules · model 1.0.0 (run v1.0.0_20261021T145244Z)",
+   "scientificContext": "The model gives a statistical estimate. When it is unsure, or no single sensor explains a stress rating, inspecting the plant and sensors in person is the most reliable check.",
+   "guidance_source": "ML rules · model 1.0.0 (run v1.0.0_20261021T145244Z)",
    "created_at": "2026-10-25T17:05:48.085023+05:30",
    "updated_at": "2026-10-25T17:05:48.085024+05:30",
    "resolved_at": null,
@@ -249,8 +249,8 @@
     }
    ],
    "reason": "Predicted class is 'moderate' without a persistent out-of-range sensor condition under the configured ranges. Model P(moderate)=0.98. Priority raised to high: the model has rated the last 3 consecutive readings 'moderate' or higher.",
-   "scientificContext": "The model gives a statistical estimate learned from a synthetic dataset and has not been validated on real plants. When it is unsure, or no single sensor explains a stress rating, inspecting the plant and sensors in person is the most reliable check.",
-   "guidance_source": "ML heuristic rules · model 1.0.0 (run v1.0.0_20261021T145244Z)",
+   "scientificContext": "The model gives a statistical estimate. When it is unsure, or no single sensor explains a stress rating, inspecting the plant and sensors in person is the most reliable check.",
+   "guidance_source": "ML rules · model 1.0.0 (run v1.0.0_20261021T145244Z)",
    "created_at": "2026-10-25T17:05:48.084109+05:30",
    "updated_at": "2026-10-25T17:05:48.084110+05:30",
    "resolved_at": null,
@@ -299,7 +299,7 @@
  },
  "modelVersion": "1.0.0",
  "provenance": "synthetic",
- "disclaimer": "These results come from models trained on a synthetic dataset and have not been validated on real plants. They are decision-support hints, not diagnoses.",
+ "disclaimer": "",
  "pipeline": {
   "runId": 1,
   "state": "completed",

@@ -40,7 +40,7 @@ function stubBackend(handlers: Handlers) {
 const renderPage = () => render(<RecommendationsPage onNavigate={vi.fn()} />);
 
 describe('RecommendationsPage', () => {
-  it('lists server-paginated recommendations with real status counts and the advisory disclaimer', async () => {
+  it('lists server-paginated recommendations with real status counts and no advisory disclaimer', async () => {
     const { urls } = stubBackend({
       list: (p) => {
         const status = p.get('status');
@@ -54,7 +54,7 @@ describe('RecommendationsPage', () => {
     renderPage();
     expect(await screen.findAllByText('Check watering')).toHaveLength(1);
     expect(screen.getByText('Monitor and inspect')).toBeInTheDocument();
-    expect(screen.getAllByTestId('rec-disclaimer')).toHaveLength(2);
+    expect(screen.queryAllByTestId('rec-disclaimer')).toHaveLength(0);
     expect(screen.getByTestId('range-label')).toHaveTextContent('Showing 1-7 of 7 directives');
 
     await waitFor(() => expect(screen.getByTestId('count-new')).toHaveTextContent('7'));
@@ -121,14 +121,13 @@ describe('RecommendationsPage', () => {
     expect(searches[0]).not.toContain('offset=12');
     // The total comes from the server's count, not from filtering the current page.
     await waitFor(() => expect(screen.getByTestId('range-label')).toHaveTextContent('Showing 1-1 of 1 directives'));
-    expect(screen.getAllByTestId('rec-disclaimer').length).toBeGreaterThan(0);
     expect(screen.queryByText(/this page/i)).not.toBeInTheDocument();
   });
 
   it('shows the Run empty state when there are no recommendations yet', async () => {
     stubBackend({ list: () => ({ body: [], headers: { 'X-Total-Count': '0' } }) });
     renderPage();
-    expect(await screen.findByTestId('run-empty-state')).toHaveTextContent('Press Run to analyze the bundled plant dataset.');
+    expect(await screen.findByTestId('run-empty-state')).toHaveTextContent('Press Run to analyze the plant data.');
   });
 
   it('changes status optimistically', async () => {

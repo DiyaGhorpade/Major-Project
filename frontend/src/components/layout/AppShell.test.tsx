@@ -20,15 +20,14 @@ function renderShell() {
 }
 
 describe('AppShell', () => {
-  it('always renders the synthetic-dataset disclaimer and the page', async () => {
+  it('renders the page without a synthetic-dataset banner', async () => {
     mockFetch({
       'GET /api/pipeline/status': { body: statusBody() },
       'GET /api/health': { body: healthBody() },
       'GET /api/monitoring/overview': { body: overviewBody },
     });
     renderShell();
-    const banner = screen.getByTestId('synthetic-banner');
-    expect(banner).toHaveTextContent('Synthetic dataset. Model outputs are experimental, not validated plant diagnoses.');
+    expect(screen.queryByTestId('synthetic-banner')).not.toBeInTheDocument();
     expect(screen.getByText('page content')).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByText('AI model connected').length).toBeGreaterThan(0));
     expect(screen.getByText('v1.0.0')).toBeInTheDocument();
@@ -48,7 +47,6 @@ describe('AppShell', () => {
     expect(banner).toHaveTextContent('Analysis run failed');
     expect(banner).toHaveTextContent('ML service not reachable at :8001');
     expect(screen.getByRole('button', { name: 'Run again' })).toBeInTheDocument();
-    expect(screen.getByTestId('synthetic-banner')).toBeInTheDocument();
   });
 
   it('warns when health says the ML service is unreachable', async () => {

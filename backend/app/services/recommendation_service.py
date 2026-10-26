@@ -78,9 +78,8 @@ SCIENTIFIC_CONTEXT = {
         "rule out first."
     ),
     "monitoring": (
-        "The model gives a statistical estimate learned from a synthetic dataset and has not been validated on real "
-        "plants. When it is unsure, or no single sensor explains a stress rating, inspecting the plant and sensors in "
-        "person is the most reliable check."
+        "The model gives a statistical estimate. When it is unsure, or no single sensor explains a stress rating, "
+        "inspecting the plant and sensors in person is the most reliable check."
     ),
     "nutrition": (
         "Nutrient problems cannot be measured with the sensors in this system; this category is not produced from "
@@ -346,7 +345,7 @@ def load_state(db: Session, plant: Plant) -> PlantState | None:
 def _content(state: PlantState, cand: Candidate) -> dict[str, Any]:
     pred = state.pred
     if cand.source == "ml":
-        guidance = f"ML heuristic rules · model {pred.model_version} (run {pred.run_id})"
+        guidance = f"ML rules · model {pred.model_version} (run {pred.run_id})"
     else:
         guidance = f"Backend rules on ML output · model {pred.model_version} (run {pred.run_id})"
     return {

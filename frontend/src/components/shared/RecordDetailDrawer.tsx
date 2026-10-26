@@ -8,7 +8,6 @@ import { AnomalyFlag, EnvStateLabel, SeverityBadge } from '../monitoring/Predict
 import { ProbabilityBars } from '../monitoring/ProbabilityBars';
 import { DatasetLabelsBlock } from '../monitoring/DatasetLabelsBlock';
 import { formatConfidence } from '../monitoring/format';
-import { InfoTip } from './Disclaimers';
 import { DISCLAIMERS } from './disclaimerText';
 import { formatPercent, formatTemp, formatLux, formatDateTime, orNA } from '../../lib/utils';
 
@@ -59,7 +58,7 @@ const RecordPrediction: React.FC<{ record: SensorRecord }> = ({ record }) => {
           <ProbabilityBars probabilities={pred.probabilities} />
           <div className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-1 text-stone-500">
-              Stress type guess <InfoTip text={DISCLAIMERS.conditionGuess} />
+              Stress type guess
             </span>
             <span className="font-semibold text-[#1C2B23]">{pred.condition ?? 'n/a'}</span>
           </div>

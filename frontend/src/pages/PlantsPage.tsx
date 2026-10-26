@@ -12,7 +12,6 @@ import {
 import { usePlants } from '../hooks/usePlants';
 import { ErrorState } from '../components/shared/ErrorState';
 import { PlantStatusBadge, PredictionSummary, SeverityBadge, AnomalyFlag, EnvStateLabel } from '../components/monitoring/PredictionBadges';
-import { InfoTip } from '../components/shared/Disclaimers';
 import { DISCLAIMERS } from '../components/shared/disclaimerText';
 import { formatConfidence } from '../components/monitoring/format';
 import { formatDateTime, formatPercent, formatTemp, formatLux, orNA } from '../lib/utils';
@@ -256,7 +255,7 @@ export const PlantsPage: React.FC<PlantsPageProps> = ({ onNavigate }) => {
                   <th className="py-3 px-4 font-semibold">Model status</th>
                   <th className="py-3 px-4 font-semibold">
                     <span className="inline-flex items-center gap-1">
-                      Stress type guess <InfoTip text={DISCLAIMERS.conditionGuess} />
+                      Stress type guess
                     </span>
                   </th>
                   <th className="py-3 px-4 font-semibold">Environmental state</th>

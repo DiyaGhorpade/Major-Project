@@ -1,7 +1,5 @@
-"""Provenance and disclaimer text shown on every ML-derived view (master prompt rule 4)."""
+"""Provenance marker and disclaimer field of ML-derived views. The disclaimer text is empty on purpose:
+issue #2 removed user-facing disclaimers (see README, DEV-55); the fields stay for the API contract."""
 
 PROVENANCE = "synthetic"
-DISCLAIMER = (
-    "These results come from models trained on a synthetic dataset and have not been validated on real plants. "
-    "They are decision-support hints, not diagnoses."
-)
+DISCLAIMER = ""

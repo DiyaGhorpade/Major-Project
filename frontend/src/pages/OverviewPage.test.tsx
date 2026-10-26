@@ -39,7 +39,8 @@ describe('OverviewPage', () => {
     expect(screen.getByText('95.7% Accepted')).toBeInTheDocument();
     expect(screen.getByText('5,376 records logged (233 flagged)')).toBeInTheDocument();
     expect(screen.getByText('3 devices')).toBeInTheDocument();
-    expect(screen.getByText('No live heartbeat (historical dataset)')).toBeInTheDocument();
+    expect(screen.getByText(/^Last data: .*Oct.* IST$/)).toBeInTheDocument();
+    expect(screen.queryByText(/heartbeat/i)).not.toBeInTheDocument();
 
     expect(screen.queryByText(/17%/)).not.toBeInTheDocument();
     expect(screen.queryByText(/16\/16/)).not.toBeInTheDocument();

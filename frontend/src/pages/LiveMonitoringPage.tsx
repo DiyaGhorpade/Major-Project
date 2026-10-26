@@ -64,7 +64,7 @@ export const LiveMonitoringPage: React.FC<LiveMonitoringPageProps> = ({ onNaviga
   );
   const monitoringQuery = usePlantMonitoring(focusId, SPARK_POINTS);
 
-  // The bundled dataset is historical, so "polling" simply re-reads the latest stored readings.
+  // "Polling" re-reads the latest stored readings.
   const refetchers = useRef<Array<() => Promise<void>>>([]);
   useEffect(() => {
     refetchers.current = [feedQuery.refetch, monitoringQuery.refetch];
@@ -97,11 +97,9 @@ export const LiveMonitoringPage: React.FC<LiveMonitoringPageProps> = ({ onNaviga
           </span>
           <div>
             <span className="text-xs font-bold text-[#1C2B23]">
-              Showing the bundled dataset&apos;s most recent readings
+              Most recent readings
             </span>
             <div className="text-[11px] text-[#6B786E] flex flex-wrap items-center gap-2">
-              <span>No live hardware is connected: this view re-reads stored data.</span>
-              <span>•</span>
               <span className="font-mono">
                 {isPolling ? `Auto-refresh every ${pollSeconds} s` : 'Auto-refresh paused'}
                 {fetchedAt ? ` • last refreshed ${formatDateTime(fetchedAt.toISOString())} IST` : ''}
@@ -265,7 +263,7 @@ export const LiveMonitoringPage: React.FC<LiveMonitoringPageProps> = ({ onNaviga
               <Radio className="w-4 h-4 text-[#2E8B57]" />
               <span>Latest Stored Readings</span>
             </h3>
-            <p className="text-xs text-[#6B786E]">Newest readings first, from the bundled dataset (not a live stream).</p>
+            <p className="text-xs text-[#6B786E]">Newest readings first.</p>
           </div>
           <span className="text-xs font-mono font-medium text-stone-500">
             {feed.length} of {feedQuery.data?.total ?? 0} shown

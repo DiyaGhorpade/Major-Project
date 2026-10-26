@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUp, ArrowDown, AlertCircle, Scale } from 'lucide-react';
+import { ArrowUp, ArrowDown, Scale } from 'lucide-react';
 import { LocalShapExplanation } from '../../types';
 
 interface ShapWaterfallChartProps {
@@ -186,16 +186,6 @@ export const ShapWaterfallChart: React.FC<ShapWaterfallChartProps> = ({ explanat
           <span>Axis: {signed(lo)} to {signed(hi)} log-odds</span>
           <span>Sum of the {rows.length} shown contributions: {signed(end - start)}</span>
         </div>
-
-        {explanation.explanation_note && (
-          <div className="mt-6 p-4 rounded-xl bg-[#EDF4EB] border border-[#DDE8D8] text-xs text-[#173F32] flex items-start gap-3">
-            <AlertCircle className="w-4 h-4 text-[#2E8B57] shrink-0 mt-0.5" />
-            <p className="leading-relaxed">
-              <strong className="font-semibold">Interpretability note: </strong>
-              {explanation.explanation_note}
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

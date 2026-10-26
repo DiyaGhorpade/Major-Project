@@ -52,7 +52,7 @@ interface RunEmptyStateProps {
   className?: string;
 }
 
-/** Pre-run empty state: "Press Run to analyze the bundled plant dataset." with a Run action wired to the pipeline. */
+/** Pre-run empty state: "Press Run to analyze the plant data." with a Run action wired to the pipeline. */
 export const RunEmptyState: React.FC<RunEmptyStateProps> = ({ title = 'No analysis yet', className }) => {
   const { run, isActive, hasCompletedRun, processed, total } = usePipeline();
   return (
@@ -68,7 +68,7 @@ export const RunEmptyState: React.FC<RunEmptyStateProps> = ({ title = 'No analys
       </div>
       <h3 className="text-lg font-semibold text-[#1C2B23] mb-2">{title}</h3>
       <p className="text-sm text-[#6B786E] max-w-md leading-relaxed mb-6">
-        Press <strong>Run</strong> to analyze the bundled plant dataset.
+        Press <strong>Run</strong> to analyze the plant data.
       </p>
       <button
         type="button"

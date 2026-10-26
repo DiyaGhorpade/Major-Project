@@ -4,7 +4,6 @@ import { SensorRecord } from '../types';
 import { usePlantMonitoring } from '../hooks/usePlants';
 import { ErrorState } from '../components/shared/ErrorState';
 import { RunEmptyState } from '../components/shared/EmptyState';
-import { AnomalyTip, EnvStateTip, InfoTip } from '../components/shared/Disclaimers';
 import { DISCLAIMERS } from '../components/shared/disclaimerText';
 import { SensorReadingCard } from '../components/shared/SensorReadingCard';
 import { SensorTrendChart } from '../components/charts/SensorTrendChart';
@@ -151,7 +150,7 @@ export const PlantDetailPage: React.FC<PlantDetailPageProps> = ({ plantId, onNav
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-[#1C2B23]">Latest Pot Sensor Measurements</h2>
-            <p className="text-xs text-[#6B786E]">Most recent stored reading for Pot #{plant.id} (bundled dataset).</p>
+            <p className="text-xs text-[#6B786E]">Most recent stored reading for Pot #{plant.id} (Most recent readings).</p>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-[11px] font-mono text-stone-500">Recorded: {latest ? formatDateTime(latest.timestamp) : 'n/a'} IST</span>
@@ -217,7 +216,7 @@ export const PlantDetailPage: React.FC<PlantDetailPageProps> = ({ plantId, onNav
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <span className="text-[11px] text-[#6B786E] mb-1 flex items-center gap-1">
-                    Stress type guess (heuristic) <InfoTip text={DISCLAIMERS.conditionGuess} />
+                    Stress type guess
                   </span>
                   <span className="text-lg font-bold text-[#102F26]">{pred.condition ?? 'Not determined'}</span>
                 </div>
@@ -252,7 +251,7 @@ export const PlantDetailPage: React.FC<PlantDetailPageProps> = ({ plantId, onNav
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 text-xs space-y-1.5" data-testid="anomaly-panel">
               <h4 className="font-bold text-[#1C2B23] flex items-center gap-1.5">
-                Anomaly check <AnomalyTip />
+                Anomaly check
               </h4>
               <div className="text-sm">
                 <AnomalyFlag isAnomaly={pred?.anomaly?.isAnomaly} />
@@ -263,12 +262,11 @@ export const PlantDetailPage: React.FC<PlantDetailPageProps> = ({ plantId, onNav
               <div className="text-stone-600">
                 {anomalyCount} of {history.length} analyzed readings in view flagged as unusual.
               </div>
-              <p className="text-[11px] text-[#6B786E] italic">{DISCLAIMERS.anomaly}</p>
             </div>
 
             <div className="rounded-xl border border-sky-200 bg-sky-50/40 p-4 text-xs space-y-1.5" data-testid="envstate-panel">
               <h4 className="font-bold text-[#1C2B23] flex items-center gap-1.5">
-                Environmental state <EnvStateTip />
+                Environmental state
               </h4>
               <div className="text-sm">
                 <EnvStateLabel envState={pred?.envState} />
@@ -281,7 +279,6 @@ export const PlantDetailPage: React.FC<PlantDetailPageProps> = ({ plantId, onNav
                   ? 'No state history in view.'
                   : `In view: ${[...envCounts.entries()].map(([label, n]) => `${label.replace('Environmental state ', '')} (${n})`).join(', ')}`}
               </div>
-              <p className="text-[11px] text-[#6B786E] italic">{DISCLAIMERS.envState}</p>
             </div>
           </div>
         </div>
@@ -306,7 +303,7 @@ export const PlantDetailPage: React.FC<PlantDetailPageProps> = ({ plantId, onNav
           <div className="p-4 border-b border-[#DCE4D9]">
             <h3 className="text-sm font-bold text-[#1C2B23]">Prediction History (ML)</h3>
             <p className="text-xs text-[#6B786E]">
-              Severity per analyzed reading, oldest to newest. Ringed cells are unusual readings. {DISCLAIMERS.synthetic}
+              Severity per analyzed reading, oldest to newest. Ringed cells are unusual readings.
             </p>
             <div className="mt-3 flex flex-wrap gap-0.5" aria-label="Severity strip">
               {history.map((h) => (
@@ -392,7 +389,6 @@ export const PlantDetailPage: React.FC<PlantDetailPageProps> = ({ plantId, onNav
       <div className="space-y-3">
         <div>
           <h2 className="text-base font-bold text-[#1C2B23]">Recommended Care Actions for Pot #{plant.id}</h2>
-          <p className="text-xs text-[#6B786E]">{DISCLAIMERS.recommendation}</p>
         </div>
 
         {actions.error && (

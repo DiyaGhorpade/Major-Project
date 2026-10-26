@@ -6,16 +6,16 @@ import { recommendationsFixture } from '../../test/fixtureHelpers';
 const irrigation = () => recommendationsFixture().find((r) => r.category === 'irrigation')!;
 
 describe('RecommendationCard', () => {
-  it('shows priority, source, model probability, reason, basedOn and the advisory disclaimer', () => {
+  it('shows priority, source, model probability, reason and basedOn, with no advisory disclaimer', () => {
     const rec = irrigation();
     render(<RecommendationCard recommendation={rec} onUpdateStatus={vi.fn()} />);
     expect(screen.getByText('High Priority')).toBeInTheDocument();
     expect(screen.getByTestId('rec-source')).toHaveTextContent('ML');
     expect(screen.getByTestId('rec-probability')).toHaveTextContent('Model probability 57%');
     expect(screen.getByText(/Soil moisture 2\.5 % \(recent average 2\.1 %\); model P\(high\)=0\.57\./)).toBeInTheDocument();
-    expect(screen.getByTestId('rec-disclaimer')).toHaveTextContent('Advisory heuristic.');
+    expect(screen.queryByTestId('rec-disclaimer')).not.toBeInTheDocument();
     expect(screen.getByTestId('rec-based-on')).toHaveTextContent(/Based on reading Oct 18, 22:02:15 IST · model 1\.0\.0/);
-    expect(screen.getByText(/ML heuristic rules · model 1\.0\.0/)).toBeInTheDocument();
+    expect(screen.getByText(/ML rules · model 1\.0\.0/)).toBeInTheDocument();
     expect(screen.getByText(/Tulsi \(Ocimum\) generally prefers evenly moist/)).toBeInTheDocument();
   });
 
@@ -43,7 +43,6 @@ describe('RecommendationCard', () => {
     expect(screen.getByText('Sensor check')).toBeInTheDocument();
     expect(screen.getByTestId('rec-source')).toHaveTextContent('Backend rule');
     expect(screen.queryByTestId('rec-probability')).not.toBeInTheDocument();
-    expect(screen.getByTestId('rec-disclaimer')).toHaveTextContent('Advisory heuristic.');
   });
 
   it('keeps the original props working: status select and Mark Done', () => {

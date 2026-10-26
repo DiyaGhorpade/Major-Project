@@ -9,7 +9,7 @@ afterEach(() => vi.unstubAllGlobals());
 const route = (plants: unknown) => ({ 'GET /api/plants': { body: plants, headers: { 'X-Total-Count': '4' } } });
 
 describe('PlantsPage', () => {
-  it('shows group, ML status, heuristic guess with confidence, env state and anomaly tips', async () => {
+  it('shows group, ML status, stress-type guess with confidence, env state and anomaly flag', async () => {
     mockFetch(route(plantsFixture()));
     render(<PlantsPage onNavigate={vi.fn()} />);
 
@@ -21,9 +21,7 @@ describe('PlantsPage', () => {
     expect(within(card).getByText('Water Stress')).toBeInTheDocument();
     expect(within(card).getByText('Environmental state group 1')).toBeInTheDocument();
     expect(within(card).getByText('Normal reading')).toBeInTheDocument();
-    expect(within(card).getByRole('note', { name: 'Environmental state group. Not a stress level.' })).toBeInTheDocument();
-    expect(within(card).getByRole('note', { name: 'Unusual reading, check the sensor. Not a plant-health verdict.' })).toBeInTheDocument();
-    expect(within(card).getByRole('note', { name: /Heuristic guess of the stress type/ })).toBeInTheDocument();
+    expect(within(card).queryAllByRole('note')).toHaveLength(0);
     expect(within(card).getByText('Node 1')).toBeInTheDocument();
     expect(screen.queryByText(/Pots 1–12|Pots 13–16/)).not.toBeInTheDocument();
   });
@@ -48,7 +46,7 @@ describe('PlantsPage', () => {
     expect(within(card).getAllByText(/Not analyzed yet/).length).toBeGreaterThan(0);
     expect(within(card).getByText('No reading stored.')).toBeInTheDocument();
     expect(within(card).getByText('No reading')).toBeInTheDocument();
-    expect(screen.getAllByText(/Press Run to analyze the bundled plant dataset\./).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Press Run to analyze the plant data\./).length).toBeGreaterThan(0);
   });
 
   it('renders n/a in list view for missing values', async () => {

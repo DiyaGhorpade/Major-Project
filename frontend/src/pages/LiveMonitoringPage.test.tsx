@@ -25,15 +25,15 @@ describe('LiveMonitoringPage', () => {
     const focus = await screen.findByTestId('focus-plant');
     expect(within(focus).getByText('Pot 5: Rama Tulsi (Watering Trial)')).toBeInTheDocument();
     expect(within(focus).getByText(/Node 1/)).toBeInTheDocument();
-    expect(screen.getByText("Showing the bundled dataset's most recent readings")).toBeInTheDocument();
+    expect(screen.getByText('Most recent readings')).toBeInTheDocument();
     expect(await screen.findByText(/Auto-refresh every 5 s/)).toBeInTheDocument();
     expect(screen.queryByText(/Jetson/)).not.toBeInTheDocument();
     expect(screen.queryByText(/5000/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Port/)).not.toBeInTheDocument();
 
-    // Model output badges with the disclaimer tips.
+    // Model output badges.
     expect(within(focus).getByText('Water Stress')).toBeInTheDocument();
-    expect(within(focus).getAllByRole('note').length).toBeGreaterThanOrEqual(3);
+    expect(within(focus).queryAllByRole('note')).toHaveLength(0);
     expect(within(focus).getByText('Environmental state group 1')).toBeInTheDocument();
 
     // Feed: a flagged reading with a missing soil value renders n/a, not 0.

@@ -27,7 +27,7 @@ class EnvStateCount(CamelModel):
     id: int
     label: str
     count: int
-    note: str = "Environmental state group. Not a stress level."
+    note: str = ""
 
 
 class InsightsModelStatus(CamelModel):

@@ -19,19 +19,19 @@ from app.services.sensor_service import to_record
 
 
 def simple_explanation(pred: MlPrediction) -> str:
-    """Plain sentence built from stored values; says what the numbers are and that the type is a guess."""
+    """Plain sentence built from stored values; says what the numbers are."""
     when = to_ist_text(pred.reading_timestamp)
     probability = (pred.probabilities or {}).get(pred.severity or "", pred.confidence)
     p_text = f" (P={probability:.2f})" if probability is not None else ""
     text = f"Model rates stress '{pred.severity}'{p_text} from the latest reading at {when}"
     if pred.stress_type_guess and pred.stress_type_guess not in ("Healthy",):
-        text += f"; the stress type ('{pred.stress_type_guess}') is a heuristic guess, not a diagnosis."
+        text += f"; the suggested stress type is '{pred.stress_type_guess}'."
     elif pred.severity == "healthy":
         text += "; no stress type is suggested."
     else:
         text += "."
     if pred.is_anomaly:
-        text += " This reading also looks unusual (check the sensor); that is not a plant-health verdict."
+        text += " This reading also looks unusual (check the sensor)."
     return text
 
 

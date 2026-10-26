@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, ChevronLeft, ChevronRight, Info, Search, X } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import { useRecommendations } from '../hooks/useRecommendations';
 import { useRecommendationStatus } from '../hooks/useRecommendationStatus';
 import { usePlants } from '../hooks/usePlants';
 import { ErrorState } from '../components/shared/ErrorState';
-import { DisclaimerNote } from '../components/shared/Disclaimers';
 import { RecommendationCard } from '../components/shared/RecommendationCard';
 import { EmptyState, RunEmptyState } from '../components/shared/EmptyState';
 import { useRecommendationCounts } from '../components/ai/useRecommendationCounts';
@@ -131,12 +130,12 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ onNavi
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-bold uppercase tracking-wider text-[#426B4F]">Agronomic Decision Support</span>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#EDF4EB] text-[#2E8B57] font-semibold border border-[#DDE8D8]">
-              ML-driven, advisory
+              ML-driven
             </span>
           </div>
           <h1 className="text-lg font-bold text-[#1C2B23]">Plant Care Recommendations</h1>
           <p className="text-xs text-[#6B786E] mt-1 max-w-2xl leading-relaxed">
-            Advisory actions built from the ML model's output and recent sensor values. Cards show the sensor values behind each action, where available.
+            Actions built from the ML model's output and recent sensor values. Cards show the sensor values behind each action, where available.
           </p>
         </div>
 
@@ -171,16 +170,6 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ onNavi
           </button>
         </div>
       )}
-
-      <DisclaimerNote disclaimer="recommendation" />
-
-      <div className="p-4 rounded-xl bg-[#EDF4EB] border border-[#DDE8D8] text-xs text-[#173F32] flex items-start gap-3">
-        <Info className="w-4 h-4 text-[#2E8B57] shrink-0 mt-0.5" />
-        <div className="leading-relaxed">
-          <strong>Reviewable action framework:</strong> Recommendations come from the ML model's stress ratings, its anomaly check and recent sensor values.
-          SHAP values are explanatory and not used alone to trigger care. A single anomalous or low moisture reading needs a physical check before watering.
-        </div>
-      </div>
 
       {/* Filters */}
       <div className="bg-white rounded-card border border-[#DCE4D9] p-4 shadow-card flex flex-wrap items-center justify-between gap-3">

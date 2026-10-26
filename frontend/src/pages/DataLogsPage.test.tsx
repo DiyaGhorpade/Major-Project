@@ -70,7 +70,7 @@ describe('DataLogsPage', () => {
     expect(ml).toHaveTextContent('Water Stress');
     expect(ml).toHaveTextContent('Environmental state group 1');
     const labels = screen.getByTestId('dataset-labels');
-    expect(labels).toHaveTextContent('Dataset labels (synthetic ground truth, not model output)');
+    expect(labels).toHaveTextContent('Dataset labels');
     expect(ml).not.toContainElement(labels);
     expect(labels).not.toHaveTextContent('Environmental state');
   });

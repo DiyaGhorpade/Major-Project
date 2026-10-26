@@ -186,7 +186,7 @@
    "timestamp": "2026-10-18T22:01:30+05:30",
    "modelVersion": "1.0.0",
    "recordId": "R-5365",
-   "simpleExplanation": "Model rates stress 'high' (P=0.62) from the latest reading at 2026-10-18T22:01:30+05:30; the stress type ('Water Stress') is a heuristic guess, not a diagnosis.",
+   "simpleExplanation": "Model rates stress 'high' (P=0.62) from the latest reading at 2026-10-18T22:01:30+05:30; the suggested stress type is 'Water Stress'.",
    "envState": {
     "id": 1,
     "distance": 5.659156409605634,
@@ -388,7 +388,7 @@
    "timestamp": "2026-10-18T22:04:30+05:30",
    "modelVersion": "1.0.0",
    "recordId": "R-5373",
-   "simpleExplanation": "Model rates stress 'low' (P=0.73) from the latest reading at 2026-10-18T22:04:30+05:30; the stress type ('Unclassified Stress') is a heuristic guess, not a diagnosis.",
+   "simpleExplanation": "Model rates stress 'low' (P=0.73) from the latest reading at 2026-10-18T22:04:30+05:30; the suggested stress type is 'Unclassified Stress'.",
    "envState": {
     "id": 1,
     "distance": 3.8669639546423844,
