@@ -259,14 +259,18 @@ def test_direction_mapping():
 
 
 # --- feature dictionary ----------------------------------------------------------------------------
-def test_feature_dictionary_resolves_all_62_classifier_features():
+def test_feature_dictionary_resolves_every_classifier_feature():
     names = META["feature_names"]
-    assert len(names) == 62
+    assert len(names) >= 50
     for name in names:
         info = fd.resolve(name)
         assert info.known, f"{name} fell back to the generic entry"
         assert info.display_name and info.description and info.display_name != name
-    assert len({fd.resolve(n).display_name for n in names}) == 62  # no two features share a label
+    assert len({fd.resolve(n).display_name for n in names}) == len(names)  # no two features share a label
+    old = ["soil_lag1", "light_diff1", "vpd_trend3", "humidity_roll12_std", "dayofweek", "light_soil_interaction", "soil_rate_per_hr"]
+    assert all(fd.resolve(n).known for n in old)  # names of earlier models still resolve
+    assert fd.resolve("soil_ref_dev").display_name == "Soil moisture vs. control plants"
+    assert fd.resolve("temperature_ref_dev_roll24").unit == "°C" and fd.resolve("vpd_long24_dev").unit == "kPa"
     info = fd.resolve("soil_roll6_mean")
     assert (info.display_name, info.unit) == ("Soil moisture, 6-reading average", "%")
     assert fd.resolve("light_roll12_std").unit == "lux" and fd.resolve("temperature_base_dev").unit == "°C"
@@ -288,7 +292,7 @@ def test_global_shap_from_report(tmp_path):
         assert [f["name"] for f in g["features"]] == names[:15]
         assert [f["importance_rank"] for f in g["features"]] == list(range(1, 16))
         top = g["features"][0]
-        assert top["displayName"] == "Soil moisture" and top["mean_abs_shap"] > g["features"][1]["mean_abs_shap"]
+        assert top["displayName"] == fd.resolve(names[0]).display_name and top["mean_abs_shap"] > g["features"][1]["mean_abs_shap"]
         assert top["interpretation"] and top["laymanTip"]
         assert g["source"]["path"] == f"reports/{RUN_ID}/evaluation_20261025T085725Z/shap_global_importance.json" and g["source"]["generatedAt"].endswith("+05:30")
         assert g["approximate"]["beeswarm"] == "sample of 3 test rows, top-5 features each (not all rows or features)"
@@ -344,11 +348,12 @@ def test_model_performance_matches_classifier_meta(fresh_client):
     assert r.status_code == 200
     m, mm = r.json(), META["metrics"]
     assert m["model_name"] == META["model_name"] == "xgboost_stress_classifier" and m["model_version"] == META["model_version"]
-    assert m["evaluated_at"] == "2026-10-21T20:22:44+05:30"  # created_at_utc 14:52:44Z in IST
+    created = datetime.fromisoformat(META["created_at_utc"]).astimezone(ZoneInfo("Asia/Kolkata"))
+    assert m["evaluated_at"] == created.isoformat(timespec="seconds")  # created_at_utc shown in IST
     assert m["dataset_name"] == "plant_sensor_data.csv" and m["total_samples"] == mm["n_samples"] == 1344
     assert m["split"] == f"chronological hold-out, last 25% (cutoff {META['split']['cutoff_timestamp']})"
     classes = ["healthy", "low", "moderate", "high"]
-    assert m["overall"]["accuracy"] == mm["accuracy"] and round(m["overall"]["accuracy"], 4) == 0.6458
+    assert m["overall"]["accuracy"] == mm["accuracy"] and round(m["overall"]["accuracy"], 4) == 0.8028  # shipped run (issue #5)
     assert m["overall"]["f1_score"] == mm["macro_f1"]
     assert m["overall"]["precision"] == pytest.approx(sum(mm["per_class"][c]["precision"] for c in classes) / 4)
     assert m["overall"]["recall"] == pytest.approx(sum(mm["per_class"][c]["recall"] for c in classes) / 4)
@@ -357,7 +362,7 @@ def test_model_performance_matches_classifier_meta(fresh_client):
         src = mm["per_class"][p["class_name"]]
         assert (p["precision"], p["recall"], p["f1_score"], p["support"]) == (src["precision"], src["recall"], src["f1"], src["support"])
         assert p["laymanStatus"]
-    assert m["per_class"][0]["laymanStatus"] != m["per_class"][1]["laymanStatus"]  # F1 .73 vs .32
+    assert m["per_class"][0]["laymanStatus"] != m["per_class"][1]["laymanStatus"]  # F1 .82 vs .50
     assert m["confusion_matrix"] == {"labels": classes, "matrix": mm["confusion_matrix"]["matrix"]}
     assert m["provenance"] == "synthetic" and m["validatedOnRealPlants"] is False and m["note"] == ""
     assert m["balancedAccuracy"] == mm["balanced_accuracy"] and m["weightedF1"] == mm["weighted_f1"]

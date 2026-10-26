@@ -22,7 +22,7 @@ from app.db.models import AnomalyRecord, MlPrediction, SensorReading
 from app.integrations.ml_client import MLClient, MLRejected
 from app.integrations.ml_types import BatchResult, MLReading, PredictRequest, PredictResponse, format_rejection, is_data_rejection
 from app.schemas.prediction import AnomalyInfo, EnvState, PredictionListItem
-from app.services import history_builder, recommendation_service
+from app.services import history_builder, recommendation_service, reference_builder
 
 logger = logging.getLogger("app.predictions")
 
@@ -179,14 +179,19 @@ async def history_rows_and_run(ml: MLClient, settings: Settings) -> tuple[int, s
 
 
 def _load_inputs(
-    session_factory: sessionmaker, plant_id: int, reading_id: int | None, history_rows: int
-) -> tuple[SensorReading, MLReading, list[MLReading]]:
+    session_factory: sessionmaker, plant_id: int, reading_id: int | None, history_rows: int, ref_plants: Sequence[int] = ()
+) -> tuple[SensorReading, MLReading, list[MLReading], list[MLReading]]:
     with session_factory() as db:
         reading = repo.get_reading(db, reading_id) if reading_id is not None else repo.latest_reading_for_plant(db, plant_id)
         if reading is None or reading.plant_id != plant_id:
             raise LookupError(f"no reading found for plant {plant_id}" + (f" with id {reading_id}" if reading_id else ""))
         history = history_builder.history_for_reading(db, reading, history_rows)
-        return reading, to_ml_reading(reading), [to_ml_reading(h) for h in history]
+        reference: list[MLReading] = []
+        if ref_plants:
+            start = (history[0].timestamp if history else reading.timestamp) - reference_builder.MARGIN
+            rows = repo.readings_between(db, ref_plants, start, reading.timestamp)
+            reference = [to_ml_reading(r) for r in rows]
+        return reading, to_ml_reading(reading), [to_ml_reading(h) for h in history], reference
 
 
 def _store(session_factory: sessionmaker, reading: SensorReading, outcome: Outcome) -> MlPrediction:
@@ -226,9 +231,12 @@ async def predict_one(
     plant/reading, `MLRejected` (after storing a `rejected` row when the rejection is about the reading's data) or `MLUnavailable` (nothing stored).
     """
     history_rows, _ = await history_rows_and_run(ml, settings)
-    reading, ml_reading, history = await asyncio.to_thread(_load_inputs, session_factory, plant_id, reading_id, history_rows)
+    ref_plants = reference_builder.reference_plants(await ml.cached_metadata())
+    reading, ml_reading, history, reference = await asyncio.to_thread(
+        _load_inputs, session_factory, plant_id, reading_id, history_rows, ref_plants
+    )
     want_explain = explain and effective_explain_mode(settings) != "none"
-    request = PredictRequest(reading=ml_reading, history=history, explain=want_explain)
+    request = PredictRequest(reading=ml_reading, history=history, explain=want_explain, reference=reference)
     try:
         result = await ml.predict(request)
     except MLRejected as exc:

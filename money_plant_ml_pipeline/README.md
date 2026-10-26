@@ -85,7 +85,9 @@ Only used by `scripts/generate_synthetic_data.py` (indoor/shaded 23-30 C days, 1
 ## Feature engineering (all per plant, trailing/past-only)
 `vpd` (approximate air VPD, kPa), `log_light`, `light_soil_interaction`, `soil_rate_per_hr`, lag1/diff1/trend3 and trailing rolling mean/std
 (windows 3, 6, 12) of soil/temperature/humidity/light/VPD, past-only 48-observation baseline deviations (warm-up 6), hour, day-of-week,
-sin/cos hour. 62 classifier inputs. Definitions and leakage tests: `docs/FEATURE_ENGINEERING.md`.
+sin/cos hour, 24/48-observation context, and deviations from the concurrent healthy-control plants 1-4 (as-of join, never later
+readings). The classifier uses 53 of them (`config/feature_config.yaml`), and its probabilities are smoothed over each plant's last 12
+readings (HMM forward filter). Definitions and leakage tests: `docs/FEATURE_ENGINEERING.md`.
 
 ## Models
 * **A - XGBoost** (`multi:softprob`): inputs = sensor + engineered features only; labels, IDs, timestamps, group and helper label are excluded
@@ -98,12 +100,13 @@ sin/cos hour. 62 classifier inputs. Definitions and leakage tests: `docs/FEATURE
 ## Split and how to read metrics
 Default: **chronological** - the last 25% of timestamps (the final weekly session) is test; features use only past rows. `group_holdout` tests unseen plants
 (4, 8, 12, 16). No random row-level split is offered. On the supplied data XGBoost beats both baselines (see `BUILD_REPORT.md` for numbers), but the
-classes "low" and "moderate" are weak, and the numbers describe recovery of **simulator labels**. Read per-class recall and the confusion matrix, not just accuracy.
+class "low" is weak, and the numbers describe recovery of **simulator labels**. Read per-class recall and the confusion matrix, not just accuracy.
 Metric scores can shift slightly between library versions (we observed ~1 point of accuracy between xgboost 3.4 and 2.1).
 
 ## API
 `GET /health`, `GET /metadata`, `POST /validate`, `POST /predict`, `POST /predict/batch` - request/response examples and error codes in `docs/API_CONTRACT.md`.
-The service is **stateless**: send the latest reading plus a chronological history for that plant (>= 49 rows for full feature parity).
+The service is **stateless**: send the latest reading plus a chronological history for that plant (>= 60 rows for full feature parity)
+and, as `reference`, the concurrent readings of the control plants listed in `/metadata` `cross_plant.reference_plants`.
 A cold-start plant still gets a prediction, flagged with a warning. History from another plant is rejected (HTTP 422).
 
 ## Frontend/backend integration

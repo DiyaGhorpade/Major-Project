@@ -197,6 +197,19 @@ def readings_before(db: Session, plant_id: int, before: Any, limit: int) -> list
     return rows
 
 
+def readings_between(db: Session, plant_ids: Sequence[int], start: Any, end: Any) -> list[SensorReading]:
+    """Readings of `plant_ids` with `start <= timestamp <= end`, oldest first (reference-plant context for the ML)."""
+    if not plant_ids:
+        return []
+    return list(
+        db.scalars(
+            select(SensorReading)
+            .where(SensorReading.plant_id.in_(list(plant_ids)), SensorReading.timestamp >= start, SensorReading.timestamp <= end)
+            .order_by(SensorReading.timestamp, SensorReading.plant_id, SensorReading.id)
+        )
+    )
+
+
 def get_reading(db: Session, reading_id: int) -> SensorReading | None:
     return db.get(SensorReading, reading_id)
 

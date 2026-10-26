@@ -36,7 +36,22 @@ def _issues(df: pd.DataFrame) -> tuple[list[dict], dict]:
     return issues, summary
 
 
-def _predict_one(req: PredictRequest, request: Request) -> dict:
+def _reference_frame(readings: list[Reading], request: Request) -> pd.DataFrame | None:
+    """Normalised reference-plant readings (invalid rows are dropped: they only feed the cross-plant features)."""
+    if not readings:
+        return None
+    cfg = request.app.state.cfg
+    limit = int(cfg.get("api.max_reference_rows", 5000))
+    if len(readings) > limit:
+        raise HTTPException(status_code=422, detail={"error": "reference_too_long",
+                            "message": f"reference has {len(readings)} rows; limit is {limit}. Send the history's time span only."})
+    df = _frame(readings, cfg.get("timezone", "Asia/Kolkata"))
+    clean = validate_frame(df, mode="quarantine", require_labels=False).clean
+    plants = set(int(p) for p in (cfg.get("features.cross_plant.reference_plants", []) or []))
+    return clean[clean["plant_id"].isin(plants)].reset_index(drop=True)
+
+
+def _predict_one(req: PredictRequest, request: Request, shared_reference: pd.DataFrame | None = None) -> dict:
     state = request.app.state
     cfg = state.cfg
     if state.predictor is None:
@@ -62,7 +77,10 @@ def _predict_one(req: PredictRequest, request: Request) -> dict:
     if (df["timestamp"].iloc[:-1] >= df["timestamp"].iloc[latest_idx]).any():
         raise HTTPException(status_code=422, detail={"error": "history_not_before_reading",
                             "message": "All history timestamps must be strictly earlier than the reading's timestamp."})
-    out = state.predictor.predict_frame(df, rows="last", explain=req.explain)
+    reference = _reference_frame(list(req.reference), request)
+    if shared_reference is not None:
+        reference = shared_reference if reference is None else pd.concat([reference, shared_reference], ignore_index=True)
+    out = state.predictor.predict_frame(df, rows="last", explain=req.explain, reference=reference)
     return out[0]
 
 
@@ -106,10 +124,11 @@ def predict_batch(body: BatchPredictRequest, request: Request):
     limit = int(st.cfg.get("api.max_batch_items", 64))
     if not body.items or len(body.items) > limit:
         raise HTTPException(status_code=422, detail={"error": "bad_batch_size", "message": f"items must contain 1..{limit} entries"})
+    shared = _reference_frame(list(body.reference), request)
     results = []
     for i, item in enumerate(body.items):
         try:
-            results.append(BatchItemResult(index=i, ok=True, result=PredictResponse(**_predict_one(item, request))))
+            results.append(BatchItemResult(index=i, ok=True, result=PredictResponse(**_predict_one(item, request, shared))))
         except HTTPException as exc:
             detail = exc.detail if isinstance(exc.detail, dict) else {"message": str(exc.detail)}
             results.append(BatchItemResult(index=i, ok=False, error={"status": exc.status_code, **detail}))

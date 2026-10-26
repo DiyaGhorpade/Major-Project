@@ -8,7 +8,8 @@ Three schemes are reported next to each other:
                           experimental group (unseen-plant generalisation).
 
 Every model is fitted INSIDE the fold on its training rows only (imputers/scalers included); the fold functions only
-build boolean masks and never touch the labels' distribution.
+build boolean masks and never touch the labels' distribution. Optional temporal smoothing is fitted per fold too: its
+class-transition matrix and prior come from the fold's TRAINING labels, and it filters the fold's test rows per plant.
 """
 from __future__ import annotations
 
@@ -29,6 +30,7 @@ from .labels import encode_stress_level
 from .preprocessing import make_numeric_pipeline, model_feature_list, select_matrix
 from .schema import STRESS_LEVELS, plant_to_group
 from .splitters import split_frame
+from .temporal_smoothing import fit_transitions, forward_filter
 
 N_CLASSES = len(STRESS_LEVELS)
 SCALARS = ("accuracy", "macro_f1", "weighted_f1", "balanced_accuracy")
@@ -163,13 +165,23 @@ def _mean_sd(values) -> dict:
     return {"mean": float(a.mean()), "sd": float(a.std(ddof=1)) if a.size > 1 else 0.0, "n": int(a.size)}
 
 
+def smooth_in_fold(proba: np.ndarray, y_tr: np.ndarray, plant_tr: np.ndarray, plant_te: np.ndarray,
+                   smoothing: dict | None) -> np.ndarray:
+    """Apply the configured smoothing with transitions fitted on this fold's training labels only."""
+    if not smoothing or smoothing.get("method", "none") == "none":
+        return proba
+    A, prior = fit_transitions(y_tr, plant_tr, float(smoothing.get("transition_pseudocount", 1.0)))
+    return forward_filter(proba, plant_te, A, prior, float(smoothing["temperature"]), int(smoothing["window"]))
+
+
 def evaluate_folds(feat: pd.DataFrame, folds: list[Fold], fit_predict: FitPredict, names: list[str],
-                   seeds=(42,), provenance: str = "synthetic") -> dict:
+                   seeds=(42,), provenance: str = "synthetic", smoothing: dict | None = None) -> dict:
     """Run ``fit_predict`` in every fold. With several seeds, metrics are averaged over seeds per fold first, so the
     reported sd reflects fold-to-fold variation (seed noise is reported separately as ``seed_sd`` per scalar)."""
     y_all = encode_stress_level(feat["stress_level"])
     ok = y_all.notna().to_numpy()
     X_all = select_matrix(feat, names)
+    plant = feat["plant_id"].to_numpy()
     fold_out = []
     for f in folds:
         tr, te = f.train & ok, f.test & ok
@@ -181,7 +193,7 @@ def evaluate_folds(feat: pd.DataFrame, folds: list[Fold], fit_predict: FitPredic
         X_te, y_te = X_all[te], y_all[te].astype(int).to_numpy()
         per_seed = []
         for sd in seeds:
-            proba = fit_predict(X_tr, y_tr, X_te, int(sd))
+            proba = smooth_in_fold(fit_predict(X_tr, y_tr, X_te, int(sd)), y_tr, plant[tr], plant[te], smoothing)
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", message="y_pred contains classes not in y_true")
                 m = classification_metrics(y_te, proba, provenance)
@@ -221,13 +233,15 @@ def summarise(fold_out: list[dict]) -> dict:
 
 
 def run_cv(feat: pd.DataFrame, cfg: Config, models: dict[str, FitPredict], schemes=("chronological", "leave_one_session", "group_kfold_plants"),
-           seeds=(42,), names: list[str] | None = None) -> dict:
-    """{scheme: {model_name: result}} for every model on every scheme's folds."""
+           seeds=(42,), names: list[str] | None = None, smoothing: dict[str, dict] | None = None) -> dict:
+    """{scheme: {model_name: result}} for every model on every scheme's folds. ``smoothing`` maps model names to a
+    smoothing config (see temporal_smoothing.smoothing_params); models not listed are scored unsmoothed."""
     names = names or model_feature_list(cfg, "classifier")
     provenance = str(cfg.get("data.provenance", "synthetic"))
     folds = build_folds(feat, cfg, schemes)
     out: dict = {}
     for scheme in schemes:
         sf = [f for f in folds if f.scheme == scheme]
-        out[scheme] = {name: evaluate_folds(feat, sf, fp, names, seeds, provenance) for name, fp in models.items()}
+        out[scheme] = {name: evaluate_folds(feat, sf, fp, names, seeds, provenance, (smoothing or {}).get(name))
+                       for name, fp in models.items()}
     return out

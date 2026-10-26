@@ -133,3 +133,44 @@ def test_service_reports_unavailable_when_artifacts_missing(base_cfg, tmp_path):
                                                   "soil": 40, "temperature": 25, "humidity": 60, "light": 1000}})
         assert r.status_code == 503 and r.json()["detail"]["error"] == "models_unavailable"
         assert not (tmp_path / "nothing").exists()               # startup never trains or creates artifacts
+
+
+def ref_rows(small_df, upto_n=70, plants=(1, 2, 3, 4)):
+    out = []
+    for p in plants:
+        out += plant_rows(small_df, p, upto_n)
+    return out
+
+
+def test_metadata_lists_reference_plants_and_smoothing(client):
+    j = client.get("/metadata").json()
+    assert j["cross_plant"]["enabled"] is True and j["cross_plant"]["reference_plants"] == [1, 2, 3, 4]
+    assert j["temporal_smoothing"]["method"] == "hmm_forward_filter" and j["temporal_smoothing"]["window"] >= 1
+
+
+def test_predict_with_reference_readings(client, small_df):
+    b = body(small_df, plant=9, n=70)
+    without = client.post("/predict", json=b).json()
+    assert any("reference-plant" in w for w in without["warnings"])
+    b["reference"] = ref_rows(small_df)
+    j = client.post("/predict", json=b)
+    assert j.status_code == 200, j.text
+    j = j.json()
+    assert not any("reference-plant" in w for w in j["warnings"])
+    assert set(j["stress_prediction"]["unsmoothed_probabilities"]) == {"healthy", "low", "moderate", "high"}
+
+
+def test_batch_reference_is_shared_and_equals_per_item_reference(client, small_df):
+    a, b = body(small_df, 9), body(small_df, 13)
+    shared = client.post("/predict/batch", json={"items": [a, b], "reference": ref_rows(small_df)}).json()["results"]
+    per_item = client.post("/predict", json={**a, "reference": ref_rows(small_df)}).json()
+    assert all(x["ok"] for x in shared)
+    assert shared[0]["result"]["stress_prediction"]["probabilities"] == pytest.approx(per_item["stress_prediction"]["probabilities"])
+
+
+def test_reference_size_limit(client, small_df, cfg_small):
+    b = body(small_df, plant=9, n=5)
+    limit = int(cfg_small.get("api.max_reference_rows"))
+    b["reference"] = (ref_rows(small_df, 70) * (limit // 280 + 1))[: limit + 1]
+    r = client.post("/predict", json=b)
+    assert r.status_code == 422 and r.json()["detail"]["error"] == "reference_too_long"

@@ -12,7 +12,7 @@ from .artifact_manager import ArtifactStore, dependency_versions
 from .config import Config
 from .data_loader import file_sha256, load_csv
 from .explainability import Explainer
-from .feature_engineering import build_features
+from .feature_engineering import build_features, cross_plant_params
 from .labels import class_counts
 from .logging_utils import get_logger
 from .preprocessing import select_matrix
@@ -28,7 +28,9 @@ LIMITATIONS = {
     "classifier": [
         "Plant identity and experimental group are deliberately excluded, so the model sees only sensor-derived features.",
         "Small dataset (16 plants, a few weeks): estimates have wide uncertainty.",
-        "Temporal features need ~49 consecutive readings per plant for full parity with training.",
+        "Temporal features need the plant's recent history (see required_history_rows_for_full_features in /metadata).",
+        "Cross-plant features compare each plant with the healthy-control (reference) plants measured at the same time; "
+        "without concurrent reference readings those features are missing and predictions are less reliable.",
     ],
     "clustering": ["Cluster IDs are arbitrary and not health states.", "k chosen by silhouette is a convenience, not discovered structure."],
     "anomaly": ["Flags unusual reading combinations (often sensor issues).",
@@ -97,7 +99,8 @@ def run_training(cfg: Config, input_path: str | Path | None = None, set_latest: 
         **common, "model_name": "xgboost_stress_classifier", "feature_names": cls["feature_names"],
         "label_mapping": cls["label_mapping"], "preprocessing": cls["preprocessing"],
         "xgboost_params": cls["xgboost_params"], "num_boost_round": cls["num_boost_round"],
-        "metrics": cls["metrics"], "baseline_metrics": {k: {m: v[m] for m in ("accuracy", "macro_f1", "weighted_f1", "balanced_accuracy")}
+        "metrics": cls["metrics"], "metrics_unsmoothed": cls["metrics_unsmoothed"],
+        "temporal_smoothing": cls["temporal_smoothing"], "cross_plant": cross_plant_params(cfg), "baseline_metrics": {k: {m: v[m] for m in ("accuracy", "macro_f1", "weighted_f1", "balanced_accuracy")}
                                                          for k, v in cls["baselines"].items()},
         "train_class_counts": cls["train_class_counts"], "known_limitations": LIMITATIONS["classifier"]})
     kpath = store.save_joblib(run_dir, "clustering", {"pipeline": clu["pipeline"], "kmeans": clu["kmeans"]})
@@ -114,7 +117,8 @@ def run_training(cfg: Config, input_path: str | Path | None = None, set_latest: 
     manifest = {**common, "run_id": run_id, "validated_on_real_plants": bool(cfg.get("data.validated_on_real_plants", False)),
                 "models": ["classifier", "clustering", "anomaly"], "config": cfg.snapshot(),
                 "validation_mode": mode, "feature_engineering": {k: cfg.get(f"features.{k}") for k in
-                                                                 ("rolling_windows", "baseline_window", "baseline_min_periods", "std_min_periods", "max_light")}}
+                                                                 ("rolling_windows", "baseline_window", "baseline_min_periods", "std_min_periods", "max_light",
+                                                                  "long_windows", "cross_plant")}}
     store.write_manifest(run_dir, manifest)
     if set_latest:
         store.set_latest(run_dir)
@@ -126,7 +130,8 @@ def run_training(cfg: Config, input_path: str | Path | None = None, set_latest: 
               "not experimentally validated plant-health performance.")
     summary = {"run_id": run_id, "provenance_banner": banner, "training_data": training_data, "data_quality": vres.report,
                "split": split.info, "metric_reading_guide": METRIC_GUIDE,
-               "classifier": {"metrics": cls["metrics"], "baselines": cls["baselines"],
+               "classifier": {"metrics": cls["metrics"], "metrics_unsmoothed": cls["metrics_unsmoothed"],
+                              "temporal_smoothing": cls["temporal_smoothing"], "baselines": cls["baselines"],
                               "feature_importance_gain": cls["feature_importance_gain"],
                               "train_class_counts": cls["train_class_counts"]},
                "clustering": {k: clu[k] for k in ("selected_k", "silhouette_by_k", "cluster_summaries", "crosstab", "note",
@@ -137,7 +142,8 @@ def run_training(cfg: Config, input_path: str | Path | None = None, set_latest: 
     rp.write_json(rdir / "class_distribution.json", {"all_rows": class_counts(clean["stress_level"]),
                   "train_labelled": cls["train_class_counts"], "test": cls["metrics"]["class_counts"],
                   "note": "Synthetic classes were balanced by the simulator; this does not reflect real-world prevalence."})
-    rp.write_json(rdir / "classifier_metrics.json", {"xgboost": cls["metrics"], "baselines": cls["baselines"],
+    rp.write_json(rdir / "classifier_metrics.json", {"xgboost": cls["metrics"], "xgboost_unsmoothed": cls["metrics_unsmoothed"],
+                  "temporal_smoothing": cls["temporal_smoothing"], "baselines": cls["baselines"],
                   "split": split.info, "feature_importance_gain": cls["feature_importance_gain"]})
     rp.write_json(rdir / "clustering_report.json", summary["clustering"])
     rp.write_json(rdir / "anomaly_report.json", summary["anomaly"])

@@ -34,6 +34,8 @@ ABLATIONS = {
     "no_lag1_diff1_trend3": lambda names: [n for n in names if not n.endswith(("_lag1", "_diff1", "_trend3"))],
     "no_roll3": lambda names: [n for n in names if "_roll3_" not in n],
     "no_calendar": lambda names: [n for n in names if n not in ("hour", "dayofweek", "hour_sin", "hour_cos")],
+    "no_cross_plant": lambda names: [n for n in names if "_ref_dev" not in n],
+    "no_long_windows": lambda names: [n for n in names if "_long" not in n],
 }
 
 

@@ -32,13 +32,15 @@ def main() -> int:
         for m in validation_messages(res.report):
             print("validation warning:", m, file=sys.stderr)
         data = res.clean.reset_index(drop=True)
+        reference = None
         if a.plant_id is not None:
+            reference = data[data["plant_id"] != a.plant_id].reset_index(drop=True)   # reference plants for cross-plant features
             data = data[data["plant_id"] == a.plant_id].reset_index(drop=True)
             if data.empty:
                 print(f"No rows for plant_id {a.plant_id}", file=sys.stderr)
                 return 1
         predictor = PlantPredictor.from_config(cfg, a.run_id)
-        results = predictor.predict_frame(data, rows=a.rows, explain=False if a.no_explain else None)
+        results = predictor.predict_frame(data, rows=a.rows, explain=False if a.no_explain else None, reference=reference)
     except (ArtifactError, DataLoadError, ValidationError, ValueError, FileNotFoundError) as exc:
         print(f"INFERENCE FAILED: {exc}", file=sys.stderr)
         return 1

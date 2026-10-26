@@ -25,7 +25,7 @@ from app.db.models import PipelineRun, SensorReading, utcnow
 from app.integrations.ml_client import MLClient, MLError, MLRejected, MLUnavailable
 from app.integrations.ml_types import MLReading, PredictRequest, format_rejection, is_data_rejection, rejection_failure_text
 from app.schemas.pipeline import PipelineState, PipelineStatus
-from app.services import history_builder, model_service, recommendation_service
+from app.services import history_builder, model_service, recommendation_service, reference_builder
 from app.services.prediction_service import Outcome, effective_explain_mode, persist_predictions, to_ml_reading
 
 logger = logging.getLogger("app.pipeline")
@@ -47,6 +47,7 @@ class WorkItem:
     start: int  # history = plant_series[start:end]
     end: int
     explain: bool
+    series_times: list = field(default_factory=list)  # datetimes of `plant_series` (shared per plant)
 
     @property
     def history_rows(self) -> int:
@@ -56,6 +57,10 @@ class WorkItem:
         return PredictRequest(
             reading=self.plant_series[self.index], history=self.plant_series[self.start : self.end], explain=self.explain
         )
+
+    def span(self) -> tuple:
+        """(first history timestamp, reading timestamp) as datetimes: the time span reference readings must cover."""
+        return self.series_times[self.start if self.end > self.start else self.index], self.series_times[self.index]
 
 
 @dataclass
@@ -89,6 +94,7 @@ class PipelineService:
         self._ml = ml
         self._lock = asyncio.Lock()
         self._task: asyncio.Task | None = None
+        self._reference: reference_builder.ReferenceIndex | None = None  # reference-plant readings of the current run
         self.on_data_changed: Callable[[], None] | None = None  # e.g. clears the API response cache
 
     def _changed(self) -> None:
@@ -162,8 +168,10 @@ class PipelineService:
             await asyncio.to_thread(
                 self._update_run, run_id, status="running", started_at=utcnow(), message="Checking ML service"
             )
-            history_rows, max_batch, ml_run_id, explain_available = await self._preflight()
-            items = await asyncio.to_thread(self._prepare, run_id, reset, history_rows, ml_run_id, explain_available, stats)
+            history_rows, max_batch, ml_run_id, explain_available, ref_plants = await self._preflight()
+            items = await asyncio.to_thread(
+                self._prepare, run_id, reset, history_rows, ml_run_id, explain_available, stats, ref_plants
+            )
             await self._process(run_id, items, max_batch, stats)
             if stats.abort_reason:
                 raise PipelineFailure(
@@ -188,7 +196,7 @@ class PipelineService:
             logger.exception("pipeline run %d crashed", run_id)
             await asyncio.to_thread(self._fail_run, run_id, f"Internal error: {type(exc).__name__}")
 
-    async def _preflight(self) -> tuple[int, int, str, bool]:
+    async def _preflight(self) -> tuple[int, int, str, bool, list[int]]:
         """ML must be healthy with models loaded and `/metadata` readable; returns the run parameters."""
         url = self._ml.base_url
         try:
@@ -214,14 +222,15 @@ class PipelineService:
             metadata.model_version, metadata.run_id, rows, max_history, max_batch,
             self._settings.ML_CONCURRENCY, effective_explain_mode(self._settings),
         )  # fmt: skip
-        return rows, max_batch, metadata.run_id, explain_available
+        return rows, max_batch, metadata.run_id, explain_available, reference_builder.reference_plants(metadata)
 
     def _cache_model(self, metadata) -> None:
         with self._sf() as db:
             model_service.cache_model_info(db, metadata)
 
     def _prepare(
-        self, run_id: int, reset: bool, history_rows: int, ml_run_id: str, explain_available: bool, stats: _Stats
+        self, run_id: int, reset: bool, history_rows: int, ml_run_id: str, explain_available: bool, stats: _Stats,
+        ref_plants: list[int] | None = None,
     ) -> list[WorkItem]:
         """Optional reset, then build the work list: every reading that still needs a prediction."""
         with self._sf() as db:
@@ -234,12 +243,17 @@ class PipelineService:
                 self._changed()
             readings = repo.all_readings_ordered(db)
             existing = {} if reset else repo.all_predictions_light(db)
+        wanted = set(ref_plants or [])
+        self._reference = (
+            reference_builder.ReferenceIndex((r for r in readings if r.plant_id in wanted), to_ml_reading) if wanted else None
+        )
 
         explain_mode = effective_explain_mode(self._settings)
         items: list[WorkItem] = []
         for _, group in groupby(readings, key=lambda r: r.plant_id):
             series = list(group)  # one plant, ordered by time
             ml_series = [to_ml_reading(r) for r in series]
+            times = [r.timestamp for r in series]
             for i, reading in enumerate(series):
                 explain = explain_mode == "latest_only" and i == len(series) - 1
                 prior = existing.get(reading.id)
@@ -251,7 +265,7 @@ class PipelineService:
                     if done:
                         continue
                 start, end = history_builder.history_bounds(series, i, history_rows)
-                items.append(WorkItem(reading, ml_series, i, start, end, explain))
+                items.append(WorkItem(reading, ml_series, i, start, end, explain, times))
         stats.total = len(items)
         self._update_run(
             run_id, total=len(items), processed=0, failed=0,
@@ -299,7 +313,8 @@ class PipelineService:
         because it would otherwise mark readings `rejected` for good (DEV-51). Anything else is a bug and
         propagates to the worker's internal-error path."""
         try:
-            results = await self._ml.predict_batch([item.request() for item in chunk])
+            reference = self._reference.for_series([item.span() for item in chunk]) if self._reference else []
+            results = await self._ml.predict_batch([item.request() for item in chunk], reference)
         except MLUnavailable as exc:
             return [Outcome("unavailable", error=exc.reason, history_rows_sent=item.history_rows) for item in chunk]
         except MLRejected as exc:

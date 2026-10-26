@@ -7,9 +7,64 @@
 allow_identifier_experiments: []
 
 classifier:
-  include: all                 # every engineered + raw sensor feature ...
-  exclude: [elapsed_hours]     # ... except elapsed_hours (depends on how much history a caller supplies -> train/serve skew,
-                               #     and acts as a proxy for "which week of the experiment")
+  # Issue #5 feature set, selected on validation folds inside sessions 1-3 (see docs/TRAINING_AND_EVALUATION.md):
+  # deviations from the concurrent healthy-control plants (cancel the shared room climate), longer per-plant context and
+  # time of day. Raw absolute sensor levels, short lags and dayofweek were dropped: with the deviations present they
+  # added no validation gain (dayofweek is a calendar artefact for plants); elapsed_hours stays out (train/serve skew).
+  features:
+    - soil_ref_dev
+    - soil_ref_dev_roll3
+    - soil_ref_dev_roll6
+    - soil_ref_dev_roll12
+    - soil_ref_dev_roll24
+    - soil_ref_dev_roll48
+    - temperature_ref_dev
+    - temperature_ref_dev_roll3
+    - temperature_ref_dev_roll6
+    - temperature_ref_dev_roll12
+    - temperature_ref_dev_roll24
+    - temperature_ref_dev_roll48
+    - humidity_ref_dev
+    - humidity_ref_dev_roll3
+    - humidity_ref_dev_roll6
+    - humidity_ref_dev_roll12
+    - humidity_ref_dev_roll24
+    - humidity_ref_dev_roll48
+    - log_light_ref_dev
+    - log_light_ref_dev_roll3
+    - log_light_ref_dev_roll6
+    - log_light_ref_dev_roll12
+    - log_light_ref_dev_roll24
+    - log_light_ref_dev_roll48
+    - vpd_ref_dev
+    - vpd_ref_dev_roll3
+    - vpd_ref_dev_roll6
+    - vpd_ref_dev_roll12
+    - vpd_ref_dev_roll24
+    - vpd_ref_dev_roll48
+    - soil_long24_mean
+    - soil_long48_mean
+    - soil_long24_dev
+    - soil_base_dev
+    - temperature_long24_mean
+    - temperature_long48_mean
+    - temperature_long24_dev
+    - temperature_base_dev
+    - humidity_long24_mean
+    - humidity_long48_mean
+    - humidity_long24_dev
+    - humidity_base_dev
+    - log_light_long24_mean
+    - log_light_long48_mean
+    - log_light_long24_dev
+    - log_light_base_dev
+    - vpd_long24_mean
+    - vpd_long48_mean
+    - vpd_long24_dev
+    - vpd_base_dev
+    - hour
+    - hour_sin
+    - hour_cos
 
 clustering:
   features:

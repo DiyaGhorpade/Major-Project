@@ -1,0 +1,174 @@
+{
+  "model_version": "1.0.0",
+  "created_at_utc": "2026-10-26T14:55:47.794761+00:00",
+  "random_seed": 42,
+  "dependency_versions": {
+    "python": "3.13.11",
+    "platform": "Linux-7.2.10-1-cachyos-x86_64-with-glibc2.44",
+    "machine": "x86_64",
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "scipy": "1.18.1",
+    "sklearn": "1.9.1",
+    "xgboost": "3.4.1",
+    "joblib": "1.6.0",
+    "yaml": "6.0.3",
+    "fastapi": "0.156.4",
+    "pydantic": "2.13.5",
+    "shap": "0.54.1",
+    "matplotlib": "3.11.2"
+  },
+  "training_data": {
+    "filename": "plant_sensor_data.csv",
+    "sha256": "92ea22e21bf3ffa8544207751a2b8ac55589c5b68a9c570ce0c0e7c1eedbf860",
+    "rows": 5376,
+    "rows_used": 5376,
+    "rows_quarantined": 0,
+    "provenance": "synthetic",
+    "provenance_note": null
+  },
+  "split": {
+    "strategy": "chronological",
+    "cutoff_timestamp": "2026-10-11T22:05:15+05:30",
+    "test_fraction": 0.25,
+    "note": "Train rows are strictly earlier than test rows; features use past rows only.",
+    "train_rows": 4032,
+    "test_rows": 1344
+  },
+  "model_name": "kmeans_environment_clusters",
+  "feature_names": [
+    "soil",
+    "temperature",
+    "humidity",
+    "log_light",
+    "vpd",
+    "soil_rate_per_hr",
+    "soil_base_dev",
+    "temperature_base_dev",
+    "humidity_base_dev",
+    "log_light_base_dev",
+    "vpd_base_dev",
+    "soil_roll6_mean",
+    "temperature_roll6_mean",
+    "humidity_roll6_mean",
+    "light_roll6_mean",
+    "vpd_roll6_mean"
+  ],
+  "selected_k": 3,
+  "silhouette_by_k": {
+    "2": {
+      "silhouette": 0.26015506586885134,
+      "inertia": 48424.27914126735
+    },
+    "3": {
+      "silhouette": 0.262676105139844,
+      "inertia": 40184.558939834336
+    },
+    "4": {
+      "silhouette": 0.21666879895037175,
+      "inertia": 35773.753675835804
+    },
+    "5": {
+      "silhouette": 0.23538223145639126,
+      "inertia": 32354.565498993972
+    },
+    "6": {
+      "silhouette": 0.22944723425949182,
+      "inertia": 29655.211984165144
+    },
+    "7": {
+      "silhouette": 0.23656648870388525,
+      "inertia": 26918.2008926488
+    },
+    "8": {
+      "silhouette": 0.24690541631625246,
+      "inertia": 24904.551236985884
+    }
+  },
+  "cluster_summaries": [
+    {
+      "cluster_id": 0,
+      "size": 362,
+      "share": 0.08978174603174603,
+      "mean_distance_to_centroid": 3.7939375020381108,
+      "centroid_original_units": {
+        "soil": 52.75248618784531,
+        "temperature": 31.657734806629833,
+        "humidity": 49.61077348066297,
+        "log_light": 3.5345910837262053,
+        "vpd": 2.42445073945496,
+        "soil_rate_per_hr": 0.020027624309392273,
+        "soil_base_dev": 0.5237602809683786,
+        "temperature_base_dev": 0.8477982410548308,
+        "humidity_base_dev": -3.58929288341116,
+        "log_light_base_dev": -0.08438970616235555,
+        "vpd_base_dev": 0.23120943233871724,
+        "soil_roll6_mean": 52.9367955801105,
+        "temperature_roll6_mean": 31.76656537753224,
+        "humidity_roll6_mean": 49.64738029465929,
+        "light_roll6_mean": 1577.5534069981582,
+        "vpd_roll6_mean": 2.4442761614317217
+      }
+    },
+    {
+      "cluster_id": 1,
+      "size": 2062,
+      "share": 0.5114087301587301,
+      "mean_distance_to_centroid": 2.5321607492808518,
+      "centroid_original_units": {
+        "soil": 46.91484716157205,
+        "temperature": 21.962251334303737,
+        "humidity": 83.37195536147502,
+        "log_light": 1.3123712676022934,
+        "vpd": 0.4645905870290824,
+        "soil_rate_per_hr": 0.015647743813682575,
+        "soil_base_dev": -1.4431933283094933,
+        "temperature_base_dev": -1.4826205920224387,
+        "humidity_base_dev": 4.768062673737682,
+        "log_light_base_dev": -2.2009141814993742,
+        "vpd_base_dev": -0.2090023392831461,
+        "soil_roll6_mean": 47.079414523694,
+        "temperature_roll6_mean": 23.328965712437327,
+        "humidity_roll6_mean": 79.23257803655184,
+        "light_roll6_mean": 874.3862526281742,
+        "vpd_roll6_mean": 0.6490847987189969
+      }
+    },
+    {
+      "cluster_id": 2,
+      "size": 1608,
+      "share": 0.39880952380952384,
+      "mean_distance_to_centroid": 2.9725889406218866,
+      "centroid_original_units": {
+        "soil": 45.83990055935364,
+        "temperature": 26.174891236793037,
+        "humidity": 70.99216904909882,
+        "log_light": 6.2821442630355495,
+        "vpd": 1.0002469095255715,
+        "soil_rate_per_hr": -0.08222498446239905,
+        "soil_base_dev": -1.1601891514257456,
+        "temperature_base_dev": 1.9474061797425435,
+        "humidity_base_dev": -6.198722466138596,
+        "log_light_base_dev": 2.6125675537424677,
+        "vpd_base_dev": 0.2708286482049209,
+        "soil_roll6_mean": 45.8693608866791,
+        "temperature_roll6_mean": 24.360741661487467,
+        "humidity_roll6_mean": 76.50566293764243,
+        "light_roll6_mean": 3068.2442303708312,
+        "vpd_roll6_mean": 0.7586734657234165
+      }
+    }
+  ],
+  "preprocessing": {
+    "imputation": "median (fit on train)",
+    "scaling": "StandardScaler (fit on train)"
+  },
+  "note": "Cluster IDs are arbitrary integers describing groups of similar environmental readings. The number of clusters is chosen from the data (silhouette), not from the number of experimental groups.",
+  "known_limitations": [
+    "Cluster IDs are arbitrary and not health states.",
+    "k chosen by silhouette is a convenience, not discovered structure."
+  ],
+  "artifact_file": "clustering.joblib",
+  "artifact_sha256": "865e609fb205cb513193c34c3ad5b4fc584d46578dc4ab87c2833014bf976704",
+  "artifact_size_bytes": 19009
+}

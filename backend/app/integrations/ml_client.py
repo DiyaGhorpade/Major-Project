@@ -8,6 +8,8 @@
   Pydantic 422 or fails with a non-503 5xx, it falls back to per-item `/predict` so one bad item cannot
   sink the others.
 * The class is plain and non-final on purpose: tests subclass it (or pass an `httpx.MockTransport`).
+* Reference-plant readings (`reference`) are sent once per batch; an empty list is left out of the payload, so
+  requests for models without cross-plant features look exactly as before.
 """
 
 import asyncio
@@ -79,6 +81,17 @@ def _unavailable_text(body: Any) -> str:
     if isinstance(detail, dict):
         return str(detail.get("message") or detail.get("error") or "models unavailable")
     return str(detail) if detail else "models unavailable"
+
+
+def _payload(model: Any) -> dict:
+    """JSON body with empty `reference` lists dropped (top level and per item)."""
+    body = model.model_dump(mode="json")
+    if not body.get("reference"):
+        body.pop("reference", None)
+    for item in body.get("items") or []:
+        if isinstance(item, dict) and not item.get("reference"):
+            item.pop("reference", None)
+    return body
 
 
 class MLClient:
@@ -174,12 +187,16 @@ class MLClient:
         return self._parse(ValidateResponse, self._check(response))
 
     async def predict(self, req: PredictRequest) -> PredictResponse:
-        response = await self._request("POST", "/predict", json=req.model_dump(mode="json"))
+        response = await self._request("POST", "/predict", json=_payload(req))
         return self._parse(PredictResponse, self._check(response))
 
-    async def predict_batch(self, items: Sequence[PredictRequest]) -> list[BatchResult]:
-        """One normalised result per item, in input order. Raises MLUnavailable if the whole call is down."""
-        payload = BatchPredictRequest(items=list(items)).model_dump(mode="json")
+    async def predict_batch(
+        self, items: Sequence[PredictRequest], reference: Sequence[MLReading] | None = None
+    ) -> list[BatchResult]:
+        """One normalised result per item, in input order. Raises MLUnavailable if the whole call is down.
+        `reference` (reference-plant readings) is shared by all items; the per-item fallback attaches it to each item."""
+        reference = list(reference or [])
+        payload = _payload(BatchPredictRequest(items=list(items), reference=reference))
         response = await self._request(
             "POST", "/predict/batch", json=payload, timeout=self.timeout_s * BATCH_TIMEOUT_FACTOR
         )
@@ -188,10 +205,10 @@ class MLClient:
             if rejected.code != "invalid_request":  # e.g. bad_batch_size: a caller bug, not an item problem
                 raise rejected
             logger.warning("batch refused (%s); falling back to per-item /predict for %d items", rejected.message, len(items))
-            return await self._predict_each(items)
+            return await self._predict_each(self._with_reference(items, reference))
         if response.status_code >= 500:  # non-503 (503 was retried and raised above): one bad item may be the cause
             logger.warning("batch failed with HTTP %d; falling back to per-item /predict for %d items", response.status_code, len(items))
-            return await self._predict_each(items)
+            return await self._predict_each(self._with_reference(items, reference))
         body = self._check(response)
         raw = body.get("results") if isinstance(body, dict) else None
         if not isinstance(raw, list) or len(raw) != len(items):
@@ -214,6 +231,12 @@ class MLClient:
         if status == 422:
             return BatchResult(index=index, status="rejected", code=code, message=message, issues=error.get("issues") or [])
         return BatchResult(index=index, status="unavailable", code=code, message=message or f"HTTP {status}")
+
+    @staticmethod
+    def _with_reference(items: Sequence[PredictRequest], reference: list[MLReading]) -> list[PredictRequest]:
+        if not reference:
+            return list(items)
+        return [item if item.reference else item.model_copy(update={"reference": reference}) for item in items]
 
     async def _predict_each(self, items: Sequence[PredictRequest]) -> list[BatchResult]:
         out: list[BatchResult] = []

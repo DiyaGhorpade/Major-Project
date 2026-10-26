@@ -1,0 +1,92 @@
+{
+  "model_version": "1.0.0",
+  "created_at_utc": "2026-10-26T14:55:47.794761+00:00",
+  "random_seed": 42,
+  "dependency_versions": {
+    "python": "3.13.11",
+    "platform": "Linux-7.2.10-1-cachyos-x86_64-with-glibc2.44",
+    "machine": "x86_64",
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "scipy": "1.18.1",
+    "sklearn": "1.9.1",
+    "xgboost": "3.4.1",
+    "joblib": "1.6.0",
+    "yaml": "6.0.3",
+    "fastapi": "0.156.4",
+    "pydantic": "2.13.5",
+    "shap": "0.54.1",
+    "matplotlib": "3.11.2"
+  },
+  "training_data": {
+    "filename": "plant_sensor_data.csv",
+    "sha256": "92ea22e21bf3ffa8544207751a2b8ac55589c5b68a9c570ce0c0e7c1eedbf860",
+    "rows": 5376,
+    "rows_used": 5376,
+    "rows_quarantined": 0,
+    "provenance": "synthetic",
+    "provenance_note": null
+  },
+  "split": {
+    "strategy": "chronological",
+    "cutoff_timestamp": "2026-10-11T22:05:15+05:30",
+    "test_fraction": 0.25,
+    "note": "Train rows are strictly earlier than test rows; features use past rows only.",
+    "train_rows": 4032,
+    "test_rows": 1344
+  },
+  "model_name": "isolation_forest_anomaly",
+  "feature_names": [
+    "soil",
+    "temperature",
+    "humidity",
+    "log_light",
+    "vpd",
+    "soil_diff1",
+    "temperature_diff1",
+    "humidity_diff1",
+    "light_diff1",
+    "vpd_diff1",
+    "soil_rate_per_hr",
+    "soil_base_dev",
+    "temperature_base_dev",
+    "humidity_base_dev",
+    "log_light_base_dev",
+    "vpd_base_dev",
+    "soil_roll6_std",
+    "temperature_roll6_std",
+    "humidity_roll6_std",
+    "light_soil_interaction"
+  ],
+  "contamination": 0.02,
+  "threshold": {
+    "decision_rule": "anomaly_score > 0",
+    "value": 0.0,
+    "isolation_forest_offset": -0.5552444516196737
+  },
+  "score_convention": "anomaly_score = -IsolationForest.decision_function(x). HIGHER = MORE anomalous. is_anomaly = anomaly_score > 0 (decision threshold 0.0, set by the contamination fraction on the training data). Scores are relative to training data and are not probabilities.",
+  "preprocessing": {
+    "imputation": "median (fit on train)",
+    "scaling": "StandardScaler (fit on train)"
+  },
+  "metrics_vs_helper_label": {
+    "note": "Evaluated against the helper label is_synthetic_anomaly; the label was never a model input.",
+    "n_samples": 1344,
+    "n_helper_positives": 14,
+    "precision": 0.2857142857142857,
+    "recall": 0.42857142857142855,
+    "f1": 0.34285714285714286,
+    "pr_auc": 0.3338292816820025,
+    "roc_auc": 0.951235230934479,
+    "n_flagged": 21,
+    "positive_rate_baseline_pr_auc": 0.010416666666666666
+  },
+  "note": "An anomaly flag means 'unusual combination of readings' - possibly a sensor / wiring / data-quality problem or an unusual environment.",
+  "known_limitations": [
+    "Flags unusual reading combinations (often sensor issues).",
+    "Contamination is a configured assumption, not an estimate of the true anomaly rate."
+  ],
+  "artifact_file": "anomaly.joblib",
+  "artifact_sha256": "b1b1842be5d40af6bae46b33d8537360b26eddee9c5f0228335f3f8e7d2cd82a",
+  "artifact_size_bytes": 1948328
+}

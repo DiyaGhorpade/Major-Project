@@ -19,6 +19,7 @@ from .feature_engineering import build_features
 from .labels import encode_stress_level
 from .preprocessing import select_matrix
 from .splitters import split_frame
+from .temporal_smoothing import apply_from_meta
 from .validation import validate_frame
 
 
@@ -46,8 +47,10 @@ def evaluate_run(cfg: Config, input_path: str | Path, run_id: str | None = None,
     y = encode_stress_level(feat["stress_level"])
     te = split.test_mask & y.notna()
     X_te = select_matrix(feat.loc[te], names)
-    proba = bundle.booster.predict(xgb.DMatrix(X_te, feature_names=names))
+    proba_raw = bundle.booster.predict(xgb.DMatrix(X_te, feature_names=names))
+    proba = apply_from_meta(bundle.meta["classifier"].get("temporal_smoothing"), proba_raw, feat.loc[te, "plant_id"].to_numpy())
     out["classifier"] = classification_metrics(y[te].astype(int).to_numpy(), proba, provenance)
+    out["classifier_unsmoothed"] = classification_metrics(y[te].astype(int).to_numpy(), proba_raw, provenance)
 
     an_names = bundle.meta["anomaly"]["feature_names"]
     score = -bundle.iforest.decision_function(bundle.anomaly_pipeline.transform(select_matrix(feat.loc[split.test_mask], an_names)))

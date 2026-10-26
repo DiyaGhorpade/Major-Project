@@ -74,6 +74,8 @@ class FakeML(MLClient):
         self.max_items_seen = 0
         self.predict_calls = 0
         self.seen: list[PredictRequest] = []  # every item received, via batch or single predict
+        self.cross_plant: dict | None = None  # advertised in /metadata when set (e.g. {"enabled": True, "reference_plants": [...]})
+        self.batch_payloads: list[dict] = []  # raw /predict/batch bodies (to inspect the shared `reference`)
         super().__init__("http://fake-ml:8001", 1, transport=httpx.MockTransport(self._handle), attempts=3, backoff_s=0)
 
     def _item_result(self, i: int, req: PredictRequest) -> dict:
@@ -100,6 +102,7 @@ class FakeML(MLClient):
                 "run_id": self.ml_run_id, "model_version": "1.0.0", "trained_at": "2026-10-21T14:52:44+00:00", "trained_on": "synthetic",
                 "validated_on_real_plants": False, "label_mapping": {k: i for i, k in enumerate(LABELS)},
                 "explainability": {"available": True, "reason": None}, "required_history_rows_for_full_features": 49, "disclaimer": "fake",
+                **({"cross_plant": self.cross_plant} if self.cross_plant is not None else {}),
             })  # fmt: skip
         body = json.loads(request.content) if request.content else {}
         if path == "/validate":
@@ -128,6 +131,7 @@ class FakeML(MLClient):
             if self.batch_error:
                 return httpx.Response(422, json={"detail": self.batch_error})
             self.batches += 1
+            self.batch_payloads.append(body)
             items = [PredictRequest.model_validate(i) for i in body["items"]]
             self.max_items_seen = max(self.max_items_seen, len(items))
             return httpx.Response(200, json={"results": [self._item_result(i, req) for i, req in enumerate(items)]})

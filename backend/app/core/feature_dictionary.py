@@ -1,8 +1,9 @@
 """Display names, units and plain-language descriptions for the ML classifier's feature names.
 
 The ML service reports raw feature names such as `soil_roll6_mean`. They follow a small set of patterns
-(`feature_engineering.py` in the ML package: sensor x {lag1, diff1, trend3, rollN_mean/std, base_dev}, derived
-and time features), so one pattern table covers all 62 names listed in `classifier.meta.json`. Text only
+(`feature_engineering.py` in the ML package: sensor x {lag1, diff1, trend3, rollN_mean/std, base_dev, longN_mean,
+longN_dev, ref_dev, ref_dev_rollN}, derived and time features), so one pattern table covers every name listed in
+`classifier.meta.json`. Text only
 describes how a feature is computed; it never claims a biological cause. `resolve` reports whether a name
 matched a known pattern (`known=False` means a generic fallback was used).
 """
@@ -58,6 +59,10 @@ _LAG = re.compile(rf"^({_SENSOR_ALT})_lag1$")
 _DIFF = re.compile(rf"^({_SENSOR_ALT})_diff1$")
 _TREND = re.compile(rf"^({_SENSOR_ALT})_trend3$")
 _BASE = re.compile(rf"^({_SENSOR_ALT})_base_dev$")
+_LONG_MEAN = re.compile(rf"^({_SENSOR_ALT})_long(\d+)_mean$")
+_LONG_DEV = re.compile(rf"^({_SENSOR_ALT})_long(\d+)_dev$")
+_REF = re.compile(rf"^({_SENSOR_ALT})_ref_dev$")
+_REF_ROLL = re.compile(rf"^({_SENSOR_ALT})_ref_dev_roll(\d+)$")
 
 
 def _info(name: str, display: str, unit: str, description: str) -> FeatureInfo:
@@ -100,6 +105,28 @@ def resolve(name: str) -> FeatureInfo:
         return _info(name, f"{label}, difference from usual", unit,
                      f"How far {label.lower()} is from this plant's own recent baseline "
                      f"(the average of its previous {_BASELINE_ROWS} readings).")  # fmt: skip
+
+    if m := _LONG_MEAN.match(name):
+        sensor, n = m.groups()
+        label, unit = _SENSORS[sensor]
+        return _info(name, f"{label}, {n}-reading average", unit,
+                     f"Average {label.lower()} over this plant's last {n} readings.")  # fmt: skip
+    if m := _LONG_DEV.match(name):
+        sensor, n = m.groups()
+        label, unit = _SENSORS[sensor]
+        return _info(name, f"{label}, difference from {n}-reading usual", unit,
+                     f"How far {label.lower()} is from the average of this plant's previous {n} readings.")  # fmt: skip
+    if m := _REF.match(name):
+        label, unit = _SENSORS[m.group(1)]
+        return _info(name, f"{label} vs. control plants", unit,
+                     f"How far this plant's {label.lower()} is from the median of the healthy-control plants "
+                     "measured at the same time (the shared room conditions cancel out).")  # fmt: skip
+    if m := _REF_ROLL.match(name):
+        sensor, n = m.groups()
+        label, unit = _SENSORS[sensor]
+        return _info(name, f"{label} vs. control plants, {n}-reading average", unit,
+                     f"Average, over this plant's last {n} readings, of how far its {label.lower()} was from the "
+                     "healthy-control plants measured at the same time.")  # fmt: skip
 
     pretty = name.replace("_", " ").strip().capitalize() or "Unknown feature"
     return FeatureInfo(name, pretty, "", "A model input derived from the sensor readings.", known=False)

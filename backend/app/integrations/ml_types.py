@@ -1,7 +1,8 @@
 """Pydantic models mirroring the ML service's request/response contract (PHASE0_FINDINGS section 2).
 
 Parsing is deliberately tolerant: loosely-typed nested dicts keep `extra="allow"` so a new field in the
-ML service never breaks the backend. The backend sends only the six core reading fields.
+ML service never breaks the backend. The backend sends only the six core reading fields (for the plant's own history
+and, when `/metadata` lists reference plants, for those plants' concurrent readings in `reference`).
 """
 
 from typing import Any, Literal
@@ -29,10 +30,12 @@ class PredictRequest(BaseModel):
     reading: MLReading
     history: list[MLReading] = Field(default_factory=list)  # same plant, strictly earlier
     explain: bool | None = None
+    reference: list[MLReading] = Field(default_factory=list)  # reference (control) plants' readings; cross-plant features
 
 
 class BatchPredictRequest(BaseModel):
     items: list[PredictRequest]
+    reference: list[MLReading] = Field(default_factory=list)  # shared by every item of the batch
 
 
 class ValidateRequest(BaseModel):
@@ -130,6 +133,7 @@ class MetadataResponse(_Tolerant):
     label_mapping: Any = None
     explainability: dict[str, Any] = Field(default_factory=dict)
     required_history_rows_for_full_features: int | None = None
+    cross_plant: dict[str, Any] | None = None  # {"enabled", "reference_plants", ...}: which plants to send as `reference`
     disclaimer: str | None = None
 
 

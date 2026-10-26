@@ -34,6 +34,14 @@ features:
   baseline_window: 48           # past-only rolling baseline length (obs). 48 obs = 4 days at 2-hourly cadence
   baseline_min_periods: 6       # warm-up: baseline (and *_base_dev) are NaN until 6 past observations exist
   max_light: 100000             # lux; normaliser for light_soil_interaction
+  long_windows: [24, 48]        # longer per-plant context: *_long{w}_mean (trailing mean) and *_long{w}_dev (value - past-only
+                                #   mean; the 48-obs deviation is the existing *_base_dev). 24 obs = 2 days
+  cross_plant:                  # deviation from the healthy-control plants measured at the same time (issue #5)
+    enabled: true
+    reference_plants: [1, 2, 3, 4]   # the experiment's healthy controls; cancels the shared room climate / session drift
+    statistic: median           # median of the reference plants found (robust to one faulty control sensor)
+    tolerance_minutes: 30       # as-of join: a reference reading counts if it is at or before the row, at most 30 min older
+    windows: [3, 6, 12, 24, 48] # trailing per-plant means of each deviation
 
 split:
   strategy: chronological       # chronological | group_holdout
@@ -41,8 +49,11 @@ split:
   holdout_plants: [4, 8, 12, 16]  # group_holdout: unseen plants (one per experimental group)
 
 classifier:
-  class_weight: none            # none | balanced  (balanced = inverse-frequency sample weights on TRAIN only)
+  class_weight: balanced        # none | balanced  (inverse-frequency sample weights on TRAIN only; +0.018 validation macro-F1
+                                #   in 14/14 paired draws on the issue #5 feature set)
   num_boost_round: 300
+  missing_reference_augmentation: 0.25  # train on 25% extra copies of TRAIN rows with the cross-plant features blanked, so a
+                                #   reading without reference-plant context degrades gracefully instead of failing (see docs)
   xgboost_params:
     objective: multi:softprob
     eval_metric: mlogloss
@@ -55,6 +66,11 @@ classifier:
     tree_method: hist
     nthread: 2
   baselines: [majority_class, logistic_regression]
+  smoothing:                    # past-only temporal smoothing of the predicted probabilities (issue #5)
+    method: hmm_forward_filter  # none | hmm_forward_filter
+    window: 12                  # readings: the filter runs over the trailing 12 predictions of the plant (stateless)
+    temperature: 0.3            # exponent on the per-reading evidence (chosen on sessions 2-3 validation, not on test)
+    transition_pseudocount: 1.0 # add-one smoothing of the class-transition counts (fitted on TRAIN labels only)
 
 clustering:
   k_min: 2
@@ -104,3 +120,4 @@ api:
   port: 8001
   max_history_rows: 500
   max_batch_items: 64
+  max_reference_rows: 5000      # reference-plant readings accepted per request (shared across a batch)

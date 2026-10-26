@@ -2,7 +2,9 @@
 
 Stateless design: the caller supplies chronological readings per plant (history + the reading of interest).
 The result is produced for the LATEST row of each plant (``rows='last'``) or for every row (``rows='all'``,
-used by offline scripts). Plants never share history: all temporal features are grouped by plant_id.
+used by offline scripts). Per-plant temporal features are grouped by plant_id. The only cross-plant input is the
+optional ``reference`` frame: readings of the configured reference (healthy-control) plants, joined as-of each row's
+timestamp (never later readings). Temporal smoothing re-predicts the plant's trailing rows from the supplied history.
 """
 from __future__ import annotations
 
@@ -13,10 +15,11 @@ import xgboost as xgb
 from .artifact_manager import ModelBundle, load_bundle
 from .config import Config
 from .explainability import Explainer
-from .feature_engineering import build_features, required_history_rows
+from .feature_engineering import REF_COUNT_COLUMN, build_features, cross_plant_params, required_history_rows
 from .preprocessing import select_matrix
 from .recommendations import DISCLAIMER, generate_recommendations
 from .schema import SENSOR_COLUMNS, STRESS_LEVELS
+from .temporal_smoothing import apply_from_meta
 
 
 class PlantPredictor:
@@ -29,7 +32,10 @@ class PlantPredictor:
         self.provenance = bundle.manifest.get("training_data", {}).get("provenance", "unknown")
         self.explainer = Explainer(bundle.booster, self.cls_features, int(cfg.get("explain.top_k", 5)),
                                    bool(cfg.get("explain.enabled", True)))
-        self.required_history = required_history_rows(cfg)
+        self.smoothing = bundle.meta["classifier"].get("temporal_smoothing") or {"method": "none"}
+        self.cross_plant = cross_plant_params(cfg)
+        extra = int(self.smoothing.get("window", 1)) - 1 if self.smoothing.get("method", "none") != "none" else 0
+        self.required_history = required_history_rows(cfg) + extra
 
     @classmethod
     def from_config(cls, cfg: Config, run_id: str | None = None) -> "PlantPredictor":
@@ -55,6 +61,12 @@ class PlantPredictor:
             "cluster_note": self.bundle.meta["clustering"].get("note"),
             "explainability": {"available": self.explainer.available, "reason": self.explainer.reason or None},
             "required_history_rows_for_full_features": self.required_history,
+            "cross_plant": {**self.cross_plant,
+                            "usage": ("Send readings of reference_plants as `reference` (per item, or once per batch) covering "
+                                      "the same time span as the history. Each row uses, per reference plant, the latest "
+                                      "reading at or before its own timestamp; later readings are ignored.")
+                            if self.cross_plant["enabled"] else None},
+            "temporal_smoothing": {k: self.smoothing.get(k) for k in ("method", "window", "temperature")},
             "dependency_versions_at_training": m.get("dependency_versions"),
             "compatibility_warnings": self.bundle.warnings,
             "disclaimer": ("Experimental. Outputs are not validated plant-health diagnoses. "
@@ -62,11 +74,13 @@ class PlantPredictor:
         }
 
     # ----------------------------------------------------------------- prediction
-    def predict_frame(self, df: pd.DataFrame, rows: str = "last", explain: bool | None = None) -> list[dict]:
-        """``df`` must be normalised + validated (tz-aware timestamp, numeric sensors). Labels are ignored."""
+    def predict_frame(self, df: pd.DataFrame, rows: str = "last", explain: bool | None = None,
+                      reference: pd.DataFrame | None = None) -> list[dict]:
+        """``df`` must be normalised + validated (tz-aware timestamp, numeric sensors). Labels are ignored.
+        ``reference``: optional normalised readings of the reference plants (cross-plant features only; no output rows)."""
         if rows not in ("last", "all"):
             raise ValueError("rows must be 'last' or 'all'")
-        feat = build_features(df, self.cfg)
+        feat = build_features(df, self.cfg, reference)
         feat["_pos"] = feat.groupby("plant_id", sort=False).cumcount()
         if rows == "last":
             sel = feat.groupby("plant_id", sort=False).tail(1)
@@ -77,7 +91,14 @@ class PlantPredictor:
             return []
 
         X_cls = select_matrix(sel, self.cls_features)
-        proba = self.bundle.booster.predict(xgb.DMatrix(X_cls, feature_names=self.cls_features))
+        if self.smoothing.get("method", "none") != "none":
+            # every row of the supplied history is (re-)predicted, then filtered over the trailing window (past-only)
+            raw_all = self.bundle.booster.predict(xgb.DMatrix(select_matrix(feat, self.cls_features), feature_names=self.cls_features))
+            smooth_all = apply_from_meta(self.smoothing, raw_all, feat["plant_id"].to_numpy())
+            raw, proba = raw_all[sel_idx], smooth_all[sel_idx]
+        else:
+            raw = self.bundle.booster.predict(xgb.DMatrix(X_cls, feature_names=self.cls_features))
+            proba = raw
         pred_idx = proba.argmax(axis=1)
 
         Zc = self.bundle.cluster_pipeline.transform(select_matrix(sel, self.cluster_features))
@@ -113,6 +134,10 @@ class PlantPredictor:
                                 "prediction is less reliable (cold start).")
             if missing:
                 warnings.append(f"Missing sensor value(s): {missing}")
+            if self.cross_plant["enabled"] and REF_COUNT_COLUMN in feat.columns and int(row[REF_COUNT_COLUMN]) == 0:
+                warnings.append("No reference-plant (healthy-control) reading was available at this timestamp, so the "
+                                "cross-plant features are missing and this prediction is less reliable. Send `reference` "
+                                f"readings of plants {self.cross_plant['reference_plants']}.")
             recs = generate_recommendations(label, probs, is_anom, missing, recent, self.cfg)
             anomaly = {"is_anomaly": is_anom, "score": float(a_score[k]), "threshold": 0.0,
                        "interpretation": ("Possible sensor / data-quality anomaly (not a plant-health prediction)."
@@ -120,7 +145,8 @@ class PlantPredictor:
             results.append({
                 "plant_id": int(row["plant_id"]),
                 "timestamp": row["timestamp"].isoformat(),
-                "stress_prediction": {"label": label, "probabilities": probs},
+                "stress_prediction": {"label": label, "probabilities": probs,
+                                      "unsmoothed_probabilities": {name: float(raw[k, j]) for j, name in enumerate(STRESS_LEVELS)}},
                 "cluster": {"id": int(cluster_id[k]), "distance": float(cluster_dist[k])},
                 "anomaly": anomaly,
                 "explanation": explanations[k],

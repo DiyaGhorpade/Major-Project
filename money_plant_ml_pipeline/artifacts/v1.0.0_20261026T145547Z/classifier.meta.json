@@ -1,0 +1,362 @@
+{
+  "model_version": "1.0.0",
+  "created_at_utc": "2026-10-26T14:55:47.794761+00:00",
+  "random_seed": 42,
+  "dependency_versions": {
+    "python": "3.13.11",
+    "platform": "Linux-7.2.10-1-cachyos-x86_64-with-glibc2.44",
+    "machine": "x86_64",
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "scipy": "1.18.1",
+    "sklearn": "1.9.1",
+    "xgboost": "3.4.1",
+    "joblib": "1.6.0",
+    "yaml": "6.0.3",
+    "fastapi": "0.156.4",
+    "pydantic": "2.13.5",
+    "shap": "0.54.1",
+    "matplotlib": "3.11.2"
+  },
+  "training_data": {
+    "filename": "plant_sensor_data.csv",
+    "sha256": "92ea22e21bf3ffa8544207751a2b8ac55589c5b68a9c570ce0c0e7c1eedbf860",
+    "rows": 5376,
+    "rows_used": 5376,
+    "rows_quarantined": 0,
+    "provenance": "synthetic",
+    "provenance_note": null
+  },
+  "split": {
+    "strategy": "chronological",
+    "cutoff_timestamp": "2026-10-11T22:05:15+05:30",
+    "test_fraction": 0.25,
+    "note": "Train rows are strictly earlier than test rows; features use past rows only.",
+    "train_rows": 4032,
+    "test_rows": 1344
+  },
+  "model_name": "xgboost_stress_classifier",
+  "feature_names": [
+    "soil_ref_dev",
+    "soil_ref_dev_roll3",
+    "soil_ref_dev_roll6",
+    "soil_ref_dev_roll12",
+    "soil_ref_dev_roll24",
+    "soil_ref_dev_roll48",
+    "temperature_ref_dev",
+    "temperature_ref_dev_roll3",
+    "temperature_ref_dev_roll6",
+    "temperature_ref_dev_roll12",
+    "temperature_ref_dev_roll24",
+    "temperature_ref_dev_roll48",
+    "humidity_ref_dev",
+    "humidity_ref_dev_roll3",
+    "humidity_ref_dev_roll6",
+    "humidity_ref_dev_roll12",
+    "humidity_ref_dev_roll24",
+    "humidity_ref_dev_roll48",
+    "log_light_ref_dev",
+    "log_light_ref_dev_roll3",
+    "log_light_ref_dev_roll6",
+    "log_light_ref_dev_roll12",
+    "log_light_ref_dev_roll24",
+    "log_light_ref_dev_roll48",
+    "vpd_ref_dev",
+    "vpd_ref_dev_roll3",
+    "vpd_ref_dev_roll6",
+    "vpd_ref_dev_roll12",
+    "vpd_ref_dev_roll24",
+    "vpd_ref_dev_roll48",
+    "soil_long24_mean",
+    "soil_long48_mean",
+    "soil_long24_dev",
+    "soil_base_dev",
+    "temperature_long24_mean",
+    "temperature_long48_mean",
+    "temperature_long24_dev",
+    "temperature_base_dev",
+    "humidity_long24_mean",
+    "humidity_long48_mean",
+    "humidity_long24_dev",
+    "humidity_base_dev",
+    "log_light_long24_mean",
+    "log_light_long48_mean",
+    "log_light_long24_dev",
+    "log_light_base_dev",
+    "vpd_long24_mean",
+    "vpd_long48_mean",
+    "vpd_long24_dev",
+    "vpd_base_dev",
+    "hour",
+    "hour_sin",
+    "hour_cos"
+  ],
+  "label_mapping": {
+    "healthy": 0,
+    "low": 1,
+    "moderate": 2,
+    "high": 3
+  },
+  "preprocessing": {
+    "imputation": "none - XGBoost handles NaN natively (missing-value direction learned in training)",
+    "scaling": "none (tree model)",
+    "class_weight": "balanced",
+    "missing_reference_augmentation": 0.25,
+    "augmented_training_rows": 1036
+  },
+  "xgboost_params": {
+    "objective": "multi:softprob",
+    "eval_metric": "mlogloss",
+    "eta": 0.05,
+    "max_depth": 4,
+    "min_child_weight": 3,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "reg_lambda": 2.0,
+    "tree_method": "hist",
+    "nthread": 2,
+    "num_class": 4,
+    "seed": 42
+  },
+  "num_boost_round": 300,
+  "metrics": {
+    "metric_scope": "held-out evaluation set",
+    "n_samples": 1344,
+    "accuracy": 0.8028273809523809,
+    "macro_f1": 0.7433468169236668,
+    "weighted_f1": 0.7917543191749032,
+    "balanced_accuracy": 0.7475457644325507,
+    "per_class": {
+      "healthy": {
+        "precision": 0.7259475218658892,
+        "recall": 0.9467680608365019,
+        "f1": 0.8217821782178217,
+        "support": 263
+      },
+      "low": {
+        "precision": 0.7244897959183674,
+        "recall": 0.37566137566137564,
+        "f1": 0.49477351916376305,
+        "support": 189
+      },
+      "moderate": {
+        "precision": 0.755223880597015,
+        "recall": 0.7689969604863222,
+        "f1": 0.7620481927710844,
+        "support": 329
+      },
+      "high": {
+        "precision": 0.8908450704225352,
+        "recall": 0.8987566607460036,
+        "f1": 0.8947833775419982,
+        "support": 563
+      }
+    },
+    "confusion_matrix": {
+      "labels": [
+        "healthy",
+        "low",
+        "moderate",
+        "high"
+      ],
+      "matrix": [
+        [
+          249,
+          14,
+          0,
+          0
+        ],
+        [
+          93,
+          71,
+          25,
+          0
+        ],
+        [
+          1,
+          13,
+          253,
+          62
+        ],
+        [
+          0,
+          0,
+          57,
+          506
+        ]
+      ],
+      "rows": "true",
+      "cols": "predicted"
+    },
+    "class_counts": {
+      "healthy": 263,
+      "low": 189,
+      "moderate": 329,
+      "high": 563
+    },
+    "classes_absent_from_eval_set": []
+  },
+  "metrics_unsmoothed": {
+    "metric_scope": "held-out evaluation set",
+    "n_samples": 1344,
+    "accuracy": 0.7648809523809523,
+    "macro_f1": 0.7234036983085989,
+    "weighted_f1": 0.7620571831625439,
+    "balanced_accuracy": 0.7319761551453849,
+    "per_class": {
+      "healthy": {
+        "precision": 0.7371601208459214,
+        "recall": 0.9277566539923955,
+        "f1": 0.8215488215488216,
+        "support": 263
+      },
+      "low": {
+        "precision": 0.5859872611464968,
+        "recall": 0.48677248677248675,
+        "f1": 0.5317919075144508,
+        "support": 189
+      },
+      "moderate": {
+        "precision": 0.6797583081570997,
+        "recall": 0.6838905775075987,
+        "f1": 0.6818181818181818,
+        "support": 329
+      },
+      "high": {
+        "precision": 0.8895238095238095,
+        "recall": 0.8294849023090586,
+        "f1": 0.8584558823529411,
+        "support": 563
+      }
+    },
+    "confusion_matrix": {
+      "labels": [
+        "healthy",
+        "low",
+        "moderate",
+        "high"
+      ],
+      "matrix": [
+        [
+          244,
+          19,
+          0,
+          0
+        ],
+        [
+          86,
+          92,
+          11,
+          0
+        ],
+        [
+          1,
+          45,
+          225,
+          58
+        ],
+        [
+          0,
+          1,
+          95,
+          467
+        ]
+      ],
+      "rows": "true",
+      "cols": "predicted"
+    },
+    "class_counts": {
+      "healthy": 263,
+      "low": 189,
+      "moderate": 329,
+      "high": 563
+    },
+    "classes_absent_from_eval_set": []
+  },
+  "temporal_smoothing": {
+    "method": "hmm_forward_filter",
+    "window": 12,
+    "temperature": 0.3,
+    "transition_pseudocount": 1.0,
+    "transition_matrix": [
+      [
+        0.698605,
+        0.297674,
+        0.002791,
+        0.00093
+      ],
+      [
+        0.276541,
+        0.643836,
+        0.077055,
+        0.002568
+      ],
+      [
+        0.003953,
+        0.08004,
+        0.849802,
+        0.066206
+      ],
+      [
+        0.001287,
+        0.002574,
+        0.079794,
+        0.916345
+      ]
+    ],
+    "prior": [
+      0.266601,
+      0.289395,
+      0.250743,
+      0.193261
+    ],
+    "fitted_on": "training labels only (consecutive readings of the same plant)"
+  },
+  "cross_plant": {
+    "enabled": true,
+    "reference_plants": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "statistic": "median",
+    "tolerance_minutes": 30.0,
+    "windows": [
+      3,
+      6,
+      12,
+      24,
+      48
+    ]
+  },
+  "baseline_metrics": {
+    "majority_class": {
+      "accuracy": 0.140625,
+      "macro_f1": 0.06164383561643835,
+      "weighted_f1": 0.034674657534246575,
+      "balanced_accuracy": 0.25
+    },
+    "logistic_regression": {
+      "accuracy": 0.45907738095238093,
+      "macro_f1": 0.46373273161419915,
+      "weighted_f1": 0.4704020349393324,
+      "balanced_accuracy": 0.5075669588711812
+    }
+  },
+  "train_class_counts": {
+    "healthy": 1075,
+    "low": 1167,
+    "moderate": 1011,
+    "high": 779
+  },
+  "known_limitations": [
+    "Plant identity and experimental group are deliberately excluded, so the model sees only sensor-derived features.",
+    "Small dataset (16 plants, a few weeks): estimates have wide uncertainty.",
+    "Temporal features need the plant's recent history (see required_history_rows_for_full_features in /metadata).",
+    "Cross-plant features compare each plant with the healthy-control (reference) plants measured at the same time; without concurrent reference readings those features are missing and predictions are less reliable."
+  ],
+  "artifact_file": "classifier.xgb.json",
+  "artifact_sha256": "566d2476d88aca06ddd9e08e25deddc8ae4c8e39b1b0fe184dc617a395687d9b",
+  "artifact_size_bytes": 2120094
+}

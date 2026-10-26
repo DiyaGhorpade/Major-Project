@@ -36,15 +36,18 @@ class ClassifierSpec:
     num_boost_round: int = 300
     class_weight: str = "none"                      # none | balanced
     cutpoints: tuple | None = None                  # regression kind only: 3 increasing thresholds on the 0..3 scale
+    missing_reference_augmentation: float = 0.0     # fraction of training rows duplicated with cross-plant features blanked
 
     def to_dict(self) -> dict:
         return {"kind": self.kind, "params": dict(self.params), "num_boost_round": int(self.num_boost_round),
-                "class_weight": self.class_weight, "cutpoints": list(self.cutpoints) if self.cutpoints else None}
+                "class_weight": self.class_weight, "cutpoints": list(self.cutpoints) if self.cutpoints else None,
+                "missing_reference_augmentation": float(self.missing_reference_augmentation)}
 
     @classmethod
     def from_dict(cls, d: dict) -> "ClassifierSpec":
         return cls(kind=d.get("kind", "softprob"), params=dict(d.get("params", {})), num_boost_round=int(d.get("num_boost_round", 300)),
-                   class_weight=d.get("class_weight", "none"), cutpoints=tuple(d["cutpoints"]) if d.get("cutpoints") else None)
+                   class_weight=d.get("class_weight", "none"), cutpoints=tuple(d["cutpoints"]) if d.get("cutpoints") else None,
+                   missing_reference_augmentation=float(d.get("missing_reference_augmentation", 0.0)))
 
     def label(self) -> str:
         p = self.params
@@ -56,7 +59,21 @@ def spec_from_config(cfg: Config) -> ClassifierSpec:
     params = dict(cfg.require("classifier.xgboost_params"))
     return ClassifierSpec(kind=str(cfg.get("classifier.kind", "softprob")), params=params,
                           num_boost_round=int(cfg.get("classifier.num_boost_round", 300)),
-                          class_weight=str(cfg.get("classifier.class_weight", "none")).lower())
+                          class_weight=str(cfg.get("classifier.class_weight", "none")).lower(),
+                          missing_reference_augmentation=float(cfg.get("classifier.missing_reference_augmentation", 0.0) or 0.0))
+
+
+def augment_missing_reference(X: pd.DataFrame, y: np.ndarray, fraction: float, seed: int) -> tuple[pd.DataFrame, np.ndarray]:
+    """Append a random ``fraction`` of the TRAINING rows again with every cross-plant (``*_ref_dev*``) feature set to NaN,
+    so the trees learn a fallback for readings that arrive without reference-plant context (controls offline). Test /
+    validation rows are never augmented."""
+    cols = [c for c in X.columns if "_ref_dev" in c]
+    if fraction <= 0 or not cols or len(X) == 0:
+        return X, y
+    pick = np.random.default_rng(seed).random(len(X)) < fraction
+    extra = X[pick].copy()
+    extra[cols] = np.nan
+    return pd.concat([X, extra]), np.concatenate([np.asarray(y), np.asarray(y)[pick]])
 
 
 def _cum_probs(p_gt: np.ndarray) -> np.ndarray:
@@ -126,6 +143,7 @@ def fit_classifier(spec: ClassifierSpec, X: pd.DataFrame, y: np.ndarray, seed: i
     if spec.kind not in KINDS:
         raise ValueError(f"unknown classifier kind {spec.kind!r}")
     names = list(X.columns)
+    X, y = augment_missing_reference(X, y, spec.missing_reference_augmentation, seed)
     w = balanced_sample_weights(y) if spec.class_weight == "balanced" else None
     wv = (balanced_sample_weights(y_val) if (spec.class_weight == "balanced" and y_val is not None) else None)
     base = {k: v for k, v in spec.params.items() if k not in ("objective", "eval_metric", "num_class")}

@@ -36,10 +36,16 @@ class PredictRequest(BaseModel):
                                    description="Earlier readings of the SAME plant (any order). "
                                                "Provide >= required_history_rows_for_full_features (see /metadata) for best accuracy.")
     explain: Optional[bool] = Field(None, description="Override explain.enabled for this call")
+    reference: List[Reading] = Field(default_factory=list,
+                                     description="Readings of the reference (healthy-control) plants listed in /metadata "
+                                                 "cross_plant.reference_plants, covering the history's time span. Used only for "
+                                                 "cross-plant features, as-of each row's timestamp (later readings are ignored).")
 
 
 class BatchPredictRequest(BaseModel):
     items: List[PredictRequest]
+    reference: List[Reading] = Field(default_factory=list,
+                                     description="Reference-plant readings shared by every item (sent once per batch).")
 
 
 class ValidateRequest(BaseModel):
@@ -49,6 +55,7 @@ class ValidateRequest(BaseModel):
 class StressPrediction(BaseModel):
     label: str
     probabilities: Dict[str, float]
+    unsmoothed_probabilities: Optional[Dict[str, float]] = None   # the single-reading model output before smoothing
 
 
 class ClusterOut(BaseModel):
