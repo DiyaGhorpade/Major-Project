@@ -26,6 +26,7 @@ from typing import Any
 import joblib
 
 from .config import Config
+from .feature_engineering import all_feature_names, feature_settings
 
 MANIFEST_SCHEMA_VERSION = 1
 
@@ -192,8 +193,35 @@ def check_compatibility(manifest: dict, allow_mismatch: bool = False) -> list[st
     return warnings
 
 
+def check_feature_config(manifest: dict, meta: dict[str, dict], cfg: Config) -> None:
+    """Refuse to serve when the live ``features`` config differs from the one the models were trained with.
+
+    Serving rebuilds every feature from the live config (windows, baselines, cross-plant settings), so a silent change
+    there would feed the models differently engineered inputs. Compares the manifest's recorded ``feature_engineering``
+    settings with the live ones and checks that every model feature name is still produced by the live config.
+    """
+    recorded = manifest.get("feature_engineering")
+    if not isinstance(recorded, dict):
+        raise ArtifactError("Manifest has no 'feature_engineering' record, so the live feature configuration cannot be "
+                            "verified against the artifact. Retrain (python scripts/train_all.py).")
+    trained = feature_settings(Config({"features": recorded}, {}, cfg.root))
+    live = feature_settings(cfg)
+    diffs = [f"{k}: trained with {trained[k]!r}, live config has {live[k]!r}" for k in live if trained[k] != live[k]]
+    if diffs:
+        raise ArtifactError("Live feature configuration differs from the artifact's training configuration -> "
+                            + "; ".join(diffs) + ". Restore config/config.yaml `features:` to the training values or "
+                            "retrain (python scripts/train_all.py).")
+    available = set(all_feature_names(cfg))
+    for name, m in meta.items():
+        absent = [f for f in m.get("feature_names", []) if f not in available]
+        if absent:
+            raise ArtifactError(f"Model '{name}' needs feature(s) the live configuration no longer produces: {absent[:8]}. "
+                                "Restore the `features:` config or retrain (python scripts/train_all.py).")
+
+
 def load_bundle(cfg: Config, run_id: str | None = None) -> ModelBundle:
-    """Load all three models after verifying hashes, feature lists and library compatibility."""
+    """Load all three models after verifying hashes, library compatibility and that the live feature config matches
+    the one recorded in the artifact."""
     store = ArtifactStore(cfg.path("paths.artifacts_dir"))
     run_dir = store.resolve_run(run_id)
     manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
@@ -210,6 +238,8 @@ def load_bundle(cfg: Config, run_id: str | None = None) -> ModelBundle:
             raise ArtifactError(f"Missing artifact file {apath}")
         if sha256_file(apath) != meta[name]["artifact_sha256"]:
             raise ArtifactError(f"Checksum mismatch for {apath.name}: file is corrupt or was modified")
+
+    check_feature_config(manifest, meta, cfg)
 
     try:
         import xgboost as xgb

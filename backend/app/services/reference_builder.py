@@ -34,7 +34,7 @@ def reference_plants(metadata: Any) -> list[int]:
 
 
 class ReferenceIndex:
-    """Time-ordered readings of the reference plants, sliced by time window."""
+    """Time-ordered readings of the reference plants, sliced by time span."""
 
     def __init__(self, readings: Iterable[SensorReading], to_ml):
         rows = sorted(readings, key=lambda r: (r.timestamp, r.plant_id, r.id))
@@ -43,14 +43,6 @@ class ReferenceIndex:
 
     def __len__(self) -> int:
         return len(self._ml)
-
-    def window(self, start: datetime, end: datetime) -> list[MLReading]:
-        """Reference readings with `start - MARGIN <= timestamp <= end`, oldest first."""
-        if not self._ml or end < start:
-            return []
-        lo = bisect_left(self._times, start - MARGIN)
-        hi = bisect_right(self._times, end)
-        return self._ml[lo:hi]
 
     def for_series(self, spans: Sequence[tuple[datetime, datetime]]) -> list[MLReading]:
         """Readings covering the union of `(first history timestamp, reading timestamp)` spans (deduplicated)."""

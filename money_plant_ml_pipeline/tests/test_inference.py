@@ -52,13 +52,42 @@ def test_cold_start_is_flagged(predictor):
 
 
 def test_sufficient_history_has_no_cold_start_warning(predictor, small_df):
-    r = predictor.predict_frame(history(small_df, plant=9, n=120), explain=False, reference=reference(small_df))[0]
+    r = predictor.predict_frame(history(small_df, plant=11, n=70), explain=False, reference=reference(small_df))[0]
     assert r["history"]["sufficient"] is True and not r["warnings"]
 
 
 def test_missing_reference_readings_are_flagged(predictor, small_df):
     r = predictor.predict_frame(history(small_df, plant=9, n=120), explain=False)[0]
     assert any("reference-plant" in w for w in r["warnings"])
+
+
+def test_partial_reference_is_flagged_but_control_plants_are_not(predictor, small_df):
+    full = reference(small_df)
+    # treated plant: all four controls expected
+    r = predictor.predict_frame(history(small_df, plant=11, n=70), explain=False, reference=full)[0]
+    assert r["history"]["reference_plants_used"] == r["history"]["reference_plants_expected"] == 4
+    assert not any("reference-plant" in w for w in r["warnings"])
+    # losing one control is routine (staggered readings, as in training): recorded, not warned
+    part = reference(small_df, plants=(1, 2, 3))
+    r = predictor.predict_frame(history(small_df, plant=11, n=70), explain=False, reference=part)[0]
+    assert r["history"]["reference_plants_used"] == 3 and r["history"]["reference_plants_expected"] == 4
+    assert not any("reference-plant" in w for w in r["warnings"])
+    # fewer than half of the expected controls is a real shortfall
+    r = predictor.predict_frame(history(small_df, plant=11, n=70), explain=False, reference=reference(small_df, plants=(1,)))[0]
+    assert r["history"]["reference_plants_used"] == 1
+    assert any("Only 1 of 4 reference-plant" in w for w in r["warnings"])
+    # a control plant never sees itself: 3 of 3 is complete, 2 of 3 is fine, 1 of 3 is a shortfall
+    r = predictor.predict_frame(history(small_df, plant=1, n=120), explain=False, reference=full)[0]
+    assert r["history"]["reference_plants_used"] == r["history"]["reference_plants_expected"] == 3
+    assert not any("reference-plant" in w for w in r["warnings"])
+    r = predictor.predict_frame(history(small_df, plant=1, n=120), explain=False,
+                                reference=reference(small_df, plants=(2, 3)))[0]
+    assert r["history"]["reference_plants_used"] == 2
+    assert not any("reference-plant" in w for w in r["warnings"])
+    r = predictor.predict_frame(history(small_df, plant=1, n=120), explain=False,
+                                reference=reference(small_df, plants=(2,)))[0]
+    assert r["history"]["reference_plants_used"] == 1
+    assert any("Only 1 of 3 reference-plant" in w for w in r["warnings"])
 
 
 def test_required_history_and_reference_reproduce_full_history_prediction(predictor, small_df):

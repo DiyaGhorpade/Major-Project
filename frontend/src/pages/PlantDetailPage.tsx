@@ -150,7 +150,7 @@ export const PlantDetailPage: React.FC<PlantDetailPageProps> = ({ plantId, onNav
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-[#1C2B23]">Latest Pot Sensor Measurements</h2>
-            <p className="text-xs text-[#6B786E]">Most recent stored reading for Pot #{plant.id} (Most recent readings).</p>
+            <p className="text-xs text-[#6B786E]">Most recent stored reading for Pot #{plant.id}.</p>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-[11px] font-mono text-stone-500">Recorded: {latest ? formatDateTime(latest.timestamp) : 'n/a'} IST</span>

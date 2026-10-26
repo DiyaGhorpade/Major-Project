@@ -7,7 +7,7 @@
    "displayName": "Soil moisture, 12-reading average",
    "mean_abs_shap": 0.46215739846229553,
    "importance_rank": 1,
-   "interpretation": "Rank 1: on average it moved the model's score by about 0.46 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "interpretation": "Rank 1: on average it moved the model's score by about 0.46 (log-odds) per explained row, across 500 test rows and all four classes.",
    "laymanTip": "Average soil moisture over this plant's last 12 readings. Larger bars mean the model relies on this input more."
   },
   {
@@ -15,7 +15,7 @@
    "displayName": "Light, 12-reading variability",
    "mean_abs_shap": 0.424699068069458,
    "importance_rank": 2,
-   "interpretation": "Rank 2: on average it moved the model's score by about 0.42 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "interpretation": "Rank 2: on average it moved the model's score by about 0.42 (log-odds) per explained row, across 500 test rows and all four classes.",
    "laymanTip": "How much light varied (standard deviation) over this plant's last 12 readings. Larger bars mean the model relies on this input more."
   },
   {
@@ -23,7 +23,7 @@
    "displayName": "Light, 12-reading average",
    "mean_abs_shap": 0.39965710043907166,
    "importance_rank": 3,
-   "interpretation": "Rank 3: on average it moved the model's score by about 0.40 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "interpretation": "Rank 3: on average it moved the model's score by about 0.40 (log-odds) per explained row, across 500 test rows and all four classes.",
    "laymanTip": "Average light over this plant's last 12 readings. Larger bars mean the model relies on this input more."
   },
   {
@@ -31,7 +31,7 @@
    "displayName": "Temperature, 12-reading average",
    "mean_abs_shap": 0.30455803871154785,
    "importance_rank": 4,
-   "interpretation": "Rank 4: on average it moved the model's score by about 0.30 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "interpretation": "Rank 4: on average it moved the model's score by about 0.30 (log-odds) per explained row, across 500 test rows and all four classes.",
    "laymanTip": "Average temperature over this plant's last 12 readings. Larger bars mean the model relies on this input more."
   },
   {
@@ -39,7 +39,7 @@
    "displayName": "Humidity, 12-reading average",
    "mean_abs_shap": 0.2138771116733551,
    "importance_rank": 5,
-   "interpretation": "Rank 5: on average it moved the model's score by about 0.21 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "interpretation": "Rank 5: on average it moved the model's score by about 0.21 (log-odds) per explained row, across 500 test rows and all four classes.",
    "laymanTip": "Average humidity over this plant's last 12 readings. Larger bars mean the model relies on this input more."
   },
   {
@@ -47,7 +47,7 @@
    "displayName": "Vapour pressure deficit, 12-reading average",
    "mean_abs_shap": 0.18141597509384155,
    "importance_rank": 6,
-   "interpretation": "Rank 6: on average it moved the model's score by about 0.18 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "interpretation": "Rank 6: on average it moved the model's score by about 0.18 (log-odds) per explained row, across 500 test rows and all four classes.",
    "laymanTip": "Average vapour pressure deficit over this plant's last 12 readings. Larger bars mean the model relies on this input more."
   },
   {
@@ -55,7 +55,7 @@
    "displayName": "Soil moisture, difference from usual",
    "mean_abs_shap": 0.17609478533267975,
    "importance_rank": 7,
-   "interpretation": "Rank 7: on average it moved the model's score by about 0.18 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "interpretation": "Rank 7: on average it moved the model's score by about 0.18 (log-odds) per explained row, across 500 test rows and all four classes.",
    "laymanTip": "How far soil moisture is from this plant's own recent baseline (the average of its previous 48 readings). Larger bars mean the model relies on this input more."
   },
   {
@@ -63,7 +63,7 @@
    "displayName": "Soil moisture, 6-reading average",
    "mean_abs_shap": 0.15692676603794098,
    "importance_rank": 8,
-   "interpretation": "Rank 8: on average it moved the model's score by about 0.16 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "interpretation": "Rank 8: on average it moved the model's score by about 0.16 (log-odds) per explained row, across 500 test rows and all four classes.",
    "laymanTip": "Average soil moisture over this plant's last 6 readings. Larger bars mean the model relies on this input more."
   },
   {
@@ -71,7 +71,7 @@
    "displayName": "Soil moisture, previous reading",
    "mean_abs_shap": 0.11995009332895279,
    "importance_rank": 9,
-   "interpretation": "Rank 9: on average it moved the model's score by about 0.12 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "interpretation": "Rank 9: on average it moved the model's score by about 0.12 (log-odds) per explained row, across 500 test rows and all four classes.",
    "laymanTip": "Soil moisture at this plant's previous reading. Larger bars mean the model relies on this input more."
   },
   {
@@ -79,7 +79,7 @@
    "displayName": "Soil moisture",
    "mean_abs_shap": 0.112359918653965,
    "importance_rank": 10,
-   "interpretation": "Rank 10: on average it moved the model's score by about 0.11 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "interpretation": "Rank 10: on average it moved the model's score by about 0.11 (log-odds) per explained row, across 500 test rows and all four classes.",
    "laymanTip": "The soil moisture measured in this reading. Larger bars mean the model relies on this input more."
   },
   {
@@ -87,7 +87,7 @@
    "displayName": "Day of week",
    "mean_abs_shap": 0.088065005838871,
    "importance_rank": 11,
-   "interpretation": "Rank 11: on average it moved the model's score by about 0.09 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "interpretation": "Rank 11: on average it moved the model's score by about 0.09 (log-odds) per explained row, across 500 test rows and all four classes.",
    "laymanTip": "Day of the week of the reading (0 = Monday ... 6 = Sunday). Larger bars mean the model relies on this input more."
   },
   {
@@ -95,7 +95,7 @@
    "displayName": "Soil moisture, 3-reading average",
    "mean_abs_shap": 0.06657209992408752,
    "importance_rank": 12,
-   "interpretation": "Rank 12: on average it moved the model's score by about 0.07 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "interpretation": "Rank 12: on average it moved the model's score by about 0.07 (log-odds) per explained row, across 500 test rows and all four classes.",
    "laymanTip": "Average soil moisture over this plant's last 3 readings. Larger bars mean the model relies on this input more."
   },
   {
@@ -103,7 +103,7 @@
    "displayName": "Soil moisture, 12-reading variability",
    "mean_abs_shap": 0.05157463625073433,
    "importance_rank": 13,
-   "interpretation": "Rank 13: on average it moved the model's score by about 0.05 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "interpretation": "Rank 13: on average it moved the model's score by about 0.05 (log-odds) per explained row, across 500 test rows and all four classes.",
    "laymanTip": "How much soil moisture varied (standard deviation) over this plant's last 12 readings. Larger bars mean the model relies on this input more."
   },
   {
@@ -111,7 +111,7 @@
    "displayName": "Temperature, 6-reading average",
    "mean_abs_shap": 0.04889916256070137,
    "importance_rank": 14,
-   "interpretation": "Rank 14: on average it moved the model's score by about 0.05 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "interpretation": "Rank 14: on average it moved the model's score by about 0.05 (log-odds) per explained row, across 500 test rows and all four classes.",
    "laymanTip": "Average temperature over this plant's last 6 readings. Larger bars mean the model relies on this input more."
   },
   {
@@ -119,7 +119,7 @@
    "displayName": "Temperature, difference from usual",
    "mean_abs_shap": 0.047427259385585785,
    "importance_rank": 15,
-   "interpretation": "Rank 15: on average it moved the model's score by about 0.05 (log-odds) per explained row, across 500 test rows and all four classes. This describes the model, not a cause in the plant.",
+   "interpretation": "Rank 15: on average it moved the model's score by about 0.05 (log-odds) per explained row, across 500 test rows and all four classes.",
    "laymanTip": "How far temperature is from this plant's own recent baseline (the average of its previous 48 readings). Larger bars mean the model relies on this input more."
   }
  ],

@@ -134,6 +134,32 @@ def test_version_mismatch_is_reported(trained, cfg_small):
     assert check_compatibility(manifest, allow_mismatch=True)
 
 
+def test_live_feature_config_must_match_the_artifact(trained, cfg_small):
+    load_bundle(cfg_small, trained["run_id"])                       # same config: loads
+    for key, value in (("features.cross_plant.windows", [3, 6]), ("features.rolling_windows", [3, 6]),
+                       ("features.cross_plant.reference_plants", [1, 2]), ("features.long_windows", [12])):
+        cfg = cfg_small.copy()
+        cfg.set(key, value)
+        with pytest.raises(ArtifactError, match="feature configuration differs"):
+            load_bundle(cfg, trained["run_id"])
+
+
+def test_manifest_without_feature_record_is_refused(trained, cfg_small):
+    from plant_ml.artifact_manager import check_feature_config
+    manifest = json.loads((trained["run_dir"] / "manifest.json").read_text())
+    del manifest["feature_engineering"]
+    with pytest.raises(ArtifactError, match="cannot be verified"):
+        check_feature_config(manifest, {}, cfg_small)
+
+
+def test_shipped_artifact_loads_with_current_config(base_cfg):
+    from plant_ml.config import PROJECT_ROOT
+    run = PROJECT_ROOT / "artifacts" / "v1.0.0_20261026T145547Z"
+    if not run.exists():
+        pytest.skip("shipped artifact not present")
+    assert load_bundle(base_cfg, run.name).run_dir.name == run.name
+
+
 def test_new_training_run_never_overwrites_previous(cfg_small, trained):
     store = ArtifactStore(cfg_small.path("paths.artifacts_dir"))
     before = set(store.list_runs())

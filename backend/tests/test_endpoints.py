@@ -282,6 +282,7 @@ def test_local_shap_after_run(ran_client):
     assert f["direction"] == "increases_prediction" and isinstance(f["observed_value"], float)
     assert "base value not provided by the model service" in s["explanation_note"] and "log-odds" in s["explanation_note"]
     assert s["target_class"] in s["laymanSummary"] and "Soil moisture" in s["laymanSummary"]
+    assert "proven cause" not in s["laymanSummary"] and s["laymanSummary"].endswith(".") and "behaviour" not in s["laymanSummary"]
     assert s["record_id"] == ran_client.get("/api/plants/4").json()["latestReading"]["record_id"]
 
 
@@ -328,6 +329,7 @@ def test_global_shap_from_report(tmp_path):
         top = g["features"][0]
         assert top["displayName"] == fd.resolve(names[0]).display_name and top["mean_abs_shap"] > g["features"][1]["mean_abs_shap"]
         assert top["interpretation"] and top["laymanTip"]
+        assert "not a cause" not in top["interpretation"] and top["interpretation"].endswith("all four classes.")
         assert g["source"]["path"] == f"reports/{RUN_ID}/evaluation_20261025T085725Z/shap_global_importance.json" and g["source"]["generatedAt"].endswith("+05:30")
         assert g["approximate"]["beeswarm"] == "sample of 3 test rows, top-5 features each (not all rows or features)"
         assert set(g["perClassTop15"]) == {"healthy", "low", "moderate", "high"} and len(g["perClassTop15"]["low"]) == 15

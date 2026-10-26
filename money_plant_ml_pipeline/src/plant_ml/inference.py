@@ -134,10 +134,22 @@ class PlantPredictor:
                                 "prediction is less reliable (cold start).")
             if missing:
                 warnings.append(f"Missing sensor value(s): {missing}")
-            if self.cross_plant["enabled"] and REF_COUNT_COLUMN in feat.columns and int(row[REF_COUNT_COLUMN]) == 0:
-                warnings.append("No reference-plant (healthy-control) reading was available at this timestamp, so the "
-                                "cross-plant features are missing and this prediction is less reliable. Send `reference` "
-                                f"readings of plants {self.cross_plant['reference_plants']}.")
+            history = {"rows_available": pos + 1, "rows_recommended": self.required_history,
+                       "sufficient": pos + 1 >= self.required_history}
+            if self.cross_plant["enabled"] and REF_COUNT_COLUMN in feat.columns:
+                used = int(row[REF_COUNT_COLUMN])
+                # a plant is never its own reference, so a control plant can have at most len(reference_plants) - 1
+                expected = len([p for p in self.cross_plant["reference_plants"] if p != int(row["plant_id"])])
+                history["reference_plants_used"], history["reference_plants_expected"] = used, expected
+                if used == 0 and expected > 0:
+                    warnings.append("No reference-plant (healthy-control) reading was available at this timestamp, so the "
+                                    "cross-plant features are missing and this prediction is less reliable. Send `reference` "
+                                    f"readings of plants {self.cross_plant['reference_plants']}.")
+                elif 2 * used < expected:  # the as-of join routinely misses one or two staggered controls, as in training
+                    warnings.append(f"Only {used} of {expected} reference-plant (healthy-control) readings were available at "
+                                    "this timestamp, so the cross-plant features are based on fewer controls and this "
+                                    "prediction is less reliable. Send `reference` readings of plants "
+                                    f"{self.cross_plant['reference_plants']}.")
             recs = generate_recommendations(label, probs, is_anom, missing, recent, self.cfg)
             anomaly = {"is_anomaly": is_anom, "score": float(a_score[k]), "threshold": 0.0,
                        "interpretation": ("Possible sensor / data-quality anomaly (not a plant-health prediction)."
@@ -152,8 +164,7 @@ class PlantPredictor:
                 "explanation": explanations[k],
                 "recommendations": recs,
                 "recommendations_disclaimer": DISCLAIMER,
-                "history": {"rows_available": pos + 1, "rows_recommended": self.required_history,
-                            "sufficient": pos + 1 >= self.required_history},
+                "history": history,
                 "warnings": warnings,
                 "model_metadata": meta_block,
             })

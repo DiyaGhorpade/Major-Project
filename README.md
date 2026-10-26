@@ -5,8 +5,10 @@ A dashboard for a 16-pot plant-monitoring rig. A bundled **synthetic** sensor da
 (stress classifier, anomaly detector, environment clustering, SHAP explanations) and turns the output into
 predictions, anomalies and recommendations that every page of the UI shows.
 
-> **Synthetic data.** The dataset and the models trained on it are synthetic. Predictions and recommendations are
-> statistical estimates, not validated plant-health diagnoses; the UI says so wherever they appear.
+> **Synthetic data.** The dataset and the models trained on it are synthetic, and the stress labels are simulation labels.
+> Predictions and recommendations are statistical estimates, not validated plant-health diagnoses. The UI does not repeat
+> this on every page (backend/README.md DEV-55); the API still reports it in the `provenance` and `validatedOnRealPlants`
+> fields.
 
 ## Architecture
 

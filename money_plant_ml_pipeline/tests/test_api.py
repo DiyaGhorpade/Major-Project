@@ -149,7 +149,7 @@ def test_metadata_lists_reference_plants_and_smoothing(client):
 
 
 def test_predict_with_reference_readings(client, small_df):
-    b = body(small_df, plant=9, n=70)
+    b = body(small_df, plant=11, n=70)       # all four controls have a reading within the as-of tolerance here
     without = client.post("/predict", json=b).json()
     assert any("reference-plant" in w for w in without["warnings"])
     b["reference"] = ref_rows(small_df)
@@ -174,3 +174,22 @@ def test_reference_size_limit(client, small_df, cfg_small):
     b["reference"] = (ref_rows(small_df, 70) * (limit // 280 + 1))[: limit + 1]
     r = client.post("/predict", json=b)
     assert r.status_code == 422 and r.json()["detail"]["error"] == "reference_too_long"
+
+
+def test_batch_total_reference_size_limit(client, small_df, cfg_small):
+    total_limit = int(cfg_small.get("api.max_batch_reference_rows"))
+    per_request = int(cfg_small.get("api.max_reference_rows"))
+    ref = ref_rows(small_df, 70)
+
+    def rows(n):
+        return (ref * (n // len(ref) + 1))[:n]
+
+    # the shared reference and the first item are each within the per-request cap; the second item pushes the sum over
+    shared = rows(per_request)
+    a, b = body(small_df, plant=9, n=5), body(small_df, plant=13, n=5)
+    a["reference"] = rows(total_limit - per_request)
+    b["reference"] = rows(1)
+    r = client.post("/predict/batch", json={"items": [a, b], "reference": shared})
+    assert r.status_code == 422 and r.json()["detail"]["error"] == "batch_reference_too_long"
+    b["reference"] = []                                        # exactly at the cap is accepted
+    assert client.post("/predict/batch", json={"items": [a, b], "reference": shared}).status_code == 200

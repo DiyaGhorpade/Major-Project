@@ -124,6 +124,13 @@ def predict_batch(body: BatchPredictRequest, request: Request):
     limit = int(st.cfg.get("api.max_batch_items", 64))
     if not body.items or len(body.items) > limit:
         raise HTTPException(status_code=422, detail={"error": "bad_batch_size", "message": f"items must contain 1..{limit} entries"})
+    total_ref = len(body.reference) + sum(len(item.reference) for item in body.items)
+    total_limit = int(st.cfg.get("api.max_batch_reference_rows", 10000))
+    if total_ref > total_limit:
+        raise HTTPException(status_code=422, detail={"error": "batch_reference_too_long",
+                            "message": f"batch carries {total_ref} reference rows in total (shared + per item); limit is "
+                                       f"{total_limit}. Send the shared `reference` once per batch, covering the history's "
+                                       "time span only."})
     shared = _reference_frame(list(body.reference), request)
     results = []
     for i, item in enumerate(body.items):

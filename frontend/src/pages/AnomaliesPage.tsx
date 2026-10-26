@@ -7,6 +7,7 @@ import { ErrorState } from '../components/shared/ErrorState';
 import { NavRoute } from '../components/layout/Sidebar';
 import { useAnomalies, useAnomalySummary } from '../hooks/useData';
 import { usePlants } from '../hooks/usePlants';
+import { MIN_SCORE_MAX, MIN_SCORE_MIN, parseAnomalyPlantId, parseMinScore } from '../lib/anomalyFilters';
 import { formatCount, formatDateTime, formatFraction, formatLux, formatPercent, formatTemp } from '../lib/utils';
 
 interface AnomaliesPageProps {
@@ -35,14 +36,13 @@ const ScoreMeter: React.FC<{ score: number; threshold: number; max: number }> = 
 };
 
 export const AnomaliesPage: React.FC<AnomaliesPageProps> = ({ onNavigate, initialPlantId = null }) => {
-  const [plantFilter, setPlantFilter] = useState<string>(initialPlantId === null ? 'all' : String(initialPlantId));
+  const [plantFilter, setPlantFilter] = useState<string>(parseAnomalyPlantId(initialPlantId) ?? 'all');
   const [sort, setSort] = useState<SortKey>('recent');
   const [minScoreText, setMinScoreText] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
 
-  const parsedMin = minScoreText.trim() === '' ? NaN : Number(minScoreText);
-  const minScore = Number.isFinite(parsedMin) ? parsedMin : undefined;
+  const minScore = parseMinScore(minScoreText);
   const filter: AnomalyFilter = {
     plantId: plantFilter,
     sort,
@@ -59,6 +59,8 @@ export const AnomaliesPage: React.FC<AnomaliesPageProps> = ({ onNavigate, initia
   const rows = list.data ?? [];
   const total = list.total;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  // The total can shrink under the current page (filter change, new run): step back to the last page that exists.
+  if (list.data !== null && currentPage > totalPages) setCurrentPage(totalPages);
   const startIndex = (currentPage - 1) * pageSize;
   const maxScore = Math.max(0, ...(summary?.plants ?? []).map((p) => p.maxScore), ...rows.map((r) => r.score));
   const filtersActive = plantFilter !== 'all' || minScore !== undefined;
@@ -235,6 +237,8 @@ export const AnomaliesPage: React.FC<AnomaliesPageProps> = ({ onNavigate, initia
             <input
               type="number"
               step="0.01"
+              min={MIN_SCORE_MIN}
+              max={MIN_SCORE_MAX}
               inputMode="decimal"
               aria-label="Minimum score"
               placeholder="none"

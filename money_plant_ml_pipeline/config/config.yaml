@@ -121,3 +121,5 @@ api:
   max_history_rows: 500
   max_batch_items: 64
   max_reference_rows: 5000      # reference-plant readings accepted per request (shared across a batch)
+  max_batch_reference_rows: 10000   # combined cap for /predict/batch: shared `reference` + every item's own `reference`.
+                                #   The backend sends ~4 plants x ~60-130 rows once per batch (a few hundred rows)

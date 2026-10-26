@@ -26,12 +26,12 @@ Interactive docs: `/docs`. No authentication; keep it on localhost or behind a f
  "anomaly": {"is_anomaly": false, "score": -0.19, "threshold": 0.0, "interpretation": "..."},
  "explanation": {"available": true, "top_features": [{"feature": "soil_roll12_mean", "value": 48.1, "contribution": 0.9, "direction": "towards_predicted_class"}]},
  "recommendations": [], "recommendations_disclaimer": "Heuristic suggestions ... Not an expert diagnosis ...",
- "history": {"rows_available": 60, "rows_recommended": 60, "sufficient": true}, "warnings": [],
+ "history": {"rows_available": 60, "rows_recommended": 60, "sufficient": true, "reference_plants_used": 4, "reference_plants_expected": 4}, "warnings": [],
  "model_metadata": {"trained_on": "synthetic", "validated_on_real_plants": false, "model_version": "1.0.0", "run_id": "..."}}
 ```
 Anomaly score: **higher = more anomalous**; `is_anomaly` when score > 0. A flagged anomaly means "check the sensor", not "plant stress".
 ## Errors
-400-class: 422 with `detail:{error,message,...}` for `invalid_readings`, `mixed_plants`, `history_not_before_reading`, `history_too_long`, `reference_too_long` (more than `api.max_reference_rows`, default 5,000), `bad_batch_size`, `empty_request`, or schema/type errors; 503 `models_unavailable`.
+400-class: 422 with `detail:{error,message,...}` for `invalid_readings`, `mixed_plants`, `history_not_before_reading`, `history_too_long`, `reference_too_long` (more than `api.max_reference_rows`, default 5,000), `batch_reference_too_long` (`/predict/batch`: shared plus per-item `reference` rows above `api.max_batch_reference_rows`, default 10,000), `bad_batch_size`, `empty_request`, or schema/type errors; 503 `models_unavailable`.
 
 ## Reference readings (cross-plant features)
 The classifier compares each plant with the healthy-control plants measured at the same time. Send the readings of the plants in `/metadata` `cross_plant.reference_plants` (1-4) as `reference`, covering the time span of the history: from the first history row (minus up to 30 min) to the reading. For each row the service uses, per reference plant, the latest reading at or before that row's timestamp (at most 30 min older). Later readings are ignored, so a wider window is harmless. Invalid reference rows are dropped, not rejected. Without reference readings the prediction still works but is less reliable, and `warnings` says so. `stress_prediction.probabilities` are smoothed over the plant's last 12 readings, re-predicted from the supplied history; `stress_prediction.unsmoothed_probabilities` is the single-reading model output.

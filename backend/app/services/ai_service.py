@@ -115,7 +115,7 @@ def local_shap(db: Session, plant_id: int) -> LocalShapOut:
     )
     summary = (
         f"For the reading at {to_ist_text(pred.reading_timestamp)}, the model rated stress '{target}'{p_text}. "
-        f"The inputs that moved this most: {named}. This describes the model's behaviour, not a proven cause."
+        f"The inputs that moved this most: {named}."
     )
     note = (expl.get("note") or "").strip()
     return LocalShapOut(

@@ -53,6 +53,11 @@ def _params(cfg: Config) -> dict:
     }
 
 
+def feature_settings(cfg: Config) -> dict:
+    """Normalised feature-engineering settings (defaults applied); what serving rebuilds features from."""
+    return _params(cfg)
+
+
 def cross_plant_params(cfg: Config) -> dict:
     cp = cfg.get("features.cross_plant", None) or {}
     return {

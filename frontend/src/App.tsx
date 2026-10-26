@@ -9,6 +9,7 @@ import { PlantsPage } from './pages/PlantsPage';
 import { PlantDetailPage } from './pages/PlantDetailPage';
 import { AiInsightsPage } from './pages/AiInsightsPage';
 import { AnomaliesPage } from './pages/AnomaliesPage';
+import { parseAnomalyPlantId } from './lib/anomalyFilters';
 import { ShapAnalysisPage } from './pages/ShapAnalysisPage';
 import { ModelPerformancePage } from './pages/ModelPerformancePage';
 import { RecommendationsPage } from './pages/RecommendationsPage';
@@ -36,7 +37,7 @@ export function App() {
         setActivePlantId(id);
         setCurrentRoute('shap-analysis');
       } else if (hash === 'anomalies' || hash.startsWith('anomalies/')) {
-        setAnomalyPlantId(hash.replace('anomalies', '').replace('/', '') || null);
+        setAnomalyPlantId(parseAnomalyPlantId(hash.replace('anomalies', '').replace('/', '')));
         setCurrentRoute('anomalies');
       } else if (hash) {
         setCurrentRoute(hash as NavRoute);

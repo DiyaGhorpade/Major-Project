@@ -147,7 +147,7 @@ def local_explanation(info: FeatureInfo, direction: str, target_class: str, valu
 def global_interpretation(info: FeatureInfo, mean_abs: float, rank: int, sample_count: int) -> str:
     return (
         f"Rank {rank}: on average it moved the model's score by about {mean_abs:.2f} (log-odds) per explained "
-        f"row, across {sample_count} test rows and all four classes. This describes the model, not a cause in the plant."
+        f"row, across {sample_count} test rows and all four classes."
     )
 
 

@@ -92,6 +92,47 @@ describe('AnomaliesPage', () => {
     expect(screen.getByLabelText('Plant filter')).toHaveValue('10');
   });
 
+  it('ignores a plant id that is not 1-16', async () => {
+    const { calls } = backend();
+    render(<AnomaliesPage onNavigate={vi.fn()} initialPlantId="999" />);
+    await screen.findByTestId('anomaly-readings');
+    expect(lastQuery(calls).has('plantId')).toBe(false);
+    expect(screen.getByLabelText('Plant filter')).toHaveValue('all');
+  });
+
+  it('clamps the minimum score to the range the server accepts', async () => {
+    const { calls } = backend();
+    render(<AnomaliesPage onNavigate={vi.fn()} />);
+    await screen.findByTestId('anomaly-readings');
+    fireEvent.change(screen.getByLabelText('Minimum score'), { target: { value: '500' } });
+    await waitFor(() => expect(lastQuery(calls).get('minScore')).toBe('10'));
+    fireEvent.change(screen.getByLabelText('Minimum score'), { target: { value: '-99' } });
+    await waitFor(() => expect(lastQuery(calls).get('minScore')).toBe('-10'));
+    expect(screen.getByLabelText('Minimum score')).toHaveAttribute('min', '-10');
+    expect(screen.getByLabelText('Minimum score')).toHaveAttribute('max', '10');
+  });
+
+  it('steps back to the last page when the total shrinks below the current page', async () => {
+    let shrunk = false;
+    const ref: { calls: Array<{ key: string; url: string }> } = { calls: [] };
+    const { calls } = backend({
+      'GET /api/ai/anomalies': () => {
+        const offset = Number(new URL(ref.calls[ref.calls.length - 1].url, 'http://x').searchParams.get('offset'));
+        if (offset >= 30) shrunk = true; // the data changed under the user: only 20 readings are left
+        return shrunk ? page(offset >= 20 ? [] : anomaliesFixture().slice(0, 3), 20) : page(anomaliesFixture(), 102);
+      },
+    });
+    ref.calls = calls;
+    render(<AnomaliesPage onNavigate={vi.fn()} />);
+    await screen.findByTestId('anomaly-readings');
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    await waitFor(() => expect(lastQuery(calls).get('offset')).toBe('15'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Next page' }));
+    expect(await screen.findByText('Page 2 of 2')).toBeInTheDocument();
+    expect(lastQuery(calls).get('offset')).toBe('15');
+    expect(screen.getByTestId('anomaly-readings')).toHaveTextContent('Showing 16 to 20 of 20 readings');
+  });
+
   it('shows an empty row when the filters match nothing', async () => {
     backend({ 'GET /api/ai/anomalies': page([], 0) });
     render(<AnomaliesPage onNavigate={vi.fn()} initialPlantId={3} />);
