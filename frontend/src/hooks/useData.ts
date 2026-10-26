@@ -1,7 +1,9 @@
 import { useContext } from 'react';
-import { apiClient } from '../api/client';
+import { apiClient, type AnomalyFilter } from '../api/client';
 import type {
   AiInsights,
+  Anomaly,
+  AnomalySummary,
   Device,
   LocalShapExplanation,
   ModelMetrics,
@@ -23,6 +25,19 @@ export function useOverview(): AsyncState<Overview> {
 }
 
 export const useInsights = (): AsyncState<AiInsights> => useAsync(() => apiClient.getInsights(), ['insights']);
+
+export const useAnomalySummary = (): AsyncState<AnomalySummary> => useAsync(() => apiClient.getAnomalySummary(), ['anomalySummary']);
+
+export interface AnomaliesState extends AsyncState<Anomaly[]> {
+  total: number;
+}
+
+/** Flagged readings (one page) with the total from X-Total-Count. */
+export function useAnomalies(filter?: AnomalyFilter): AnomaliesState {
+  const state = useAsync(() => apiClient.getAnomalies(filter), ['anomalies', filter]);
+  const page = state.data;
+  return { ...state, data: page ? page.items : null, total: page ? page.total : 0 };
+}
 
 export const useModelMetrics = (): AsyncState<ModelMetrics> => useAsync(() => apiClient.getModelMetrics(), ['metrics']);
 

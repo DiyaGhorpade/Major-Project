@@ -678,22 +678,57 @@ def list_predictions(
 
 
 def list_anomalies(
-    db: Session, *, plant_id: int | None, limit: int, offset: int
+    db: Session,
+    *,
+    plant_id: int | None,
+    limit: int,
+    offset: int,
+    sort: str = "recent",
+    min_score: float | None = None,
 ) -> tuple[list[tuple[AnomalyRecord, Plant, SensorReading]], int]:
     where = [AnomalyRecord.is_anomaly.is_(True)]
     if plant_id is not None:
         where.append(AnomalyRecord.plant_id == plant_id)
+    if min_score is not None:
+        where.append(AnomalyRecord.score >= min_score)
     total = db.scalar(select(func.count()).select_from(AnomalyRecord).where(*where)) or 0
+    order = (
+        (AnomalyRecord.score.desc(), AnomalyRecord.reading_timestamp.desc(), AnomalyRecord.id.desc())
+        if sort == "score"
+        else (AnomalyRecord.reading_timestamp.desc(), AnomalyRecord.id.desc())
+    )
     rows = db.execute(
         select(AnomalyRecord, Plant, SensorReading)
         .join(Plant, Plant.id == AnomalyRecord.plant_id)
         .join(SensorReading, SensorReading.id == AnomalyRecord.reading_id)
         .where(*where)
-        .order_by(AnomalyRecord.reading_timestamp.desc(), AnomalyRecord.id.desc())
+        .order_by(*order)
         .limit(limit)
         .offset(offset)
     )
     return [(a, p, r) for a, p, r in rows], total
+
+
+def anomaly_summary_totals(db: Session) -> tuple[int, int, datetime | None]:
+    """`(flagged records, plants with a flag, newest flagged reading timestamp)`."""
+    flagged, plants, latest = db.execute(
+        select(func.count(), func.count(func.distinct(AnomalyRecord.plant_id)), func.max(AnomalyRecord.reading_timestamp)).where(
+            AnomalyRecord.is_anomaly.is_(True)
+        )
+    ).one()
+    return int(flagged or 0), int(plants or 0), latest
+
+
+def anomaly_counts_by_plant(db: Session) -> list[tuple[Plant, int, float, datetime]]:
+    """One row per plant with at least one flag: `(plant, flags, max score, last flagged reading timestamp)`."""
+    rows = db.execute(
+        select(Plant, func.count(), func.max(AnomalyRecord.score), func.max(AnomalyRecord.reading_timestamp))
+        .join(AnomalyRecord, AnomalyRecord.plant_id == Plant.id)
+        .where(AnomalyRecord.is_anomaly.is_(True))
+        .group_by(Plant.id)
+        .order_by(func.count().desc(), Plant.id)
+    )
+    return [(p, int(n), float(score), ts) for p, n, score, ts in rows]
 
 
 def count_anomalies(db: Session) -> int:

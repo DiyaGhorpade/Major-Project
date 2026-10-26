@@ -179,6 +179,40 @@ def test_anomalies_list(ran_client):
     assert ran_client.get("/api/ai/anomalies?limit=501").status_code == 422
 
 
+def test_anomalies_sort_and_min_score(ran_client):
+    by_score = ran_client.get("/api/ai/anomalies?sort=score&limit=500")
+    rows = by_score.json()
+    scores = [x["score"] for x in rows]
+    assert len(rows) == total(by_score) > 3 and scores == sorted(scores, reverse=True)
+    assert total(ran_client.get("/api/ai/anomalies?sort=recent")) == total(by_score)
+    cut = max(scores)  # the fake ML service gives every flag the same score; minScore is inclusive
+    at = ran_client.get(f"/api/ai/anomalies?sort=score&minScore={cut}&limit=500")
+    assert total(at) == len(rows) and total(ran_client.get(f"/api/ai/anomalies?minScore={cut + 0.01}")) == 0
+    assert total(ran_client.get("/api/ai/anomalies?minScore=-1")) == len(rows)
+    assert total(ran_client.get("/api/ai/anomalies?minScore=9")) == 0
+    for bad in ("sort=bogus", "minScore=abc", "minScore=nan", "minScore=99"):
+        assert ran_client.get(f"/api/ai/anomalies?{bad}").status_code == 422, bad
+
+
+def test_anomalies_summary(ran_client):
+    s = ran_client.get("/api/ai/anomalies/summary").json()
+    insights = ran_client.get("/api/ai/insights").json()
+    assert set(s) == {"flagged", "totalScored", "rate", "plantsAffected", "latestFlaggedAt", "threshold", "plants"}
+    assert s["flagged"] == insights["anomalies"]["count"] > 0
+    assert s["totalScored"] == insights["predictions"]["ok"] and s["rate"] == pytest.approx(s["flagged"] / s["totalScored"], abs=1e-6)
+    assert s["threshold"] == 0.0 and s["plantsAffected"] == len(s["plants"]) >= 1
+    assert sum(p["flags"] for p in s["plants"]) == s["flagged"]
+    assert [p["flags"] for p in s["plants"]] == sorted((p["flags"] for p in s["plants"]), reverse=True)
+    newest = ran_client.get("/api/ai/anomalies?limit=1").json()[0]
+    assert s["latestFlaggedAt"] == newest["timestamp"] and s["latestFlaggedAt"].endswith("+05:30")
+    top = s["plants"][0]
+    assert set(top) == {"plantId", "plantName", "group", "groupLabel", "flags", "maxScore", "lastFlaggedAt"}
+    one = ran_client.get(f"/api/ai/anomalies?plantId={top['plantId']}&sort=score&limit=500")
+    assert total(one) == top["flags"] and one.json()[0]["score"] == top["maxScore"]
+    assert one.json()[0]["plant_name"] == top["plantName"]
+    assert top["group"].startswith("Cluster ") and top["lastFlaggedAt"] == ran_client.get(f"/api/ai/anomalies?plantId={top['plantId']}&limit=1").json()[0]["timestamp"]
+
+
 def test_monitoring_plant_detail(ran_client):
     d = ran_client.get("/api/monitoring/plants/7?limit=10").json()
     assert d["plant"]["id"] == 7 and len(d["series"]) == 10

@@ -509,6 +509,41 @@ export interface AiInsights {
   disclaimer: string;
 }
 
+/** One row of GET /api/ai/anomalies: a reading the Isolation Forest flagged as unusual (field names are literal). */
+export interface Anomaly {
+  id: string;
+  plant_id: number;
+  plant_name: string;
+  record_id: string;
+  timestamp: string;
+  score: number;
+  threshold: number;
+  interpretation: string;
+  readings: { soil: number | null; temperature: number | null; humidity: number | null; light: number | null };
+  datasetLabelIsSyntheticAnomaly: boolean | null;
+}
+
+export interface AnomalyPlantSummary {
+  plantId: number;
+  plantName: string;
+  group: string; // experimental group, "Cluster 1".."Cluster 4"
+  groupLabel: string;
+  flags: number;
+  maxScore: number;
+  lastFlaggedAt: string | null;
+}
+
+/** GET /api/ai/anomalies/summary: totals plus a per-plant breakdown, most flags first. */
+export interface AnomalySummary {
+  flagged: number;
+  totalScored: number;
+  rate: number | null;
+  plantsAffected: number;
+  latestFlaggedAt: string | null;
+  threshold: number;
+  plants: AnomalyPlantSummary[];
+}
+
 /** 404 `global_shap_unavailable`: the empty-state hint says which command to run. */
 export interface GlobalShapUnavailable {
   message: string;

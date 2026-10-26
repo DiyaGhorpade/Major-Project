@@ -262,6 +262,13 @@ export const PlantDetailPage: React.FC<PlantDetailPageProps> = ({ plantId, onNav
               <div className="text-stone-600">
                 {anomalyCount} of {history.length} analyzed readings in view flagged as unusual.
               </div>
+              <button
+                type="button"
+                onClick={() => onNavigate('anomalies', plant.id)}
+                className="text-[#2E8B57] font-semibold hover:underline"
+              >
+                View all anomalies for this plant
+              </button>
             </div>
 
             <div className="rounded-xl border border-sky-200 bg-sky-50/40 p-4 text-xs space-y-1.5" data-testid="envstate-panel">

@@ -21,7 +21,7 @@ from app.core.provenance import DISCLAIMER, PROVENANCE
 from app.core.units import format_value
 from app.db import repositories as repo
 from app.db.models import MlPrediction
-from app.schemas.ai import AnomalyOut, EnvStateCount, InsightsModelStatus, InsightsOut
+from app.schemas.ai import AnomalyOut, AnomalyPlantOut, AnomalySummaryOut, EnvStateCount, InsightsModelStatus, InsightsOut
 from app.schemas.shap import BeeswarmPointOut, GlobalFeatureOut, GlobalShapOut, LocalShapOut, ShapFeatureOut
 from app.services import model_service
 
@@ -29,6 +29,7 @@ logger = logging.getLogger("app.ai")
 
 SEVERITIES = ("healthy", "low", "moderate", "high")
 ANOMALY_TEXT = "Unusual reading detected"
+ANOMALY_THRESHOLD = 0.0  # Isolation Forest rule: flagged when score (= -decision_function) > 0
 UNITS_NOTE = "Units: log-odds contribution; base value not provided by the model service."
 SHAP_SAMPLE_ROWS = 500  # scripts/generate_explanations.py explains min(500, test rows) rows (config explain.background_rows)
 _DIRECTION = {
@@ -251,8 +252,10 @@ def global_shap(settings: Settings) -> GlobalShapOut:
 
 
 # --- anomalies --------------------------------------------------------------------------------
-def list_anomalies(db: Session, plant_id: int | None, limit: int, offset: int) -> tuple[list[AnomalyOut], int]:
-    rows, total = repo.list_anomalies(db, plant_id=plant_id, limit=limit, offset=offset)
+def list_anomalies(
+    db: Session, plant_id: int | None, limit: int, offset: int, sort: str = "recent", min_score: float | None = None
+) -> tuple[list[AnomalyOut], int]:
+    rows, total = repo.list_anomalies(db, plant_id=plant_id, limit=limit, offset=offset, sort=sort, min_score=min_score)
     items = [
         AnomalyOut(
             id=f"anom-{a.id}",
@@ -269,6 +272,31 @@ def list_anomalies(db: Session, plant_id: int | None, limit: int, offset: int) -
         for a, p, r in rows
     ]
     return items, total
+
+
+def anomaly_summary(db: Session) -> AnomalySummaryOut:
+    flagged, plants_affected, latest = repo.anomaly_summary_totals(db)
+    scored = repo.prediction_status_counts(db).get("ok", 0)
+    return AnomalySummaryOut(
+        flagged=flagged,
+        total_scored=scored,
+        rate=round(flagged / scored, 6) if scored else None,
+        plants_affected=plants_affected,
+        latest_flagged_at=to_ist_iso(latest),
+        threshold=ANOMALY_THRESHOLD,
+        plants=[
+            AnomalyPlantOut(
+                plant_id=p.id,
+                plant_name=p.name,
+                group=p.cluster,
+                group_label=p.cluster_label,
+                flags=flags,
+                max_score=max_score,
+                last_flagged_at=to_ist_iso(last),
+            )
+            for p, flags, max_score, last in repo.anomaly_counts_by_plant(db)
+        ],
+    )
 
 
 # --- insights ---------------------------------------------------------------------------------

@@ -1,5 +1,7 @@
 import type {
   AiInsights,
+  Anomaly,
+  AnomalySummary,
   ApiErrorEnvelope,
   Device,
   GlobalShapData,
@@ -208,6 +210,12 @@ export interface PredictionFilter extends PageParams {
   to?: string;
 }
 
+export interface AnomalyFilter extends PageParams {
+  plantId?: number | string;
+  sort?: 'recent' | 'score';
+  minScore?: number;
+}
+
 export interface GlobalShapResult {
   data: GlobalShapData | null;
   /** Set when the report has not been generated yet; `hint` is the command to run. */
@@ -337,6 +345,20 @@ class ApiClient {
 
   public getInsights(): Promise<AiInsights> {
     return getJson<AiInsights>('/ai/insights');
+  }
+
+  public getAnomalies(filter?: AnomalyFilter): Promise<Page<Anomaly>> {
+    return getPage<Anomaly>('/ai/anomalies', {
+      plantId: filter?.plantId === undefined || filter.plantId === 'all' ? undefined : plantNumber(filter.plantId),
+      sort: filter?.sort,
+      minScore: filter?.minScore !== undefined && Number.isFinite(filter.minScore) ? filter.minScore : undefined,
+      limit: filter?.limit,
+      offset: filter?.offset,
+    });
+  }
+
+  public getAnomalySummary(): Promise<AnomalySummary> {
+    return getJson<AnomalySummary>('/ai/anomalies/summary');
   }
 
   // Recommendations

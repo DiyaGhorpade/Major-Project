@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from app.schemas.ai import AnomalyOut, InsightsOut
+from app.schemas.ai import AnomalyOut, AnomalySummaryOut, InsightsOut
 from app.schemas.dashboard import OverviewOut, PlantMonitoringOut
 from app.schemas.device import DeviceOut
 from app.schemas.model import ModelMetricsOut
@@ -151,7 +151,7 @@ def assert_shape(payload: dict, interface: str, where: str = "", model: Any = No
 TARGETS = {
     "Plant": 14, "PlantPrediction": 3, "PlantOptimalRange": 4, "SensorRecord": 9, "Session": 10, "Device": 9, "HardwareDetails": 1,
     "LocalShapExplanation": 9, "ShapFeatureContribution": 8, "GlobalShapData": 4, "GlobalShapFeature": 6, "BeeswarmPoint": 5,
-    "ModelMetrics": 9, "Recommendation": 16, "SystemSettings": 8,
+    "ModelMetrics": 9, "Recommendation": 16, "SystemSettings": 8, "Anomaly": 10, "AnomalySummary": 7, "AnomalyPlantSummary": 7,
 }  # fmt: skip
 
 
@@ -268,6 +268,10 @@ def test_endpoints_without_a_ts_interface_match_their_models(ran_client):
     InsightsOut.model_validate(ran_client.get("/api/ai/insights").json())
     for item in ran_client.get("/api/ai/anomalies").json()[:5]:
         AnomalyOut.model_validate(item)
+        assert_shape(item, "Anomaly", model=AnomalyOut, minimum=10)
+    summary = ran_client.get("/api/ai/anomalies/summary").json()
+    assert_shape(summary, "AnomalySummary", model=AnomalySummaryOut, minimum=14)
+    assert_shape(summary["plants"][0], "AnomalyPlantSummary", "anomalies.summary.plants")
     items = ran_client.get("/api/predictions?limit=5").json()
     assert len(items) == 5
     for item in items:

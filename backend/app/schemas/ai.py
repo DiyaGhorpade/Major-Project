@@ -53,3 +53,25 @@ class InsightsOut(CamelModel):
     last_pipeline_run: dict[str, Any] | None
     provenance: str
     disclaimer: str
+
+
+class AnomalyPlantOut(CamelModel):
+    plant_id: int
+    plant_name: str
+    group: str  # experimental group, "Cluster 1".."Cluster 4"
+    group_label: str
+    flags: int
+    max_score: float
+    last_flagged_at: str | None
+
+
+class AnomalySummaryOut(CamelModel):
+    """Aggregates over every stored anomaly record (camelCase). `total_scored` counts ok predictions."""
+
+    flagged: int
+    total_scored: int
+    rate: float | None  # flagged / total_scored, None before any analysis
+    plants_affected: int
+    latest_flagged_at: str | None
+    threshold: float
+    plants: list[AnomalyPlantOut]

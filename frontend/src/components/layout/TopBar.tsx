@@ -76,6 +76,7 @@ export const TopBar: React.FC<TopBarProps> = ({
       category: 'Workspace / Plants',
     },
     'ai-insights': { title: 'Tulsi Stress ML Inference Insights', category: 'Intelligence' },
+    anomalies: { title: 'Unusual Readings', category: 'Intelligence' },
     'shap-analysis': { title: 'SHAP Explainability Workspace', category: 'Intelligence' },
     'model-performance': { title: 'Model Evaluation & Benchmark Metrics', category: 'Intelligence' },
     recommendations: { title: 'Agronomic Care Recommendations', category: 'Intelligence' },

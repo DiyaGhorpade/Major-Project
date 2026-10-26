@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { AiInsightsPage } from './AiInsightsPage';
 import { HealthContext, type HealthValue } from '../hooks/useHealth';
 import { mockFetch } from '../test/helpers';
@@ -7,11 +7,11 @@ import { healthFixture, insightsFixture, metricsFixture } from '../test/fixtureH
 
 afterEach(() => vi.unstubAllGlobals());
 
-function renderPage(health: Partial<HealthValue> = {}) {
+function renderPage(health: Partial<HealthValue> = {}, onNavigate = vi.fn()) {
   const value: HealthValue = { health: healthFixture(), error: null, mlConnected: true, mlUnreachable: false, ...health };
   return render(
     <HealthContext.Provider value={value}>
-      <AiInsightsPage onNavigate={vi.fn()} />
+      <AiInsightsPage onNavigate={onNavigate} />
     </HealthContext.Provider>,
   );
 }
@@ -47,6 +47,17 @@ describe('AiInsightsPage', () => {
     // Top global features come from the SHAP report.
     expect(screen.getAllByText('Soil moisture, 12-reading average').length).toBeGreaterThan(0);
     expect(screen.getByText('0.462')).toBeInTheDocument();
+  });
+
+  it('opens the anomalies page from the anomaly card', async () => {
+    mockFetch({
+      'GET /api/ai/insights': { body: insightsFixture() },
+      'GET /api/models/performance': { body: metricsFixture() },
+    });
+    const onNavigate = vi.fn();
+    renderPage({}, onNavigate);
+    fireEvent.click(await screen.findByRole('button', { name: /Anomalous Readings/ }));
+    expect(onNavigate).toHaveBeenCalledWith('anomalies');
   });
 
   it('shows none of the old hard-coded numbers', async () => {

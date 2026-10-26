@@ -25,6 +25,9 @@ def test_before_a_run_the_data_pages_have_rows_and_the_ai_pages_are_empty(fresh_
     assert insights["explanationCoverage"]["plantsWithLocalShap"] == 0
     assert c.get("/api/predictions").json() == [] and c.get("/api/predictions").headers["x-total-count"] == "0"
     assert c.get("/api/ai/anomalies").json() == []
+    empty = c.get("/api/ai/anomalies/summary").json()
+    assert empty["flagged"] == 0 and empty["totalScored"] == 0 and empty["rate"] is None and empty["plants"] == []
+    assert empty["latestFlaggedAt"] is None and empty["plantsAffected"] == 0
     r = c.get("/api/ai/shap/1")
     assert r.status_code == 404 and r.json()["error"]["code"] == "explanation_unavailable"
     assert c.get("/api/recommendations").json() == []

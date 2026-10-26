@@ -1,7 +1,7 @@
 """/api/ai/*: insights, local and global SHAP, anomaly list. Before a Run these return empty states / 404."""
 
 import asyncio
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session, sessionmaker
@@ -10,7 +10,7 @@ from app.api.deps import MAX_OFFSET, get_app_settings, get_cache, get_db, get_ml
 from app.core.cache import ResponseCache
 from app.core.config import Settings
 from app.integrations.ml_client import MLClient
-from app.schemas.ai import AnomalyOut, InsightsOut
+from app.schemas.ai import AnomalyOut, AnomalySummaryOut, InsightsOut
 from app.schemas.shap import GlobalShapOut, LocalShapOut
 from app.services import ai_service
 
@@ -66,9 +66,18 @@ def anomalies(
     plant_id: Annotated[int | None, Query(alias="plantId", ge=1, le=16)] = None,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
     offset: Annotated[int, Query(ge=0, le=MAX_OFFSET)] = 0,
+    sort: Literal["recent", "score"] = "recent",
+    min_score: Annotated[float | None, Query(alias="minScore", ge=-10, le=10, allow_inf_nan=False)] = None,
     db: Session = Depends(get_db),
 ) -> list[AnomalyOut]:
-    """Unusual readings flagged by the Isolation Forest, newest first. These are sensor checks, not health verdicts."""
-    items, total = ai_service.list_anomalies(db, plant_id, limit, offset)
+    """Unusual readings flagged by the Isolation Forest, newest first (`sort=score`: highest score first, optional
+    `minScore`). These are sensor checks, not health verdicts."""
+    items, total = ai_service.list_anomalies(db, plant_id, limit, offset, sort, min_score)
     response.headers["X-Total-Count"] = str(total)
     return items
+
+
+@router.get("/anomalies/summary", response_model=AnomalySummaryOut)
+def anomalies_summary(db: Session = Depends(get_db)) -> AnomalySummaryOut:
+    """Totals and a per-plant breakdown (most flags first) of the stored anomaly records."""
+    return ai_service.anomaly_summary(db)

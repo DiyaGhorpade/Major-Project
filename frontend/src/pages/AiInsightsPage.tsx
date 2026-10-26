@@ -162,6 +162,7 @@ export const AiInsightsPage: React.FC<AiInsightsPageProps> = ({ onNavigate }) =>
             value={insights.anomalies.count.toLocaleString()}
             subtitle={`${(insights.anomalies.rate * 100).toFixed(1)}% (${insights.anomalies.rateBasis})`}
             icon={<Sparkles className="w-4 h-4 text-[#2E8B57]" />}
+            onClick={() => onNavigate('anomalies')}
           />
           <MetricCard
             title="Explanation Coverage"

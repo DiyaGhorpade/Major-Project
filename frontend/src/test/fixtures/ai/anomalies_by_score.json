@@ -1,0 +1,138 @@
+[
+ {
+  "id": "anom-28",
+  "plant_id": 10,
+  "plant_name": "Pot 10: Krishna Tulsi (Light Trial)",
+  "record_id": "R-4346",
+  "timestamp": "2026-10-13T14:03:00+05:30",
+  "score": 0.16233652921703556,
+  "threshold": 0.0,
+  "interpretation": "Unusual reading detected",
+  "readings": {
+   "soil": 5.3,
+   "temperature": 35.2,
+   "humidity": 96.7,
+   "light": 514.0
+  },
+  "datasetLabelIsSyntheticAnomaly": true
+ },
+ {
+  "id": "anom-23",
+  "plant_id": 10,
+  "plant_name": "Pot 10: Krishna Tulsi (Light Trial)",
+  "record_id": "R-874",
+  "timestamp": "2026-09-25T12:03:00+05:30",
+  "score": 0.16030782255119536,
+  "threshold": 0.0,
+  "interpretation": "Unusual reading detected",
+  "readings": {
+   "soil": 8.1,
+   "temperature": 36.3,
+   "humidity": 98.5,
+   "light": 2888.0
+  },
+  "datasetLabelIsSyntheticAnomaly": true
+ },
+ {
+  "id": "anom-17",
+  "plant_id": 8,
+  "plant_name": "Pot 8: Krishna Tulsi (Watering Trial)",
+  "record_id": "R-280",
+  "timestamp": "2026-09-22T10:02:15+05:30",
+  "score": 0.13276464153777734,
+  "threshold": 0.0,
+  "interpretation": "Unusual reading detected",
+  "readings": {
+   "soil": 8.5,
+   "temperature": 33.8,
+   "humidity": 97.0,
+   "light": 3014.0
+  },
+  "datasetLabelIsSyntheticAnomaly": true
+ },
+ {
+  "id": "anom-11",
+  "plant_id": 6,
+  "plant_name": "Pot 6: Krishna Tulsi (Watering Trial)",
+  "record_id": "R-2966",
+  "timestamp": "2026-10-06T10:01:30+05:30",
+  "score": 0.11374099744111921,
+  "threshold": 0.0,
+  "interpretation": "Unusual reading detected",
+  "readings": {
+   "soil": 14.5,
+   "temperature": 36.6,
+   "humidity": 94.4,
+   "light": 4149.0
+  },
+  "datasetLabelIsSyntheticAnomaly": true
+ },
+ {
+  "id": "anom-29",
+  "plant_id": 10,
+  "plant_name": "Pot 10: Krishna Tulsi (Light Trial)",
+  "record_id": "R-4362",
+  "timestamp": "2026-10-13T16:03:00+05:30",
+  "score": 0.11290216959368204,
+  "threshold": 0.0,
+  "interpretation": "Unusual reading detected",
+  "readings": {
+   "soil": 47.4,
+   "temperature": 28.5,
+   "humidity": 55.4,
+   "light": 382.0
+  },
+  "datasetLabelIsSyntheticAnomaly": false
+ },
+ {
+  "id": "anom-40",
+  "plant_id": 12,
+  "plant_name": "Pot 12: Krishna Tulsi (Light Trial)",
+  "record_id": "R-3724",
+  "timestamp": "2026-10-10T08:03:45+05:30",
+  "score": 0.09510746727840536,
+  "threshold": 0.0,
+  "interpretation": "Unusual reading detected",
+  "readings": {
+   "soil": 66.1,
+   "temperature": 24.2,
+   "humidity": 75.7,
+   "light": 20680.0
+  },
+  "datasetLabelIsSyntheticAnomaly": false
+ },
+ {
+  "id": "anom-38",
+  "plant_id": 12,
+  "plant_name": "Pot 12: Krishna Tulsi (Light Trial)",
+  "record_id": "R-1996",
+  "timestamp": "2026-10-01T08:03:45+05:30",
+  "score": 0.0942166105473784,
+  "threshold": 0.0,
+  "interpretation": "Unusual reading detected",
+  "readings": {
+   "soil": 64.3,
+   "temperature": 24.1,
+   "humidity": 82.2,
+   "light": 13736.0
+  },
+  "datasetLabelIsSyntheticAnomaly": false
+ },
+ {
+  "id": "anom-24",
+  "plant_id": 10,
+  "plant_name": "Pot 10: Krishna Tulsi (Light Trial)",
+  "record_id": "R-890",
+  "timestamp": "2026-09-25T14:03:00+05:30",
+  "score": 0.08606652328438058,
+  "threshold": 0.0,
+  "interpretation": "Unusual reading detected",
+  "readings": {
+   "soil": 47.6,
+   "temperature": 27.1,
+   "humidity": 60.4,
+   "light": 2589.0
+  },
+  "datasetLabelIsSyntheticAnomaly": false
+ }
+]

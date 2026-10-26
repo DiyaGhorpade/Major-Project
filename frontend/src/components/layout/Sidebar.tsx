@@ -7,6 +7,7 @@ import {
   PieChart,
   Target,
   Sparkles,
+  ScanSearch,
   FileSpreadsheet,
   Server,
   History,
@@ -23,6 +24,7 @@ export type NavRoute =
   | 'plants'
   | 'plant-detail'
   | 'ai-insights'
+  | 'anomalies'
   | 'shap-analysis'
   | 'model-performance'
   | 'recommendations'
@@ -59,6 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       group: 'Intelligence',
       items: [
         { id: 'ai-insights', label: 'AI Insights', icon: BrainCircuit },
+        { id: 'anomalies', label: 'Anomalies', icon: ScanSearch },
         { id: 'shap-analysis', label: 'SHAP Analysis', icon: PieChart },
         { id: 'model-performance', label: 'Model Performance', icon: Target },
         { id: 'recommendations', label: 'Recommendations', icon: Sparkles },

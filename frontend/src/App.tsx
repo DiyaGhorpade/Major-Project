@@ -8,6 +8,7 @@ import { LiveMonitoringPage } from './pages/LiveMonitoringPage';
 import { PlantsPage } from './pages/PlantsPage';
 import { PlantDetailPage } from './pages/PlantDetailPage';
 import { AiInsightsPage } from './pages/AiInsightsPage';
+import { AnomaliesPage } from './pages/AnomaliesPage';
 import { ShapAnalysisPage } from './pages/ShapAnalysisPage';
 import { ModelPerformancePage } from './pages/ModelPerformancePage';
 import { RecommendationsPage } from './pages/RecommendationsPage';
@@ -19,6 +20,8 @@ import { SettingsPage } from './pages/SettingsPage';
 export function App() {
   const [currentRoute, setCurrentRoute] = useState<NavRoute>('overview');
   const [activePlantId, setActivePlantId] = useState<number | string>(1);
+  // Plant the Anomalies page opens filtered to (`#/anomalies/<id>`); null shows all plants.
+  const [anomalyPlantId, setAnomalyPlantId] = useState<string | null>(null);
 
   // Sync route with URL hash for browser back/forward and deep linking
   useEffect(() => {
@@ -32,6 +35,9 @@ export function App() {
         const id = hash.replace('shap/', '');
         setActivePlantId(id);
         setCurrentRoute('shap-analysis');
+      } else if (hash === 'anomalies' || hash.startsWith('anomalies/')) {
+        setAnomalyPlantId(hash.replace('anomalies', '').replace('/', '') || null);
+        setCurrentRoute('anomalies');
       } else if (hash) {
         setCurrentRoute(hash as NavRoute);
       }
@@ -47,6 +53,12 @@ export function App() {
 
   
   const handleNavigate = (route: NavRoute, plantId?: number | string) => {
+    if (route === 'anomalies') {
+      setAnomalyPlantId(plantId === undefined ? null : String(plantId));
+      window.location.hash = plantId === undefined ? '#/anomalies' : `#/anomalies/${plantId}`;
+      setCurrentRoute(route);
+      return;
+    }
     if (plantId !== undefined) {
       setActivePlantId(plantId);
 
@@ -77,6 +89,8 @@ export function App() {
         return <PlantDetailPage plantId={activePlantId} onNavigate={handleNavigate} />;
       case 'ai-insights':
         return <AiInsightsPage onNavigate={handleNavigate} />;
+      case 'anomalies':
+        return <AnomaliesPage key={anomalyPlantId ?? 'all'} initialPlantId={anomalyPlantId} onNavigate={handleNavigate} />;
       case 'shap-analysis':
         return <ShapAnalysisPage initialPlantId={activePlantId} onNavigate={handleNavigate} />;
       case 'model-performance':

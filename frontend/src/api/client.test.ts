@@ -84,6 +84,24 @@ describe('api client', () => {
     expect(url.searchParams.has('q')).toBe(false);
   });
 
+  it('builds the anomaly query: sort, minScore, plant and paging; drops "all" and non-finite scores', async () => {
+    const { calls } = mockFetch({
+      'GET /api/ai/anomalies': { body: [{ id: 'anom-1' }], headers: { 'X-Total-Count': '102' } },
+      'GET /api/ai/anomalies/summary': { body: { flagged: 102, plants: [] } },
+    });
+    const page = await apiClient.getAnomalies({ plantId: 'plant-14', sort: 'score', minScore: 0.05, limit: 15, offset: 30 });
+    expect(page.total).toBe(102);
+    const url = new URL(calls[0].url, 'http://x');
+    expect(url.pathname).toBe('/api/ai/anomalies');
+    expect(Object.fromEntries(url.searchParams)).toEqual({ plantId: '14', sort: 'score', minScore: '0.05', limit: '15', offset: '30' });
+    await apiClient.getAnomalies({ plantId: 'all', minScore: 0 });
+    expect(Object.fromEntries(new URL(calls[1].url, 'http://x').searchParams)).toEqual({ minScore: '0' });
+    await apiClient.getAnomalies({ minScore: Number.NaN });
+    expect(new URL(calls[2].url, 'http://x').searchParams.has('minScore')).toBe(false);
+    expect((await apiClient.getAnomalySummary()).flagged).toBe(102);
+    expect(calls[3].url).toContain('/api/ai/anomalies/summary');
+  });
+
   it('sends a free-text search for "all" but still drops the "all" select sentinel', async () => {
     const { calls } = mockFetch({
       'GET /api/recommendations': { body: [], headers: { 'X-Total-Count': '0' } },

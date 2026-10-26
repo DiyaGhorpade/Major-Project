@@ -1,0 +1,136 @@
+{
+ "flagged": 102,
+ "totalScored": 5376,
+ "rate": 0.018973,
+ "plantsAffected": 14,
+ "latestFlaggedAt": "2026-10-17T08:05:15+05:30",
+ "threshold": 0.0,
+ "plants": [
+  {
+   "plantId": 14,
+   "plantName": "Pot 14: Krishna Tulsi (Climate Trial)",
+   "group": "Cluster 4",
+   "groupLabel": "Cluster 4: Temperature/Humidity Stress",
+   "flags": 42,
+   "maxScore": 0.08493874966870996,
+   "lastFlaggedAt": "2026-10-15T12:04:30+05:30"
+  },
+  {
+   "plantId": 13,
+   "plantName": "Pot 13: Rama Tulsi (Climate Trial)",
+   "group": "Cluster 4",
+   "groupLabel": "Cluster 4: Temperature/Humidity Stress",
+   "flags": 11,
+   "maxScore": 0.0356023755751933,
+   "lastFlaggedAt": "2026-10-17T08:04:30+05:30"
+  },
+  {
+   "plantId": 10,
+   "plantName": "Pot 10: Krishna Tulsi (Light Trial)",
+   "group": "Cluster 3",
+   "groupLabel": "Cluster 3: Light Stress",
+   "flags": 8,
+   "maxScore": 0.16233652921703556,
+   "lastFlaggedAt": "2026-10-15T08:03:00+05:30"
+  },
+  {
+   "plantId": 11,
+   "plantName": "Pot 11: Rama Tulsi (Light Trial)",
+   "group": "Cluster 3",
+   "groupLabel": "Cluster 3: Light Stress",
+   "flags": 7,
+   "maxScore": 0.06533691537419961,
+   "lastFlaggedAt": "2026-10-14T08:03:45+05:30"
+  },
+  {
+   "plantId": 6,
+   "plantName": "Pot 6: Krishna Tulsi (Watering Trial)",
+   "group": "Cluster 2",
+   "groupLabel": "Cluster 2: Water Stress",
+   "flags": 6,
+   "maxScore": 0.11374099744111921,
+   "lastFlaggedAt": "2026-10-14T12:01:30+05:30"
+  },
+  {
+   "plantId": 12,
+   "plantName": "Pot 12: Krishna Tulsi (Light Trial)",
+   "group": "Cluster 3",
+   "groupLabel": "Cluster 3: Light Stress",
+   "flags": 5,
+   "maxScore": 0.09510746727840536,
+   "lastFlaggedAt": "2026-10-10T14:03:45+05:30"
+  },
+  {
+   "plantId": 9,
+   "plantName": "Pot 9: Rama Tulsi (Light Trial)",
+   "group": "Cluster 3",
+   "groupLabel": "Cluster 3: Light Stress",
+   "flags": 4,
+   "maxScore": 0.07237595155812415,
+   "lastFlaggedAt": "2026-10-15T16:03:00+05:30"
+  },
+  {
+   "plantId": 15,
+   "plantName": "Pot 15: Rama Tulsi (Climate Trial)",
+   "group": "Cluster 4",
+   "groupLabel": "Cluster 4: Temperature/Humidity Stress",
+   "flags": 4,
+   "maxScore": 0.0705268144568264,
+   "lastFlaggedAt": "2026-10-12T16:05:15+05:30"
+  },
+  {
+   "plantId": 4,
+   "plantName": "Pot 4: Krishna Tulsi (Control Group)",
+   "group": "Cluster 1",
+   "groupLabel": "Cluster 1: Healthy Control",
+   "flags": 3,
+   "maxScore": 0.06589658909990148,
+   "lastFlaggedAt": "2026-10-15T08:00:45+05:30"
+  },
+  {
+   "plantId": 7,
+   "plantName": "Pot 7: Rama Tulsi (Watering Trial)",
+   "group": "Cluster 2",
+   "groupLabel": "Cluster 2: Water Stress",
+   "flags": 3,
+   "maxScore": 0.06983378157695697,
+   "lastFlaggedAt": "2026-10-04T04:02:15+05:30"
+  },
+  {
+   "plantId": 16,
+   "plantName": "Pot 16: Krishna Tulsi (Climate Trial)",
+   "group": "Cluster 4",
+   "groupLabel": "Cluster 4: Temperature/Humidity Stress",
+   "flags": 3,
+   "maxScore": 0.05182792928630764,
+   "lastFlaggedAt": "2026-10-17T08:05:15+05:30"
+  },
+  {
+   "plantId": 1,
+   "plantName": "Pot 1: Rama Tulsi (Control Group)",
+   "group": "Cluster 1",
+   "groupLabel": "Cluster 1: Healthy Control",
+   "flags": 2,
+   "maxScore": 0.07948530355688654,
+   "lastFlaggedAt": "2026-10-08T14:00:00+05:30"
+  },
+  {
+   "plantId": 2,
+   "plantName": "Pot 2: Krishna Tulsi (Control Group)",
+   "group": "Cluster 1",
+   "groupLabel": "Cluster 1: Healthy Control",
+   "flags": 2,
+   "maxScore": 0.028456107617660376,
+   "lastFlaggedAt": "2026-10-04T14:00:00+05:30"
+  },
+  {
+   "plantId": 8,
+   "plantName": "Pot 8: Krishna Tulsi (Watering Trial)",
+   "group": "Cluster 2",
+   "groupLabel": "Cluster 2: Water Stress",
+   "flags": 2,
+   "maxScore": 0.13276464153777734,
+   "lastFlaggedAt": "2026-09-22T12:02:15+05:30"
+  }
+ ]
+}

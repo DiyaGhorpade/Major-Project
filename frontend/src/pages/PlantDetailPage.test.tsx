@@ -9,6 +9,15 @@ afterEach(() => vi.unstubAllGlobals());
 const monitoringRoute = (body: unknown) => ({ 'GET /api/monitoring/plants/5': { body } });
 
 describe('PlantDetailPage', () => {
+  it('links the anomaly panel to the filtered anomalies page', async () => {
+    mockFetch(monitoringRoute(monitoringFixture()));
+    const onNavigate = vi.fn();
+    render(<PlantDetailPage plantId={5} onNavigate={onNavigate} />);
+    const panel = await screen.findByTestId('anomaly-panel');
+    fireEvent.click(within(panel).getByRole('button', { name: 'View all anomalies for this plant' }));
+    expect(onNavigate).toHaveBeenCalledWith('anomalies', 5);
+  });
+
   it('renders ML output, history, anomaly/env panels and keeps dataset labels separate', async () => {
     mockFetch(monitoringRoute(monitoringFixture()));
     render(<PlantDetailPage plantId={5} onNavigate={vi.fn()} />);
