@@ -7,6 +7,7 @@ import { ErrorState } from '../components/shared/ErrorState';
 import { RecommendationCard } from '../components/shared/RecommendationCard';
 import { EmptyState, RunEmptyState } from '../components/shared/EmptyState';
 import { useRecommendationCounts } from '../components/ai/useRecommendationCounts';
+import { NoActionPlants } from '../components/ai/NoActionPlants';
 import type { RecommendationFilter } from '../api/client';
 import { PAGE_SIZE, describeRecommendationError } from '../components/ai/recommendationHelpers';
 import type {
@@ -242,6 +243,9 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ onNavi
           {recsQuery.refreshing ? ' (refreshing)' : ''}
         </span>
       </div>
+
+      {/* Pots without open actions, so every pot is visible on the unfiltered page */}
+      {!filtersActive && !searchQuery && <NoActionPlants plants={plants} onViewPlant={(id) => onNavigate('plant-detail', id)} />}
 
       {/* Cards */}
       {recsQuery.loading ? (
