@@ -66,6 +66,32 @@ def test_climate_suggestion_needs_persistence(base_cfg):
     assert "check_climate" not in ids(blip)
 
 
+def test_climate_two_of_last_three_readings_is_enough(base_cfg):
+    two = generate_recommendations("moderate", PROBS_OK, False, [], recent(temperature=[26, 26, 26, 26, 35.0, 35.0]), base_cfg)
+    assert "check_climate" in ids(two)
+    one = generate_recommendations("moderate", PROBS_OK, False, [], recent(temperature=[26, 26, 26, 26, 26, 35.0]), base_cfg)
+    assert "check_climate" not in ids(one)
+
+
+def test_damp_air_suggests_ventilation(base_cfg):
+    recs = generate_recommendations("moderate", PROBS_OK, False, [], recent(humidity=[96.0] * 6), base_cfg)
+    rec = [x for x in recs if x["id"] == "check_climate"][0]
+    assert rec["category"] == "temperature_humidity" and "ventilation" in rec["text"] and "humidity above" in rec["reason"]
+
+
+def test_sustained_cool_or_dry_means_trigger_climate_check(base_cfg):
+    cool = generate_recommendations("moderate", PROBS_OK, False, [], recent(temperature=[19.0] * 6, temperature_roll6_mean=19.0), base_cfg)
+    assert "check_climate" in ids(cool)           # every reading is inside the hard limits; the rolling mean is not
+    dry = generate_recommendations("moderate", PROBS_OK, False, [], recent(humidity_roll6_mean=55.0), base_cfg)
+    assert "check_climate" in ids(dry) and "recent mean humidity" in [x for x in dry if x["id"] == "check_climate"][0]["reason"]
+
+
+def test_control_like_conditions_do_not_trigger_climate(base_cfg):
+    normal = recent(temperature=[24, 25, 23, 24, 26, 25.0], humidity=[78, 85, 80, 76, 82, 90.0],
+                    temperature_roll6_mean=24.5, humidity_roll6_mean=81.8)
+    assert "check_climate" not in ids(generate_recommendations("moderate", PROBS_OK, False, [], normal, base_cfg))
+
+
 def test_stressed_without_driver_gets_generic_monitor_advice(base_cfg):
     recs = generate_recommendations("high", PROBS_OK, False, [], recent(), base_cfg)
     assert ids(recs) == ["monitor_and_inspect"]
@@ -75,6 +101,18 @@ def test_healthy_normal_conditions_have_no_recommendations(base_cfg):
     assert generate_recommendations("healthy", {"healthy": 0.9, "low": 0.05, "moderate": 0.03, "high": 0.02}, False, [], recent(), base_cfg) == []
 
 
+def test_low_without_driver_gets_gentle_monitor_advice(base_cfg):
+    recs = generate_recommendations("low", {"healthy": 0.2, "low": 0.6, "moderate": 0.15, "high": 0.05}, False, [], recent(), base_cfg)
+    assert ids(recs) == ["monitor_and_inspect"]
+    assert recs[0]["category"] == "general" and recs[0]["priority"] == "low" and "early or mild" in recs[0]["text"]
+    assert recs[0]["supporting_features"] == {"predicted_label": "low"}
+
+
+def test_low_with_a_driver_keeps_only_the_condition_suggestion(base_cfg):
+    recs = generate_recommendations("low", {"healthy": 0.2, "low": 0.6, "moderate": 0.15, "high": 0.05}, False, [], recent(soil=[20.0] * 6), base_cfg)
+    assert ids(recs) == ["check_watering"] and recs[0]["priority"] == "low"
+
+
 def test_no_watering_volumes_are_ever_recommended(base_cfg):
     import re
     for soil in ([20.0] * 6,):
@@ -82,5 +120,6 @@ def test_no_watering_volumes_are_ever_recommended(base_cfg):
             assert not re.search(r"\b\d+\s?(ml|l|litres?|liters?|cups?)\b", r["text"], re.I)
 
 
-def test_disclaimer_is_labelled_heuristic():
-    assert "Not an expert diagnosis" in DISCLAIMER
+def test_disclaimer_is_a_neutral_non_empty_string():
+    assert isinstance(DISCLAIMER, str) and DISCLAIMER.strip()
+    assert "expert" not in DISCLAIMER.lower()

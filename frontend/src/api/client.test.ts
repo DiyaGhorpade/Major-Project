@@ -84,6 +84,17 @@ describe('api client', () => {
     expect(url.searchParams.has('q')).toBe(false);
   });
 
+  it('sends a free-text search for "all" but still drops the "all" select sentinel', async () => {
+    const { calls } = mockFetch({
+      'GET /api/recommendations': { body: [], headers: { 'X-Total-Count': '0' } },
+      'GET /api/data-logs': { body: [], headers: { 'X-Total-Count': '0' } },
+    });
+    await apiClient.getRecommendationsPage({ q: 'all' });
+    await apiClient.getDataLogsPage({ nodeId: 'all', q: 'all' });
+    for (const call of calls) expect(new URL(call.url, 'http://x').searchParams.get('q')).toBe('all');
+    expect(new URL(calls[1].url, 'http://x').searchParams.has('nodeId')).toBe(false);
+  });
+
   it('builds the server CSV url from the same filters without paging', () => {
     const url = new URL(apiClient.dataLogsCsvUrl({ plantId: 3, status: 'flagged', limit: 15, offset: 15 }), 'http://x');
     expect(url.pathname).toBe('/api/data-logs');

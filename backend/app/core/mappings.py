@@ -141,6 +141,9 @@ _TYPE_BY_ML_CATEGORY: dict[str, StressType] = {
 }
 
 
+UNCLASSIFIED_STRESS: StressType = "Unclassified Stress"
+
+
 def stress_type_guess(severity: str | None, ml_rec_categories: list[str] | tuple[str, ...]) -> StressType | None:
     """Heuristic stress type for a prediction (never a diagnosis).
 
@@ -154,7 +157,7 @@ def stress_type_guess(severity: str | None, ml_rec_categories: list[str] | tuple
         return "Healthy"
     types = {_TYPE_BY_ML_CATEGORY[c] for c in ml_rec_categories if c in _TYPE_BY_ML_CATEGORY}
     if not types:
-        return "Unclassified Stress"
+        return UNCLASSIFIED_STRESS
     return next(iter(types)) if len(types) == 1 else "Mixed Stress"
 
 

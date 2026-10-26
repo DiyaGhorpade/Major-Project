@@ -265,8 +265,8 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ onNavi
           title="No Recommendations Match"
           description={
             searchQuery
-              ? 'No recommendation matches the search text. Clear the search or adjust the filters.'
-              : 'Try broadening the filters, or show superseded recommendations.'
+              ? 'No recommendations match the search text and filters. Clear the search or adjust the filters.'
+              : 'No recommendations match the selected filters. Try broadening them, or show superseded recommendations.'
           }
         />
       ) : null}

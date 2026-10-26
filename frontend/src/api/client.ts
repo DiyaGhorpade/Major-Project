@@ -75,11 +75,15 @@ async function parseError(res: Response): Promise<ApiError> {
 
 type Query = Record<string, string | number | boolean | null | undefined>;
 
+/** Free-text search keys: their value is user input, so "all" is a real search term rather than the select sentinel. */
+const FREE_TEXT_KEYS = new Set(['q']);
+
 export function buildQuery(params?: Query): string {
   if (!params) return '';
   const usp = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (value === undefined || value === null || value === '' || value === 'all') continue;
+    if (value === undefined || value === null || value === '') continue;
+    if (value === 'all' && !FREE_TEXT_KEYS.has(key)) continue; // 'all' = "no filter" for select controls
     usp.set(key, String(value));
   }
   const text = usp.toString();

@@ -176,7 +176,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
                   </div>
                   {hasPredictions && (
                     <div className="text-[11px] text-stone-600">
-                      Most common stress-type guess: <strong>{orNA(c.topCondition)}</strong>
+                      Most common stress-type guess: <strong>{c.topCondition ?? 'No dominant type'}</strong>
                     </div>
                   )}
                 </div>
@@ -364,7 +364,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
               )
             ) : (
               <div className="space-y-4">
-                {overview.topRecommendations.slice(0, 2).map((rec) => (
+                {overview.topRecommendations.map((rec) => (
                   <RecommendationCard
                     key={rec.id}
                     recommendation={rec}

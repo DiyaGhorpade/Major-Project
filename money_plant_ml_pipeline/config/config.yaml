@@ -85,7 +85,14 @@ recommendations:
   temp_high_c: 32
   temp_low_c: 18
   humidity_low_pct: 40
+  humidity_high_pct: 92         # single readings above this count as damp air
   vpd_high_kpa: 2.0
+  climate_min_hits: 2           # climate check fires when this many of the last min_consistent_rows readings are out of range
+  # Sustained-deviation bands on the 6-reading rolling mean (temperature_roll6_mean / humidity_roll6_mean):
+  temp_mean_high_c: 30
+  temp_mean_low_c: 20
+  humidity_mean_low_pct: 60
+  humidity_mean_high_pct: 88
   low_confidence_max_prob: 0.45
   min_consistent_rows: 3        # trailing readings that must agree before a persistent-condition suggestion
 

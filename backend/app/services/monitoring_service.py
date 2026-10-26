@@ -7,7 +7,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.cache import ResponseCache
-from app.core.mappings import EXPERIMENTAL_GROUPS, to_ist_iso
+from app.core.mappings import EXPERIMENTAL_GROUPS, UNCLASSIFIED_STRESS, to_ist_iso
 from app.core.provenance import DISCLAIMER, PROVENANCE
 from app.db import repositories as repo
 from app.schemas.dashboard import (
@@ -38,6 +38,13 @@ def _mean(values: list[float]) -> float | None:
     return round(sum(values) / len(values), 3) if values else None
 
 
+def top_stress_type(guesses: list[str | None]) -> str | None:
+    """Most common concrete stress-type guess. "Unclassified Stress" (no condition fired) and missing guesses
+    are not a stress type, so they never win the vote; None when nothing else remains."""
+    counts = Counter(g for g in guesses if g and g != UNCLASSIFIED_STRESS)
+    return counts.most_common(1)[0][0] if counts else None
+
+
 def _cluster_summaries(db: Session) -> list[ClusterSummary]:
     readings = {r.plant_id: r for r in repo.latest_reading_per_plant(db)}
     preds = repo.latest_ok_prediction_per_plant(db)
@@ -46,7 +53,6 @@ def _cluster_summaries(db: Session) -> list[ClusterSummary]:
         ids = list(group.plant_ids)
         latest = [readings[i] for i in ids if i in readings]
         sev = Counter(preds[i].severity for i in ids if i in preds)
-        guesses = Counter(preds[i].stress_type_guess for i in ids if i in preds and preds[i].stress_type_guess)
         out.append(
             ClusterSummary(
                 cluster=group.cluster,
@@ -55,7 +61,7 @@ def _cluster_summaries(db: Session) -> list[ClusterSummary]:
                 plants=len(ids),
                 averages=SensorAverages(**{s: _mean(valid_values(latest, s)) for s in SENSORS}),
                 severity_counts={**{s: sev.get(s, 0) for s in SEVERITIES}, "unmeasured": sum(1 for i in ids if i not in preds)},
-                top_condition=guesses.most_common(1)[0][0] if guesses else None,
+                top_condition=top_stress_type([preds[i].stress_type_guess for i in ids if i in preds]),
             )
         )
     return out
