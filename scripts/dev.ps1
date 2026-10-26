@@ -63,10 +63,15 @@ Ok "python: $SysPy $($SysPyArgs -join ' ')"
 
 if (-not $NoFrontend -or $SetupOnly) {
     if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Fail 'Node.js >= 20 not found. Install it from https://nodejs.org.' }
-    $nodeMajor = [int](& node -p 'process.versions.node.split(".")[0]')
-    if ($nodeMajor -lt 20) { Fail "Node.js >= 20 is required (found $(& node -v))." }
-    if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { Fail 'npm not found (it normally ships with Node.js).' }
-    Ok "node: $(& node -v)"
+    $nodeVersion = (& node --version).Trim()
+    if ($nodeVersion -match '^v?(\d+)\.') {
+        $nodeMajor = [int]$Matches[1]
+    } else {
+        Fail "Could not determine the Node.js version (found '$nodeVersion')."
+    }
+    if ($nodeMajor -lt 20) { Fail "Node.js >= 20 is required (found $nodeVersion)." }
+    if (-not (Get-Command npm.cmd -ErrorAction SilentlyContinue)) { Fail 'npm not found (it normally ships with Node.js).' }
+    Ok "node: $nodeVersion"
 }
 
 # ---- helpers -------------------------------------------------------------------------------
@@ -108,7 +113,7 @@ function Ensure-Frontend {
     if (-not (Test-Path (Join-Path $FeDir 'node_modules')) -or $want -ne $have) {
         Info 'Installing frontend dependencies (npm ci)'
         Push-Location $FeDir
-        try { & npm ci --no-audit --no-fund; if ($LASTEXITCODE -ne 0) { Fail 'npm ci failed.' } } finally { Pop-Location }
+        try { & npm.cmd ci --no-audit --no-fund; if ($LASTEXITCODE -ne 0) { Fail 'npm ci failed.' } } finally { Pop-Location }
         Set-Content -Path $marker -Value $want
     }
     Ok 'frontend dependencies ready'

@@ -92,7 +92,7 @@ All status indicators pair colors with icons and text labels (never color alone)
 ## Installation & Running
 
 ### Prerequisites
-- Node.js `v18.0.0` or later (`v22.x` tested)
+- Node.js `v20.0.0` or later (`v22.x` tested)
 - npm `v9.x` or later
 
 ### 1. Install Dependencies
