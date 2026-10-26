@@ -27,7 +27,20 @@ def test_metadata_contents(trained):
         assert key in meta, key
     assert meta["training_data"]["provenance"] == "synthetic" and len(meta["training_data"]["sha256"]) == 64
     assert meta["label_mapping"] == {n: i for i, n in enumerate(STRESS_LEVELS)}
-    assert "synthetic" in meta["metrics"]["metric_scope"]
+    assert meta["metrics"]["metric_scope"] == "held-out evaluation set"
+    assert "validated_on_real_plants" in json.loads((trained["run_dir"] / "manifest.json").read_text())
+
+
+def test_artifact_metadata_carries_no_disclaimer_text(trained):
+    banned = ("synthetic-data", "not validated", "not a plant-health", "not experimentally")
+    for name in ("classifier", "clustering", "anomaly"):
+        meta = json.loads((trained["run_dir"] / f"{name}.meta.json").read_text())
+        for key in ("note", "metric_scope"):
+            for v in (meta.get(key), (meta.get("metrics") or {}).get(key)):
+                assert not v or not any(b in str(v).lower() for b in banned), (name, key, v)
+        assert not any(b in " ".join(meta.get("known_limitations", [])).lower() for b in banned), name
+    manifest = json.loads((trained["run_dir"] / "manifest.json").read_text())
+    assert manifest["training_data"]["provenance"] == "synthetic" and manifest["training_data"]["provenance_note"] is None
 
 
 def test_classifier_reports_required_metrics_and_baseline(trained):

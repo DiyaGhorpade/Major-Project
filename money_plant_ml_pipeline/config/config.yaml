@@ -21,9 +21,7 @@ data:
   # The supplied dataset carries an `is_synthetic_anomaly` helper column and contains no experimenter
   # confirmation of real measurements, so it is treated as SYNTHETIC. Change ONLY if you have verified real data.
   provenance: synthetic
-  provenance_note: >
-    Training labels (stress_level / stress_type) are simulation labels, not biological ground truth.
-    Metrics are synthetic-data metrics and are not experimentally validated plant-health performance.
+  provenance_note: null         # optional free-text note stored in artifact metadata
   validated_on_real_plants: false
 
 validation:

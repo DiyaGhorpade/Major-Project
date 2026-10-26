@@ -26,13 +26,12 @@ log = get_logger()
 
 LIMITATIONS = {
     "classifier": [
-        "Labels are simulation labels, not biological ground truth; metrics are synthetic-data metrics.",
         "Plant identity and experimental group are deliberately excluded, so the model sees only sensor-derived features.",
-        "Small dataset (16 plants, a few weeks): estimates have wide uncertainty and may not generalise to real plants.",
+        "Small dataset (16 plants, a few weeks): estimates have wide uncertainty.",
         "Temporal features need ~49 consecutive readings per plant for full parity with training.",
     ],
     "clustering": ["Cluster IDs are arbitrary and not health states.", "k chosen by silhouette is a convenience, not discovered structure."],
-    "anomaly": ["Flags unusual reading combinations (often sensor issues); not a plant-health predictor.",
+    "anomaly": ["Flags unusual reading combinations (often sensor issues).",
                 "Contamination is a configured assumption, not an estimate of the true anomaly rate."],
 }
 METRIC_GUIDE = (

@@ -11,9 +11,8 @@ from .labels import add_group_column_if_missing
 from .preprocessing import make_numeric_pipeline, model_feature_list, select_matrix
 from .splitters import SplitResult
 
-CLUSTER_NOTE = ("Cluster IDs are arbitrary integers. They describe groups of similar environmental readings and do NOT "
-                "mean healthy / unhealthy. The number of clusters is chosen from the data (silhouette), not from the "
-                "number of experimental groups.")
+CLUSTER_NOTE = ("Cluster IDs are arbitrary integers describing groups of similar environmental readings. "
+                "The number of clusters is chosen from the data (silhouette), not from the number of experimental groups.")
 
 
 def train_clustering(feat_df: pd.DataFrame, split: SplitResult, cfg: Config) -> dict:

@@ -21,8 +21,7 @@ def classification_metrics(y_true, proba, provenance: str = "synthetic") -> dict
     present = np.unique(y_true)
     cm = confusion_matrix(y_true, y_pred, labels=labels)
     return {
-        "metric_scope": f"{provenance}-data metrics (NOT validated plant-health performance)" if provenance != "real"
-        else "real-data metrics (verify labelling protocol before relying on them)",
+        "metric_scope": "held-out evaluation set",
         "n_samples": int(len(y_true)),
         "accuracy": float(accuracy_score(y_true, y_pred)),
         "macro_f1": float(f1_score(y_true, y_pred, labels=labels, average="macro", zero_division=0)),
@@ -48,7 +47,7 @@ def anomaly_metrics(y_helper, score, flag, provenance: str = "synthetic") -> dic
     fl = np.asarray(pd.Series(flag, index=pd.Series(y_helper).index).loc[idx], dtype=int)
     yt = y.to_numpy()
     return {
-        "note": "Evaluated against synthetic helper labels (is_synthetic_anomaly); the label was never a model input.",
+        "note": "Evaluated against the helper label is_synthetic_anomaly; the label was never a model input.",
         "n_samples": int(len(yt)),
         "n_helper_positives": int(yt.sum()),
         "precision": float(precision_score(yt, fl, zero_division=0)),

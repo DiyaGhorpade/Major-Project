@@ -14,7 +14,7 @@ SCORE_CONVENTION = ("anomaly_score = -IsolationForest.decision_function(x). HIGH
                     "is_anomaly = anomaly_score > 0 (decision threshold 0.0, set by the contamination fraction on the "
                     "training data). Scores are relative to training data and are not probabilities.")
 ANOMALY_NOTE = ("An anomaly flag means 'unusual combination of readings' - possibly a sensor / wiring / data-quality "
-                "problem or an unusual environment. It is NOT a plant-health prediction.")
+                "problem or an unusual environment.")
 
 
 def train_anomaly(feat_df: pd.DataFrame, split: SplitResult, cfg: Config) -> dict:
