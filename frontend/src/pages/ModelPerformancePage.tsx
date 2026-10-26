@@ -125,6 +125,7 @@ export const ModelPerformancePage: React.FC = () => {
   const metricsQuery = useModelMetrics();
   const metrics = metricsQuery.data;
   const classCount = metrics?.confusion_matrix.labels.length ?? 0;
+  const correctCount = metrics?.confusion_matrix.matrix.reduce((sum, row, i) => sum + (row[i] ?? 0), 0) ?? 0;
 
   if (metricsQuery.error && !metrics) {
     return <ErrorState message={metricsQuery.error.message} onRetry={() => void metricsQuery.refetch()} />;
@@ -173,10 +174,11 @@ export const ModelPerformancePage: React.FC = () => {
       {/* Global Evaluation Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <MetricCard
-          title="Accuracy"
+          title="Overall Accuracy"
           value={formatFraction(metrics.overall.accuracy)}
-          subtitle="Top-1, hold-out set"
+          subtitle={`${correctCount.toLocaleString()} of ${metrics.total_samples.toLocaleString()} hold-out readings correct`}
           icon={<Target className="w-4 h-4 text-[#2E8B57]" />}
+          className="border-[#2E8B57] bg-[#F4FAF2]"
         />
         <MetricCard
           title="Macro Precision"

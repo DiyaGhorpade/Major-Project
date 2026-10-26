@@ -20,7 +20,8 @@ describe('ModelPerformancePage', () => {
 
     // Overall, balanced accuracy and weighted F1.
     const card = (title: string) => screen.getByText(title, { selector: 'span' }).parentElement!.parentElement!;
-    expect(card('Accuracy')).toHaveTextContent('64.6%');
+    expect(card('Overall Accuracy')).toHaveTextContent('64.6%');
+    expect(card('Overall Accuracy')).toHaveTextContent('868 of 1,344 hold-out readings correct');
     expect(card('Macro Precision')).toHaveTextContent('58.3%');
     expect(card('Macro Recall')).toHaveTextContent('60.6%');
     expect(card('Macro F1')).toHaveTextContent('58.6%');
