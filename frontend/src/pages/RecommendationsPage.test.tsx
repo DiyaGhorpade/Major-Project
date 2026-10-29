@@ -69,6 +69,26 @@ describe('RecommendationsPage', () => {
     expect(listCall).not.toContain('limit=500');
   });
 
+  it('lists the pots with no open recommendation so every pot is visible', async () => {
+    stubBackend({
+      list: (p) => {
+        const status = p.get('status');
+        if (status === 'new') return { body: recommendationsFixture(), headers: { 'X-Total-Count': '2' } }; // pots 16 and 8
+        if (status) return { body: [], headers: { 'X-Total-Count': '0' } };
+        return { body: recommendationsFixture(), headers: { 'X-Total-Count': '2' } };
+      },
+    });
+    renderPage();
+    const strip = await screen.findByTestId('no-action-plants');
+    expect(strip).toHaveTextContent('14 of 16 pots');
+    expect(strip).toHaveTextContent(/Pot 1: /);
+    expect(strip).not.toHaveTextContent(/Pot 8: /);
+    expect(strip).not.toHaveTextContent(/Pot 16: /);
+
+    fireEvent.change(screen.getByLabelText('Priority filter'), { target: { value: 'high' } });
+    await waitFor(() => expect(screen.queryByTestId('no-action-plants')).not.toBeInTheDocument());
+  });
+
   it('sends every filter to the server and returns to the first page', async () => {
     const { urls } = stubBackend({ list: () => ({ body: recommendationsFixture(), headers: { 'X-Total-Count': '30' } }) });
     renderPage();
