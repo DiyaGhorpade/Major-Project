@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Logs</title>
+<style>
+    body {
+        margin: 0;
+        padding: 12px;
+        background: #000;
+        color: #ccc;
+        font-family: Consolas, monospace;
+        font-size: 14px;
+        line-height: 1.7;
+    }
+
+    #logs {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+</style>
+</head>
+<body>
+<div id="logs"></div>
+
+<script>
+const logs = document.getElementById("logs");
+let lastUpdate = "";
+
+async function update() {
+    try {
+        const response = await fetch("/api/logs", {
+            cache: "no-store"
+        });
+        const data = await response.json();
+
+        if (!data.logs.length || data.updated_at === lastUpdate) return;
+        lastUpdate = data.updated_at;
+
+        const lines = data.logs.map(item =>
+            `[${item.timestamp}] ${item.plant_id} ` +
+            `${item.soil_moisture} ${item.temperature_c} ` +
+            `${item.humidity_percent} ${item.light_lux}`
+        );
+
+        logs.textContent += lines.join("\n") + "\n";
+        window.scrollTo(0, document.body.scrollHeight);
+    } catch (_) {}
+}
+
+update();
+setInterval(update, 2000);
+</script>
+</body>
+</html>
