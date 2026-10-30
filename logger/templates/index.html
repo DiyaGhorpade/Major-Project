@@ -22,35 +22,47 @@
 </style>
 </head>
 <body>
-<div id="logs"></div>
+<div>Sensor logs — simulated live readings</div>
+<div id="status" role="status">Connecting to live feed...</div>
+<div>record_id,received_at,accepted_at,timestamp,session_id,node_id,sampling_point,plant_id,soil,temperature,humidity,light</div>
+<div id="logs">{% for item in initial_logs %}{% for field in fields %}{{ item[field] }}{% if not loop.last %},{% endif %}{% endfor %}{{ '\n' }}{% endfor %}</div>
 
 <script>
 const logs = document.getElementById("logs");
-let lastUpdate = "";
+const status = document.getElementById("status");
+let cursor = {{ initial_cursor | default(0) | tojson }};
 
 async function update() {
     try {
-        const response = await fetch("/api/logs", {
+        const response = await fetch(`/api/logs?after=${cursor}`, {
             cache: "no-store"
         });
+        if (!response.ok) throw new Error(`Server returned ${response.status}`);
         const data = await response.json();
+        if (!Array.isArray(data.logs)) throw new Error("Invalid log response");
+        if (data.total_readings < cursor) {
+            cursor = 0;
+            logs.textContent = "";
+            return;
+        }
 
-        if (!data.logs.length || data.updated_at === lastUpdate) return;
-        lastUpdate = data.updated_at;
+        const fields = ["record_id", "received_at", "accepted_at", "timestamp", "session_id", "node_id", "sampling_point", "plant_id", "soil", "temperature", "humidity", "light"];
+        const lines = data.logs.map(item => fields.map(field => item[field]).join(","));
 
-        const lines = data.logs.map(item =>
-            `[${item.timestamp}] ${item.plant_id} ` +
-            `${item.soil_moisture} ${item.temperature_c} ` +
-            `${item.humidity_percent} ${item.light_lux}`
-        );
-
-        logs.textContent += lines.join("\n") + "\n";
+        if (lines.length) logs.textContent += lines.join("\n") + "\n";
+        cursor = data.total_readings;
+        status.textContent = `Live - ${cursor} readings - refreshes every 2 seconds`;
         window.scrollTo(0, document.body.scrollHeight);
-    } catch (_) {}
+    } catch (error) {
+        status.textContent = `Unable to load readings: ${error.message}. Open http://localhost:5000 with the logger running.`;
+    }
 }
 
 update();
-setInterval(update, 2000);
+setTimeout(async function poll() {
+    await update();
+    setTimeout(poll, 2000);
+}, 2000);
 </script>
 </body>
 </html>
