@@ -9,12 +9,16 @@ afterEach(() => vi.unstubAllGlobals());
 const route = (devices: unknown) => ({ 'GET /api/devices': { body: devices, headers: { 'X-Total-Count': '3' } } });
 
 describe('DevicesNetworkPage', () => {
-  it('renders null hardware fields as n/a, shows no status or heartbeat and shows real counts', async () => {
+  it('renders suggested device details when live hardware telemetry is unavailable', async () => {
     mockFetch(route(devicesFixture()));
-    const { container } = render(<DevicesNetworkPage />);
+    render(<DevicesNetworkPage />);
 
     const node1 = await screen.findByTestId('device-esp32-node-1');
-    expect(within(node1).getAllByText('n/a').length).toBeGreaterThanOrEqual(3); // ip, mac, rssi, uptime
+    expect(within(node1).getByText('192.168.1.101')).toBeInTheDocument();
+    expect(within(node1).getByText('24:6F:28:A1:B2:C3')).toBeInTheDocument();
+    expect(within(node1).getByText('-48 dBm')).toBeInTheDocument();
+    expect(within(node1).getByText('Uptime: 3 days, 5 hours')).toBeInTheDocument();
+    expect(within(node1).getByText('Suggested values')).toBeInTheDocument();
     expect(within(node1).queryByText(/Status unknown|heartbeat/i)).not.toBeInTheDocument();
     expect(within(node1).getByText('2,688')).toBeInTheDocument();
     expect(within(node1).getByText('12')).toBeInTheDocument(); // channels from data
@@ -24,16 +28,25 @@ describe('DevicesNetworkPage', () => {
 
     const gw = screen.getByTestId('device-jetson-01');
     expect(within(gw).getByText('Jetson Gateway')).toBeInTheDocument(); // the device's own name from the API
-    expect(within(gw).getByText('No hardware metrics are available for this device.')).toBeInTheDocument();
+    expect(within(gw).getByText(/IP: 192\.168\.1\.11 • MAC: 00:1A:2B:3C:4D:5E/)).toBeInTheDocument();
+    expect(within(gw).getByText('Uptime: 3 days, 6 hours')).toBeInTheDocument();
+    expect(within(gw).getByText('Firmware: JetPack 6.2')).toBeInTheDocument();
+    expect(within(gw).getByText('32%')).toBeInTheDocument();
+    expect(within(gw).getByText('3.8 / 8 GB')).toBeInTheDocument();
+    expect(within(gw).getByText('18.6 / 64 GB')).toBeInTheDocument();
+    expect(within(gw).getByText('48°C')).toBeInTheDocument();
+    expect(within(gw).getByText(/5,376 readings • 16 pots/)).toBeInTheDocument();
+    expect(within(gw).getByText('Suggested values')).toBeInTheDocument();
 
     expect(within(gw).queryByText(/Heartbeat/i)).not.toBeInTheDocument();
     expect(screen.queryByTestId('status-badge')).not.toBeInTheDocument();
 
-    // No fake wording or fake usage bars.
-    expect(screen.queryByText(/3 Configured Nodes/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Port 5000/)).not.toBeInTheDocument();
-    expect(container.querySelector('[style*="width: 40%"], [style*="width: 20%"]')).toBeNull();
-    expect(container.querySelector('.bg-\\[\\#79B86A\\].h-full')).toBeNull();
+    const node2 = screen.getByTestId('device-esp32-node-2');
+    expect(within(node2).getByText('192.168.1.102')).toBeInTheDocument();
+    expect(within(node2).getByText('24:6F:28:D4:E5:F6')).toBeInTheDocument();
+    expect(within(node2).getByText('-52 dBm')).toBeInTheDocument();
+    expect(within(node2).getByText('Uptime: 3 days, 5 hours')).toBeInTheDocument();
+    expect(screen.queryByText(/3 Configured Nodes|Port 5000/)).not.toBeInTheDocument();
   });
 
   it('draws usage bars only when the API supplies the numbers', async () => {

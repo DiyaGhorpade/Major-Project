@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, ChevronLeft, ChevronRight, Clock, Gauge, ScanSearch, Trees } from 'lucide-react';
+import { Activity, ChevronLeft, ChevronRight, Clock, ScanSearch, Trees } from 'lucide-react';
 import type { AnomalyFilter } from '../api/client';
 import { MetricCard } from '../components/shared/MetricCard';
 import { EmptyState, RunEmptyState } from '../components/shared/EmptyState';
@@ -149,12 +149,6 @@ export const AnomaliesPage: React.FC<AnomaliesPageProps> = ({ onNavigate, initia
           value={formatDateTime(summary.latestFlaggedAt)}
           subtitle="IST, time the reading was taken"
           icon={<Clock className="w-4 h-4 text-[#2E8B57]" />}
-        />
-        <MetricCard
-          title="Threshold"
-          value={fmtScore(summary.threshold)}
-          subtitle="flagged when the score is above this"
-          icon={<Gauge className="w-4 h-4 text-[#2E8B57]" />}
         />
       </div>
 

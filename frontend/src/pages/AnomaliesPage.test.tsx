@@ -24,7 +24,7 @@ const lastQuery = (calls: Array<{ key: string; url: string }>) => {
 };
 
 describe('AnomaliesPage', () => {
-  it('shows the KPI row, affected plants and flagged readings from the real payloads', async () => {
+  it('shows the summary KPIs, affected plants and flagged readings from the real payloads', async () => {
     backend();
     render(<AnomaliesPage onNavigate={vi.fn()} />);
 
@@ -33,7 +33,7 @@ describe('AnomaliesPage', () => {
     expect(await screen.findByText(/1\.9% of 5,376 analyzed readings/)).toBeInTheDocument();
     expect(within(kpi('Flagged Readings')).getByText('102')).toBeInTheDocument();
     expect(within(kpi('Plants Affected')).getByText('14')).toBeInTheDocument();
-    expect(within(kpi('Threshold')).getByText('0.000')).toBeInTheDocument();
+    expect(screen.queryByText('Threshold')).not.toBeInTheDocument();
 
     const plants = within(screen.getByTestId('affected-plants'));
     const rows = plants.getAllByRole('row');
